@@ -22,6 +22,19 @@
 --     issue_findings) are gated through their parent issues.org_id.
 -- ============================================================
 
+-- ─── 0. Table-level grants ───────────────────────────────────────────────────
+-- RLS controls row-level access, but the role needs table-level GRANTs first.
+
+GRANT USAGE ON SCHEMA public TO authenticated, anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+
+-- Also apply to future tables created in this schema
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
+
 -- ─── 1. org_invites table ────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS org_invites (

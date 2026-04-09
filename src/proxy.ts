@@ -7,7 +7,7 @@
  *   2. Redirect unauthenticated requests to /sign-in, except for an
  *      explicit allowlist of public routes (auth pages, callback, etc.)
  *
- * In Next.js 16 the conventional file name is `proxy.ts` (formerly `middleware.ts`).
+ * Next.js 16 uses `proxy.ts` with a `proxy` export (replaces the old `middleware.ts`).
  */
 
 import { NextRequest, NextResponse } from 'next/server'

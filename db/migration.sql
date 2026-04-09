@@ -1352,6 +1352,17 @@ ALTER TABLE issue_evidence
 --   - Issue child tables are gated through their parent issues.org_id.
 -- ============================================================
 
+-- ─── 0. Table-level grants ───────────────────────────────────────────────────
+
+GRANT USAGE ON SCHEMA public TO authenticated, anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
+
 -- ─── 1. org_invites table ────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS org_invites (
