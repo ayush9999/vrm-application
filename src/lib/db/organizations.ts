@@ -1,5 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
-import { logActivity } from '@/lib/db/activity-log'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { AssessmentFramework } from '@/types/assessment'
 
 // ─── Seed data ─────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export interface OrgUser {
 
 /** Fetch all users belonging to an org, ordered by name then email */
 export async function getOrgUsers(orgId: string): Promise<OrgUser[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('users')
     .select('id, name, email')
@@ -42,42 +42,6 @@ export async function getOrgUsers(orgId: string): Promise<OrgUser[]> {
   return (data ?? []) as OrgUser[]
 }
 
-// ─── Core helpers ──────────────────────────────────────────────────────────────
-
-export async function createOrganization(name: string) {
-  const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('organizations')
-    .insert({ name })
-    .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data as { id: string; name: string; created_at: string }
-}
-
-export async function createDevUser(orgId: string, name: string, email: string) {
-  const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('users')
-    .insert({ org_id: orgId, name, email })
-    .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data as { id: string }
-}
-
-export async function createOrgMembership(
-  orgId: string,
-  userId: string,
-  role: 'site_admin' | 'vendor_admin',
-) {
-  const supabase = createServerClient()
-  const { error } = await supabase
-    .from('org_memberships')
-    .insert({ org_id: orgId, user_id: userId, role })
-  if (error) throw new Error(error.message)
-}
-
 /**
  * Idempotently seeds:
  *  1. Standard document types for the org
@@ -85,7 +49,11 @@ export async function createOrgMembership(
  *  3. category_required_documents links
  */
 export async function initOrgDefaults(orgId: string): Promise<void> {
-  const supabase = createServerClient()
+  // Uses service client because this runs during signup before any user
+  // session exists, AND because once RLS is enabled the cookie-aware client
+  // would be unable to insert org-scoped seed rows for an org the user
+  // doesn't yet belong to (race vs. the membership insert).
+  const supabase = createServiceClient()
 
   // ── 1. Standard document types ──────────────────────────────────────────────
   const { data: existingDocTypes } = await supabase
@@ -192,7 +160,7 @@ export interface OrgFrameworkSelection {
 export async function getOrgFrameworkSelections(
   orgId: string,
 ): Promise<OrgFrameworkSelection[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data, error } = await supabase
     .from('org_framework_selections')
@@ -231,7 +199,7 @@ export async function saveOrgFrameworkSelections(
   orgId: string,
   frameworkIds: string[],
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { error: delErr } = await supabase
     .from('org_framework_selections')
@@ -249,27 +217,4 @@ export async function saveOrgFrameworkSelections(
 
   const { error: insErr } = await supabase.from('org_framework_selections').insert(rows)
   if (insErr) throw new Error(insErr.message)
-}
-
-/** Full setup: org + user + membership + defaults. Returns { orgId, userId }. */
-export async function setupOrganization(
-  orgName: string,
-  adminName: string,
-  adminEmail: string,
-): Promise<{ orgId: string; userId: string }> {
-  const org = await createOrganization(orgName)
-  const user = await createDevUser(org.id, adminName, adminEmail)
-  await createOrgMembership(org.id, user.id, 'site_admin')
-  await initOrgDefaults(org.id)
-
-  await logActivity({
-    orgId: org.id,
-    actorUserId: user.id,
-    entityType: 'organization',
-    entityId: org.id,
-    action: 'created',
-    title: `Organisation "${org.name}" created`,
-  })
-
-  return { orgId: org.id, userId: user.id }
 }

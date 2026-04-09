@@ -43,15 +43,6 @@ function IconIssues({ className }: { className?: string }) {
   )
 }
 
-function IconSetup({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="8" r="2.5" />
-      <path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M11.5 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1" />
-    </svg>
-  )
-}
-
 function IconSettings({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -67,7 +58,6 @@ const NAV_ITEMS = [
   { href: '/assessments',  match: '/assessments',  label: 'Risk Assessment', Icon: IconAssessments, exact: false },
   { href: '/issues',       match: '/issues',       label: 'Issues',          Icon: IconIssues,      exact: false },
   { href: '/settings',     match: '/settings',     label: 'Settings',        Icon: IconSettings,    exact: false },
-  { href: '/setup/organization', match: '/setup',  label: 'Setup',           Icon: IconSetup,       exact: false },
 ]
 
 export function SidebarNav() {

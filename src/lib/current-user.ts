@@ -1,49 +1,64 @@
 /**
- * current-user.ts — Dev-mode user/role context resolver.
+ * current-user.ts — Resolves the current user context from the Supabase Auth session.
  *
- * Reads the `user_id` cookie set during /setup/organization and resolves
- * the user's role from org_memberships.
- * TODO: Replace with real session/JWT resolution once auth is implemented.
+ * Reads auth.uid() via the cookie-aware server client, then looks up:
+ *   - public.users (id = auth.uid()) → home org_id
+ *   - org_memberships → role within that org
  */
 
-import { cookies } from 'next/headers'
 import { createServerClient } from '@/lib/supabase/server'
 import type { CurrentUser, OrgRole } from '@/types/org'
 
-export async function getCurrentUserId(): Promise<string | null> {
-  const cookieStore = await cookies()
-  return cookieStore.get('user_id')?.value ?? null
-}
-
-/**
- * Returns { userId, orgId, role } from cookies + a single DB lookup.
- * Returns null if cookies are absent (no setup yet).
- */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const cookieStore = await cookies()
-  const userId = cookieStore.get('user_id')?.value
-  const orgId = cookieStore.get('org_id')?.value
-  if (!userId || !orgId) return null
+  const supabase = await createServerClient()
 
-  const supabase = createServerClient()
-  const { data } = await supabase
-    .from('org_memberships')
-    .select('role')
-    .eq('user_id', userId)
-    .eq('org_id', orgId)
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser()
+
+  if (!authUser) return null
+
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('id, org_id')
+    .eq('id', authUser.id)
     .maybeSingle()
 
-  const role: OrgRole = (data?.role as OrgRole) ?? 'vendor_admin'
-  return { userId, orgId, role }
+  if (!userRow) {
+    // Auth session exists but no public.users row — user is mid-signup
+    // (just confirmed email but org-creation hasn't completed). Caller
+    // should redirect to /auth/callback or /sign-up to finish provisioning.
+    return null
+  }
+
+  const { data: membership } = await supabase
+    .from('org_memberships')
+    .select('role')
+    .eq('user_id', userRow.id)
+    .eq('org_id', userRow.org_id)
+    .maybeSingle()
+
+  const role: OrgRole = (membership?.role as OrgRole) ?? 'vendor_admin'
+  return { userId: userRow.id, orgId: userRow.org_id, role }
 }
 
 /**
- * Like getCurrentUser but throws if no context exists.
+ * Like getCurrentUser but throws if no context is available.
+ * Callers should typically be on a route protected by proxy.ts so this
+ * shouldn't fire in normal operation.
  */
 export async function requireCurrentUser(): Promise<CurrentUser> {
   const user = await getCurrentUser()
   if (!user) {
-    throw new Error('No user context. Please complete setup at /setup.')
+    throw new Error('No user context. Please sign in.')
   }
   return user
+}
+
+/**
+ * Convenience for when you only need the user id.
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  const user = await getCurrentUser()
+  return user?.userId ?? null
 }

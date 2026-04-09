@@ -3,7 +3,7 @@ import type { VendorCategory } from '@/types/vendor'
 
 /** Fetch all active, non-deleted categories for an org */
 export async function getVendorCategories(orgId: string): Promise<VendorCategory[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data, error } = await supabase
     .from('vendor_categories')

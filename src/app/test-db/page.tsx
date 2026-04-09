@@ -1,7 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 
 export default async function TestDbPage() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data: organizations, error } = await supabase
     .from('organizations')
     .select('*')

@@ -15,7 +15,7 @@ interface LogActivityParams {
 
 /** Insert a single activity_log row. Errors are suppressed (never fail the main operation). */
 export async function logActivity(params: LogActivityParams): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   await supabase.from('activity_log').insert({
     org_id: params.orgId,
     vendor_id: params.vendorId ?? null,
@@ -35,7 +35,7 @@ export async function getAssessmentActivityLog(
   assessmentId: string,
   limit = 50,
 ): Promise<ActivityLogEntry[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('activity_log')
     .select('*')
@@ -55,7 +55,7 @@ export async function getVendorActivityLog(
   vendorId: string,
   limit = 50,
 ): Promise<ActivityLogEntry[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('activity_log')
     .select('*')

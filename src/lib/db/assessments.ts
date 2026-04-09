@@ -25,7 +25,7 @@ export async function getFrameworks(
   orgId: string,
   kind?: 'compliance_standard' | 'vendor_risk_framework',
 ): Promise<AssessmentFramework[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   let query = supabase
     .from('assessment_frameworks')
     .select('*')
@@ -42,7 +42,7 @@ export async function getFrameworks(
 
 /** List framework items for a given framework, ordered by sort_order */
 export async function getFrameworkItems(frameworkId: string): Promise<AssessmentFrameworkItem[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('assessment_framework_items')
     .select('*')
@@ -56,7 +56,7 @@ export async function getFrameworkItems(frameworkId: string): Promise<Assessment
 
 /** Get frameworks explicitly selected for an assessment (from assessment_framework_selections) */
 export async function getAssessmentFrameworks(assessmentId: string): Promise<AssessmentFramework[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data: rows } = await supabase
     .from('assessment_framework_selections')
@@ -79,7 +79,7 @@ export async function getVendorAssessmentFrameworks(
   orgId: string,
   vendorId: string,
 ): Promise<AssessmentFramework[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data: assessments } = await supabase
     .from('vendor_assessments')
@@ -112,7 +112,7 @@ export async function getVendorOnboardingAssessmentId(
   orgId: string,
   vendorId: string,
 ): Promise<string | null> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data } = await supabase
     .from('vendor_assessments')
     .select('id')
@@ -132,7 +132,7 @@ export async function removeFrameworkFromAssessment(
   assessmentId: string,
   frameworkId: string,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Soft-delete by joining through the FK relationship — avoids .in(id, [...N ids]) URL overflow.
   // First fetch the assessment_items that link to this framework's items.
@@ -199,7 +199,7 @@ export async function getAssessments(
   orgId: string,
   opts: GetAssessmentsOptions = {},
 ): Promise<VendorAssessment[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   let query = supabase
     .from('vendor_assessments')
     .select(ASSESSMENT_SELECT)
@@ -220,7 +220,7 @@ export async function getAssessmentById(
   orgId: string,
   assessmentId: string,
 ): Promise<VendorAssessment | null> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_assessments')
     .select(ASSESSMENT_SELECT)
@@ -241,7 +241,7 @@ export async function getAssessmentDetail(
   const assessment = await getAssessmentById(orgId, assessmentId)
   if (!assessment) return null
 
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const [itemsRes, findingsRes, reviewsRes, reportsRes] = await Promise.all([
     supabase
@@ -320,7 +320,7 @@ export interface CreateAssessmentInput {
 export async function createAssessment(
   input: CreateAssessmentInput,
 ): Promise<VendorAssessmentRow> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_assessments')
     .insert({
@@ -361,7 +361,7 @@ export async function addAssessmentFrameworkSelection(
   source: 'onboarding' | 'manual',
   addedByUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('assessment_framework_selections')
     .insert({ assessment_id: assessmentId, framework_id: frameworkId, source, added_by_user_id: addedByUserId })
@@ -374,7 +374,7 @@ async function removeAssessmentFrameworkSelection(
   assessmentId: string,
   frameworkId: string,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   await supabase
     .from('assessment_framework_selections')
     .delete()
@@ -390,7 +390,7 @@ export async function instantiateFrameworkItems(
   frameworkId: string,
   createdByUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const items = await getFrameworkItems(frameworkId)
   if (items.length === 0) return
 
@@ -473,7 +473,7 @@ export async function updateAssessment(
   assessmentId: string,
   input: UpdateAssessmentInput,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('vendor_assessments')
     .update({ ...input, updated_at: new Date().toISOString() })
@@ -498,7 +498,7 @@ export async function updateAssessmentItem(
   itemId: string,
   input: UpdateAssessmentItemInput,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('assessment_items')
     .update({ ...input, updated_at: new Date().toISOString() })
@@ -515,7 +515,7 @@ export async function deleteAssessment(
   assessmentId: string,
   deletedByUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const now = new Date().toISOString()
   const { error } = await supabase
     .from('vendor_assessments')
@@ -545,7 +545,7 @@ export async function addItemEvidence(
   summary: string | null,
   createdByUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase.from('assessment_item_evidence').insert({
     org_id: orgId,
     assessment_item_id: assessmentItemId,
@@ -572,7 +572,7 @@ export interface CreateFindingInput {
 }
 
 export async function createFinding(input: CreateFindingInput): Promise<AssessmentFinding> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('assessment_findings')
     .insert({
@@ -598,7 +598,7 @@ export async function updateFindingStatus(
   findingId: string,
   status: AssessmentFinding['status'],
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('assessment_findings')
     .update({ status })
@@ -624,7 +624,7 @@ export interface CreateMitigationInput {
 export async function createMitigation(
   input: CreateMitigationInput,
 ): Promise<AssessmentMitigation> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('assessment_mitigations')
     .insert({
@@ -653,7 +653,7 @@ export async function createReview(
   reviewerUserId: string | null,
   createdByUserId: string | null,
 ): Promise<AssessmentReview> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('assessment_reviews')
     .insert({
@@ -675,7 +675,7 @@ export async function completeReview(
   reviewId: string,
   summary: string,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('assessment_reviews')
     .update({

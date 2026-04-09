@@ -28,7 +28,7 @@ export async function getIssues(
   orgId: string,
   opts: GetIssuesOptions = {},
 ): Promise<Issue[]> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   let q = sb
     .from('issues')
     .select(`
@@ -82,7 +82,7 @@ export async function getIssueById(
   orgId: string,
   issueId: string,
 ): Promise<Issue | null> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   const { data: issue, error } = await sb
     .from('issues')
@@ -182,7 +182,7 @@ export interface CreateIssueInput {
 }
 
 export async function createIssue(input: CreateIssueInput): Promise<Issue> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   const { data, error } = await sb
     .from('issues')
@@ -252,7 +252,7 @@ export async function updateIssue(
   input: UpdateIssueInput,
   userId: string | null,
 ): Promise<void> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   // Get current state for activity log + vendor_id for propagation
   const { data: current } = await sb
@@ -334,7 +334,7 @@ export async function updateIssue(
 // ─── Propagate issue resolution to assessment controls ──────────────────────
 
 async function propagateResolutionToControls(issueId: string): Promise<void> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   const { data: controls } = await sb
     .from('issue_controls')
@@ -362,7 +362,7 @@ export async function findDuplicateIssues(
   vendorId: string,
   controlId: string,
 ): Promise<Issue[]> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   const { data } = await sb
     .from('issue_controls')
     .select(`
@@ -395,7 +395,7 @@ export async function getVendorIssueCounts(
   orgId: string,
   vendorId: string,
 ): Promise<VendorIssueCounts> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   const { data, error } = await sb
     .from('issues')
     .select('status, severity, due_date')
@@ -423,7 +423,7 @@ export async function getVendorIssueCounts(
 // ─── Org-wide issue counts (for nav badge / dashboard) ──────────────────────
 
 export async function getOrgIssueCounts(orgId: string) {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   const { data, error } = await sb
     .from('issues')
     .select('status, due_date')
@@ -454,7 +454,7 @@ export async function getAssessmentFindingIssueLinks(
   findingIds: string[],
 ): Promise<FindingIssueLink[]> {
   if (findingIds.length === 0) return []
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   const { data, error } = await sb
     .from('issue_findings')
@@ -486,7 +486,7 @@ export async function addIssueEvidence(
   uploadedByUserId: string | null,
   fileKey?: string | null,
 ): Promise<IssueEvidence> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   const { data, error } = await sb
     .from('issue_evidence')
     .insert({
@@ -527,7 +527,7 @@ export async function reviewIssueEvidence(
   reviewNotes: string | null,
   reviewedByUserId: string,
 ): Promise<void> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   // Get evidence to find issue_id for activity log
   const { data: ev } = await sb
@@ -632,7 +632,7 @@ export async function deleteIssueEvidence(
   evidenceId: string,
   userId: string | null,
 ): Promise<void> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   const { data: ev } = await sb
     .from('issue_evidence')
@@ -661,7 +661,7 @@ export async function promoteEvidenceToVendorDocument(
   docTypeId: string,
   userId: string | null,
 ): Promise<string> {
-  const sb = createServerClient()
+  const sb = await createServerClient()
 
   // Get evidence details
   const { data: ev, error: evErr } = await sb
@@ -725,7 +725,7 @@ async function logIssueActivity(
   newValue: string | null,
   note: string | null,
 ) {
-  const sb = createServerClient()
+  const sb = await createServerClient()
   await sb.from('issue_activity').insert({
     issue_id: issueId,
     user_id: userId,

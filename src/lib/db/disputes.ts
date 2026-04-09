@@ -5,7 +5,7 @@ export async function getVendorDisputes(
   orgId: string,
   vendorId: string,
 ): Promise<VendorDispute[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_disputes')
     .select('*')
@@ -27,7 +27,7 @@ export async function createDispute(
     created_by_user_id?: string | null
   },
 ): Promise<VendorDispute> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_disputes')
     .insert({ org_id: orgId, vendor_id: vendorId, ...input })
@@ -42,7 +42,7 @@ export async function updateDisputeStatus(
   disputeId: string,
   status: DisputeStatus,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const update: Record<string, unknown> = { status }
   if (status === 'resolved') update.resolved_at = new Date().toISOString()
 

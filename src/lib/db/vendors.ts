@@ -21,7 +21,7 @@ export async function getVendors(
   orgId: string,
   opts: GetVendorsOptions = {},
 ): Promise<Vendor[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   let query = supabase
     .from('vendors')
@@ -44,7 +44,7 @@ export async function getVendors(
 
 /** Fetch a single vendor by id (scoped to org) */
 export async function getVendorById(orgId: string, id: string): Promise<Vendor | null> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendors')
     .select(
@@ -61,7 +61,7 @@ export async function getVendorById(orgId: string, id: string): Promise<Vendor |
 /** Generate the next VND-XXXX code for an org (includes deleted vendors to avoid reuse) */
 async function generateVendorCode(
   orgId: string,
-  supabase: ReturnType<typeof createServerClient>,
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
 ): Promise<string> {
   const { data } = await supabase
     .from('vendors')
@@ -86,7 +86,7 @@ export async function createVendor(
   actorUserId?: string | null,
   explicitFrameworkIds: string[] = [],
 ): Promise<VendorRow> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const vendorCode = await generateVendorCode(orgId, supabase)
   const { data, error } = await supabase
     .from('vendors')
@@ -159,7 +159,7 @@ export async function updateVendor(
   input: UpdateVendorInput,
   actorUserId?: string | null,
 ): Promise<VendorRow> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendors')
     .update(input)
@@ -194,7 +194,7 @@ export async function softDeleteVendor(
   id: string,
   actorUserId?: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendors')
     .update({ deleted_at: new Date().toISOString() })

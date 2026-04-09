@@ -26,7 +26,7 @@ export async function uploadDocumentFile(
   vendorId: string,
   file: File,
 ): Promise<string> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
   const path = `${orgId}/${vendorId}/${crypto.randomUUID()}.${ext}`
   const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
@@ -45,7 +45,7 @@ export async function getDocumentSignedUrl(fileKey: string): Promise<string> {
   if (fileKey.startsWith('placeholder:')) {
     throw new Error('This document was recorded by filename only — no file is stored. Re-upload to enable download.')
   }
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase.storage
     .from(STORAGE_BUCKET)
     .createSignedUrl(fileKey, 3600)
@@ -58,7 +58,7 @@ export async function getDocumentSignedUrl(fileKey: string): Promise<string> {
  */
 export async function deleteDocumentFile(fileKey: string): Promise<void> {
   if (fileKey.startsWith('placeholder:')) return
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   await supabase.storage.from(STORAGE_BUCKET).remove([fileKey])
 }
 
@@ -86,7 +86,7 @@ export async function getVendorDocumentsData(
   vendorId: string,
   categoryId: string | null,
 ): Promise<VendorDocumentsData> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // ── 1. Get required docs for category ──────────────────────────────────────
   type RequiredDocRow = {
@@ -291,7 +291,7 @@ export async function getVendorDocStatusMap(
   orgId: string,
   vendorId: string,
 ): Promise<Map<string, VendorDocStatus>> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // 1. Fetch all vendor_documents for this vendor
   const { data: docs, error: docsErr } = await supabase
@@ -369,7 +369,7 @@ export async function getAssessmentDocRequestsForVendor(
   orgId: string,
   vendorId: string,
 ): Promise<AssessmentDocRequest[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // 1. Fetch active (non-archived) assessments for this vendor
   const { data: assessments } = await supabase
@@ -533,7 +533,7 @@ export async function getAssessmentDocRequestsForVendor(
 
 /** Fetch document types for the org (for custom doc creation) */
 export async function getOrgDocumentTypes(orgId: string) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   // Include both org-specific (custom) and global (standard, org_id IS NULL) document types
   const { data, error } = await supabase
     .from('document_types')
@@ -550,7 +550,7 @@ export async function getOrgDocumentTypes(orgId: string) {
  * Returns category-suggested doc types + any org-custom doc types.
  */
 export async function getVendorDocumentTypes(orgId: string, vendorId: string) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Get vendor's category_id
   const { data: vendor } = await supabase
@@ -610,7 +610,7 @@ export async function getVendorDocumentTypes(orgId: string, vendorId: string) {
 
 /** Get or create a custom document type for the org (prevents duplicate key errors on re-add) */
 export async function createDocumentType(orgId: string, name: string, category?: string | null) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Return existing active doc type if the name is already taken
   const { data: existing } = await supabase
@@ -645,7 +645,7 @@ export async function createPlaceholderDocumentVersion(
   /** If provided, used as the file_key directly (real storage path). Otherwise a placeholder is generated. */
   fileKey?: string,
 ): Promise<string> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Upsert vendor_documents (slot row)
   const { data: docRow, error: docErr } = await supabase
@@ -702,7 +702,7 @@ export async function deleteDocumentVersion(
   vendorDocId: string,
   actorUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const now = new Date().toISOString()
 
   const { data: docRow } = await supabase
@@ -739,7 +739,7 @@ export async function deleteVendorDocument(
   vendorDocId: string,
   actorUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const now = new Date().toISOString()
 
   const { data: docRow } = await supabase
@@ -773,7 +773,7 @@ export async function updateVendorDocumentMeta(
   vendorDocId: string,
   fields: { expiry_date?: string | null; verification_notes?: string | null; last_verified_at?: string | null },
 ) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('vendor_documents')
     .update(fields)

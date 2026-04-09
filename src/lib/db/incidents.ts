@@ -9,7 +9,7 @@ export async function getVendorIncidents(
   orgId: string,
   vendorId: string,
 ): Promise<VendorIncident[]> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_incidents')
     .select('*')
@@ -27,7 +27,7 @@ export async function createIncident(
   input: CreateIncidentInput,
   actorUserId: string | null,
 ): Promise<VendorIncident> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_incidents')
     .insert({
@@ -51,7 +51,7 @@ export async function updateIncident(
   incidentId: string,
   input: UpdateIncidentInput,
 ): Promise<VendorIncident> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('vendor_incidents')
     .update(input)
@@ -69,7 +69,7 @@ export async function deleteIncident(
   incidentId: string,
   actorUserId: string | null,
 ): Promise<void> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('vendor_incidents')
     .update({ deleted_at: new Date().toISOString(), deleted_by_user_id: actorUserId })

@@ -22,7 +22,7 @@ export async function computeComplianceScore(
     return { score: null, required_total: 0, required_complete: 0 }
   }
 
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Fetch required doc type IDs for this category
   const { data: reqDocs } = await supabase
@@ -163,7 +163,7 @@ export async function getVendorComplianceReadiness(
     framework: fw,
   }))
 
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   // Get vendor documents for this vendor (all of them)
   const { data: vendorDocs } = await supabase

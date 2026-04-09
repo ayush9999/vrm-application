@@ -11,7 +11,7 @@ export async function getCategoryFrameworkSuggestions(
 ): Promise<AssessmentFramework[]> {
   if (!categoryId) return []
 
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data, error } = await supabase
     .from('category_framework_suggestions')
@@ -54,7 +54,7 @@ export async function getCategoryFrameworkSuggestions(
 export async function getAllCategoryFrameworkSuggestions(
   orgId: string,
 ): Promise<Record<string, string[]>> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   const { data, error } = await supabase
     .from('category_framework_suggestions')

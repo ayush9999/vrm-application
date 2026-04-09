@@ -88,7 +88,7 @@ export interface DashboardData {
 }
 
 export async function getDashboardData(orgId: string): Promise<DashboardData> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
