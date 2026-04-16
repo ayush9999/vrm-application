@@ -173,6 +173,84 @@ export function VendorForm({
         </div>
       </div>
 
+      {/* ── Risk Profile ── */}
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Risk Profile</p>
+        <p className="text-xs mb-4 -mt-2" style={{ color: '#a99fd8' }}>
+          These fields drive auto-assignment of Review Packs.
+        </p>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Service Type</label>
+            <select
+              name="service_type"
+              defaultValue={defaultValues.service_type ?? 'other'}
+              className={inputCls}
+              style={inputStyle}
+            >
+              <option value="saas">SaaS</option>
+              <option value="contractor">Contractor</option>
+              <option value="supplier">Supplier</option>
+              <option value="logistics">Logistics</option>
+              <option value="professional_services">Professional Services</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Data Access Level</label>
+            <select
+              name="data_access_level"
+              defaultValue={defaultValues.data_access_level ?? 'none'}
+              className={inputCls}
+              style={inputStyle}
+            >
+              <option value="none">None</option>
+              <option value="internal_only">Internal Only</option>
+              <option value="personal_data">Personal Data</option>
+              <option value="sensitive_personal_data">Sensitive Personal Data</option>
+              <option value="financial_data">Financial Data</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Annual Spend</label>
+            <input
+              name="annual_spend"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={defaultValues.annual_spend ?? ''}
+              placeholder="50000"
+              className={inputCls}
+              style={inputStyle}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-6">
+            <input id="processes_personal_data" name="processes_personal_data" type="hidden" value="false" />
+            <input
+              id="processes_personal_data_check"
+              name="processes_personal_data"
+              type="checkbox"
+              value="true"
+              defaultChecked={defaultValues.processes_personal_data ?? false}
+              className="h-4 w-4 rounded"
+              style={{ accentColor: '#6c5dd3' }}
+              onChange={(e) => {
+                const hidden = e.currentTarget.form?.elements.namedItem(
+                  'processes_personal_data',
+                ) as HTMLInputElement | null
+                if (hidden) hidden.value = e.currentTarget.checked ? 'true' : 'false'
+              }}
+            />
+            <label htmlFor="processes_personal_data_check" className="text-sm font-medium" style={labelStyle}>
+              Processes personal data
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* ── Contact ── */}
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Contact</p>

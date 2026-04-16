@@ -4,11 +4,9 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
 import { createPlaceholderDocumentVersion, createDocumentType, updateVendorDocumentMeta, deleteDocumentVersion, deleteVendorDocument, uploadDocumentFile, getDocumentSignedUrl } from '@/lib/db/documents'
-import { createDispute, updateDisputeStatus } from '@/lib/db/disputes'
 import { createIncident, updateIncident, deleteIncident } from '@/lib/db/incidents'
 import { logActivity } from '@/lib/db/activity-log'
 import type { FormState } from '@/types/common'
-import type { DisputeStatus } from '@/types/dispute'
 import type { IncidentSeverity, IncidentStatus } from '@/types/incident'
 
 // ─── Upload document (placeholder) ────────────────────────────────────────────
@@ -149,83 +147,6 @@ export async function updateDocumentMetaAction(
 
   revalidatePath(`/vendors/${vendorId}`)
   return { success: true }
-}
-
-// ─── Create dispute ────────────────────────────────────────────────────────────
-
-const disputeSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional().transform((v) => v?.trim() || null),
-  vendor_document_id: z
-    .string()
-    .uuid()
-    .optional()
-    .nullable()
-    .transform((v) => v || null),
-})
-
-export async function createDisputeAction(
-  vendorId: string,
-  _prevState: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const parsed = disputeSchema.safeParse({
-    title: formData.get('title'),
-    description: formData.get('description'),
-    vendor_document_id: formData.get('vendor_document_id') || null,
-  })
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
-
-  try {
-    const user = await requireCurrentUser()
-    const dispute = await createDispute(user.orgId, vendorId, {
-      ...parsed.data,
-      created_by_user_id: user.userId,
-    })
-    await logActivity({
-      orgId: user.orgId,
-      vendorId,
-      actorUserId: user.userId,
-      entityType: 'dispute',
-      entityId: dispute.id,
-      action: 'dispute_created',
-      title: `Dispute created: "${dispute.title}"`,
-    })
-  } catch (err) {
-    return { message: err instanceof Error ? err.message : 'Failed to create dispute.' }
-  }
-
-  revalidatePath(`/vendors/${vendorId}`)
-  return { success: true }
-}
-
-// ─── Update dispute status ─────────────────────────────────────────────────────
-
-export async function updateDisputeStatusAction(
-  vendorId: string,
-  formData: FormData,
-): Promise<void> {
-  const disputeId = formData.get('dispute_id') as string
-  const status = formData.get('status') as DisputeStatus
-  if (!disputeId || !status) return
-
-  try {
-    const user = await requireCurrentUser()
-    await updateDisputeStatus(user.orgId, disputeId, status)
-    await logActivity({
-      orgId: user.orgId,
-      vendorId,
-      actorUserId: user.userId,
-      entityType: 'dispute',
-      entityId: disputeId,
-      action: 'dispute_status_updated',
-      title: `Dispute status updated to "${status}"`,
-    })
-  } catch {
-    // silently fail for simple status toggle — errors would need toast in real app
-  }
-
-  revalidatePath(`/vendors/${vendorId}`)
 }
 
 // ─── Create incident ───────────────────────────────────────────────────────────

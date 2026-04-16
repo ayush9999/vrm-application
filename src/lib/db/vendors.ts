@@ -80,7 +80,6 @@ export async function createVendor(
   orgId: string,
   input: CreateVendorInput,
   actorUserId?: string | null,
-  _explicitFrameworkIds: string[] = [],
 ): Promise<VendorRow> {
   const supabase = await createServerClient()
   const vendorCode = await generateVendorCode(orgId, supabase)

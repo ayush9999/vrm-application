@@ -2,8 +2,10 @@
 
 import { z } from 'zod'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
-import { createVendor, updateVendor, softDeleteVendor } from '@/lib/db/vendors'
+import { createVendor, updateVendor, softDeleteVendor, getVendorById } from '@/lib/db/vendors'
+import { autoAssignReviewPacks } from '@/lib/db/review-packs'
 import type { FormState } from '@/types/common'
 
 // ─── Shared Zod schema ─────────────────────────────────────────────────────────
@@ -44,6 +46,13 @@ const vendorSchema = z.object({
   next_review_due_at: nullableStr,
   last_reviewed_at: nullableStr,
   notes: nullableStr,
+  service_type: z.enum(['saas', 'contractor', 'supplier', 'logistics', 'professional_services', 'other']).default('other'),
+  data_access_level: z.enum(['none', 'internal_only', 'personal_data', 'sensitive_personal_data', 'financial_data']).default('none'),
+  processes_personal_data: z.boolean().default(false),
+  annual_spend: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    z.number().min(0).nullable().optional(),
+  ),
 })
 
 function parseVendorFormData(formData: FormData) {
@@ -62,6 +71,10 @@ function parseVendorFormData(formData: FormData) {
     next_review_due_at: (formData.get('next_review_due_at') as string) ?? '',
     last_reviewed_at: (formData.get('last_reviewed_at') as string) ?? '',
     notes: (formData.get('notes') as string) ?? '',
+    service_type: (formData.get('service_type') as string) ?? 'other',
+    data_access_level: (formData.get('data_access_level') as string) ?? 'none',
+    processes_personal_data: formData.get('processes_personal_data') === 'true',
+    annual_spend: (formData.get('annual_spend') as string) ?? '',
   }
 }
 
@@ -78,17 +91,52 @@ export async function createVendorAction(
   let vendorId: string
   try {
     const user = await requireCurrentUser()
-    // Explicitly selected frameworks from form — passed to createVendor so
-    // the auto-created onboarding assessment can attach them
-    const frameworkIds = formData.getAll('framework_ids').map(String).filter(Boolean)
-    const vendor = await createVendor(user.orgId, parsed.data, user.userId, frameworkIds)
+    const vendor = await createVendor(user.orgId, parsed.data, user.userId)
     vendorId = vendor.id
+
+    // Auto-apply Review Packs based on the vendor's risk profile
+    await autoAssignReviewPacks({
+      id: vendor.id,
+      org_id: user.orgId,
+      category_id: parsed.data.category_id,
+      criticality_tier: parsed.data.criticality_tier ?? null,
+      service_type: parsed.data.service_type,
+      data_access_level: parsed.data.data_access_level,
+      processes_personal_data: parsed.data.processes_personal_data,
+    })
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to create vendor' }
   }
 
-  // Redirect to detail page defaulting to the documents tab so onboarding starts
-  redirect(`/vendors/${vendorId}?tab=documents`)
+  // Redirect to detail page defaulting to the reviews tab to start the workflow
+  redirect(`/vendors/${vendorId}?tab=reviews`)
+}
+
+// ─── Re-apply Review Packs (for existing vendors) ─────────────────────────────
+
+export async function reapplyReviewPacksAction(
+  vendorId: string,
+): Promise<{ message?: string; success?: boolean }> {
+  try {
+    const user = await requireCurrentUser()
+    const vendor = await getVendorById(user.orgId, vendorId)
+    if (!vendor) return { message: 'Vendor not found' }
+
+    await autoAssignReviewPacks({
+      id: vendor.id,
+      org_id: user.orgId,
+      category_id: vendor.category_id,
+      criticality_tier: vendor.criticality_tier,
+      service_type: vendor.service_type,
+      data_access_level: vendor.data_access_level,
+      processes_personal_data: vendor.processes_personal_data,
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to re-apply review packs' }
+  }
 }
 
 // ─── Update ────────────────────────────────────────────────────────────────────

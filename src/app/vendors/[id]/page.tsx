@@ -3,23 +3,21 @@ import { notFound } from 'next/navigation'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorById } from '@/lib/db/vendors'
 import { getVendorDocumentsData, getAssessmentDocRequestsForVendor } from '@/lib/db/documents'
-import { getVendorDisputes } from '@/lib/db/disputes'
 import { getVendorActivityLog } from '@/lib/db/activity-log'
 import { getVendorIncidents } from '@/lib/db/incidents'
 import { getVendorIssueCounts } from '@/lib/db/issues'
+import { getVendorReviewPacks } from '@/lib/db/review-packs'
 import { VendorTabs } from './_components/VendorTabs'
 import {
   uploadDocumentAction,
   addCustomDocumentAction,
   deleteDocumentAction,
   deleteCustomDocumentAction,
-  createDisputeAction,
-  updateDisputeStatusAction,
   createIncidentAction,
   updateIncidentAction,
   deleteIncidentAction,
 } from './actions'
-import { deleteVendorAction } from '@/app/vendors/actions'
+import { deleteVendorAction, reapplyReviewPacksAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
 
 const STATUS_BADGE: Record<VendorStatus, { label: string; className: string }> = {
@@ -41,17 +39,17 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, disputes, activityLog, incidents, assessmentDocRequests, issueCounts] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
-    getVendorDisputes(user.orgId, id),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
     getAssessmentDocRequestsForVendor(user.orgId, id),
     getVendorIssueCounts(user.orgId, id),
+    getVendorReviewPacks(id),
   ])
 
   const tabParam = sp.tab as
-    | 'overview' | 'documents' | 'incidents' | 'activity' | 'disputes'
+    | 'overview' | 'reviews' | 'evidence' | 'remediation' | 'incidents' | 'activity'
     | undefined
   const defaultTab = tabParam ?? 'overview'
 
@@ -59,11 +57,11 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const boundAddCustomDoc     = addCustomDocumentAction.bind(null, id)
   const boundDeleteDoc        = deleteDocumentAction.bind(null, id)
   const boundDeleteCustomDoc  = deleteCustomDocumentAction.bind(null, id)
-  const boundCreateDispute    = createDisputeAction.bind(null, id)
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)
   const boundCreateIncident   = createIncidentAction.bind(null, id)
   const boundUpdateIncident   = updateIncidentAction.bind(null, id)
   const boundDeleteIncident   = deleteIncidentAction.bind(null, id)
+  const boundReapplyPacks     = reapplyReviewPacksAction.bind(null, id)
   const statusBadge = STATUS_BADGE[vendor.status]
 
   return (
@@ -118,20 +116,19 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           currentRole={user.role}
           documents={documents}
           assessmentDocRequests={assessmentDocRequests}
-          disputes={disputes}
           incidents={incidents}
           activityLog={activityLog}
+          reviewPacks={reviewPacks}
           defaultTab={defaultTab}
           uploadDocAction={boundUploadDoc}
           addCustomDocAction={boundAddCustomDoc}
           deleteDocAction={boundDeleteDoc}
           deleteCustomDocAction={boundDeleteCustomDoc}
-          createDisputeAction={boundCreateDispute}
-          updateDisputeStatusAction={updateDisputeStatusAction}
           createIncidentAction={boundCreateIncident}
           updateIncidentAction={boundUpdateIncident}
           deleteIncidentAction={boundDeleteIncident}
           deleteVendorAction={boundDeleteVendor}
+          reapplyReviewPacksAction={boundReapplyPacks}
           issueCounts={issueCounts}
           vendorId={id}
         />

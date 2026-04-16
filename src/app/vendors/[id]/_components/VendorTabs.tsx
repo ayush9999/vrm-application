@@ -4,27 +4,27 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import type { Vendor, VendorStatus } from '@/types/vendor'
 import type { VendorDocumentsData, AssessmentDocRequest } from '@/types/document'
-import type { VendorDispute } from '@/types/dispute'
 import type { ActivityLogEntry } from '@/types/activity'
 import type { VendorIncident } from '@/types/incident'
 import type { FormState } from '@/types/common'
 import type { OrgRole } from '@/types/org'
 import type { VendorIssueCounts } from '@/lib/db/issues'
+import type { VendorReviewPack } from '@/types/review-pack'
 import { getCountryName } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 import { DocumentsTab } from './tabs/DocumentsTab'
-import { DisputesTab } from './tabs/DisputesTab'
 import { ActivityTab } from './tabs/ActivityTab'
 import { IncidentsTab } from './tabs/IncidentsTab'
+import { ReviewsTab } from './tabs/ReviewsTab'
 
-type Tab = 'overview' | 'documents' | 'incidents' | 'activity' | 'disputes'
+type Tab = 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'documents', label: 'Documents' },
+  { id: 'overview',  label: 'Overview' },
+  { id: 'reviews',   label: 'Reviews' },
+  { id: 'evidence',  label: 'Evidence' },
   { id: 'incidents', label: 'Incidents' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'disputes', label: 'Disputes' },
+  { id: 'activity',  label: 'Activity' },
 ]
 
 export interface VendorTabsProps {
@@ -32,20 +32,19 @@ export interface VendorTabsProps {
   currentRole: OrgRole
   documents: VendorDocumentsData
   assessmentDocRequests: AssessmentDocRequest[]
-  disputes: VendorDispute[]
   incidents: VendorIncident[]
   activityLog: ActivityLogEntry[]
+  reviewPacks: VendorReviewPack[]
   defaultTab?: Tab
   uploadDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   addCustomDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteCustomDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  createDisputeAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  updateDisputeStatusAction: (vendorId: string, formData: FormData) => Promise<void>
   createIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   updateIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteVendorAction: (prevState: FormState, formData: FormData) => Promise<FormState>
+  reapplyReviewPacksAction: () => Promise<{ message?: string; success?: boolean }>
   issueCounts: VendorIssueCounts
   vendorId: string
 }
@@ -55,20 +54,19 @@ export function VendorTabs({
   currentRole,
   documents,
   assessmentDocRequests,
-  disputes,
   incidents,
   activityLog,
+  reviewPacks,
   defaultTab = 'overview',
   uploadDocAction,
   addCustomDocAction,
   deleteDocAction,
   deleteCustomDocAction,
-  createDisputeAction,
-  updateDisputeStatusAction,
   createIncidentAction,
   updateIncidentAction,
   deleteIncidentAction,
   deleteVendorAction,
+  reapplyReviewPacksAction,
   issueCounts,
   vendorId,
 }: VendorTabsProps) {
@@ -91,17 +89,20 @@ export function VendorTabs({
               }
             >
               {tab.label}
-              {tab.id === 'documents' && documents.suggested.length > 0 && (
+              {tab.id === 'reviews' && reviewPacks.length > 0 && (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full leading-none"
+                  style={{ background: 'rgba(109,93,211,0.1)', color: '#6b5fa8' }}
+                >
+                  {reviewPacks.length}
+                </span>
+              )}
+              {tab.id === 'evidence' && documents.suggested.length > 0 && (
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full leading-none"
                   style={{ background: 'rgba(109,93,211,0.1)', color: '#6b5fa8' }}
                 >
                   {documents.suggested.length}
-                </span>
-              )}
-              {tab.id === 'disputes' && disputes.length > 0 && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full leading-none">
-                  {disputes.length}
                 </span>
               )}
               {tab.id === 'incidents' && incidents.filter(i => i.status === 'open').length > 0 && (
@@ -125,7 +126,14 @@ export function VendorTabs({
           onSwitchTab={setActive}
         />
       )}
-      {active === 'documents' && (
+      {active === 'reviews' && (
+        <ReviewsTab
+          vendorId={vendor.id}
+          reviewPacks={reviewPacks}
+          reapplyReviewPacksAction={reapplyReviewPacksAction}
+        />
+      )}
+      {active === 'evidence' && (
         <DocumentsTab
           documents={documents}
           assessmentDocRequests={assessmentDocRequests}
@@ -144,14 +152,6 @@ export function VendorTabs({
         />
       )}
       {active === 'activity' && <ActivityTab activityLog={activityLog} />}
-      {active === 'disputes' && (
-        <DisputesTab
-          vendorId={vendor.id}
-          disputes={disputes}
-          createDisputeAction={createDisputeAction}
-          updateDisputeStatusAction={updateDisputeStatusAction}
-        />
-      )}
     </div>
   )
 }
@@ -367,11 +367,11 @@ function ExpiryAlertCard({ documents, onSwitchTab }: { documents: VendorDocument
         ))}
         <button
           type="button"
-          onClick={() => onSwitchTab('documents')}
+          onClick={() => onSwitchTab('evidence')}
           className="text-xs font-medium mt-1 hover:opacity-80 transition-opacity"
           style={{ color: '#6c5dd3' }}
         >
-          Go to Documents tab →
+          Go to Evidence tab →
         </button>
       </div>
     </div>
@@ -392,7 +392,7 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
           <circle cx="8" cy="11" r="0.5" fill="#6c5dd3" />
         </svg>
         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#4a4270' }}>
-          Issues & Remediation
+          Remediation
         </span>
         <Link
           href={`/issues?vendor_id=${vendorId}`}
@@ -432,7 +432,7 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
             className="text-xs font-medium px-3 py-1 rounded-full transition-all hover:opacity-80"
             style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.2)' }}
           >
-            + New Issue
+            + New Remediation
           </Link>
         </div>
       )}
