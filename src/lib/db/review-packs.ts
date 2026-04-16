@@ -32,6 +32,20 @@ export async function getReviewPacks(orgId: string): Promise<ReviewPack[]> {
   return (data ?? []) as ReviewPack[]
 }
 
+/** Fetch all review packs visible to the org including archived (custom only — standard packs can't be archived). */
+export async function getReviewPacksWithArchived(orgId: string): Promise<ReviewPack[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('review_packs')
+    .select('*')
+    .or(`org_id.is.null,org_id.eq.${orgId}`)
+    .is('deleted_at', null)
+    .order('is_active', { ascending: false })
+    .order('name')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ReviewPack[]
+}
+
 /** Fetch a single review pack with its evidence and review requirements. */
 export async function getReviewPackWithRequirements(packId: string) {
   const supabase = await createServerClient()
@@ -269,6 +283,96 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
   return packs
 }
 
+// ─── Custom Pack creation ───────────────────────────────────────────────────
+
+export interface CustomEvidenceReqInput {
+  name: string
+  description?: string | null
+  required: boolean
+  expiry_applies: boolean
+}
+
+export interface CustomReviewReqInput {
+  name: string
+  description?: string | null
+  required: boolean
+  creates_remediation_on_fail: boolean
+  linked_evidence_index?: number | null  // index into evidence requirements array
+  compliance_references?: { standard: string; reference: string }[]
+}
+
+export async function createCustomReviewPack(input: {
+  orgId: string
+  name: string
+  description?: string | null
+  applicabilityRules: ApplicabilityRules
+  reviewCadence: 'annual' | 'biannual' | 'on_incident' | 'on_renewal'
+  evidenceRequirements: CustomEvidenceReqInput[]
+  reviewRequirements: CustomReviewReqInput[]
+  createdByUserId: string
+}): Promise<{ packId: string }> {
+  const supabase = await createServerClient()
+
+  // 1. Create the pack
+  const { data: pack, error: packErr } = await supabase
+    .from('review_packs')
+    .insert({
+      org_id: input.orgId,
+      name: input.name,
+      description: input.description ?? null,
+      applicability_rules: input.applicabilityRules,
+      review_cadence: input.reviewCadence,
+      source_type: 'custom',
+      is_active: true,
+      created_by_user_id: input.createdByUserId,
+    })
+    .select('id')
+    .single()
+  if (packErr) throw new Error(packErr.message)
+  const packId = (pack as { id: string }).id
+
+  // 2. Insert evidence requirements (collect ids by index for linking)
+  const evidenceIdByIdx = new Map<number, string>()
+  if (input.evidenceRequirements.length > 0) {
+    const rows = input.evidenceRequirements.map((er, idx) => ({
+      org_id: input.orgId,
+      review_pack_id: packId,
+      name: er.name,
+      description: er.description ?? null,
+      required: er.required,
+      expiry_applies: er.expiry_applies,
+      sort_order: idx,
+    }))
+    const { data: evRows, error: evErr } = await supabase
+      .from('evidence_requirements')
+      .insert(rows)
+      .select('id')
+    if (evErr) throw new Error(evErr.message)
+    ;(evRows ?? []).forEach((r, i) => evidenceIdByIdx.set(i, (r as { id: string }).id))
+  }
+
+  // 3. Insert review requirements
+  if (input.reviewRequirements.length > 0) {
+    const rows = input.reviewRequirements.map((rr, idx) => ({
+      org_id: input.orgId,
+      review_pack_id: packId,
+      name: rr.name,
+      description: rr.description ?? null,
+      required: rr.required,
+      creates_remediation_on_fail: rr.creates_remediation_on_fail,
+      linked_evidence_requirement_id: rr.linked_evidence_index != null ? evidenceIdByIdx.get(rr.linked_evidence_index) ?? null : null,
+      compliance_references: rr.compliance_references ?? [],
+      sort_order: idx,
+    }))
+    const { error: rrErr } = await supabase
+      .from('review_requirements')
+      .insert(rows)
+    if (rrErr) throw new Error(rrErr.message)
+  }
+
+  return { packId }
+}
+
 /** Returns a human-readable explanation of why this pack was assigned to this vendor. */
 function describeMatchedRule(
   rules: ApplicabilityRules,
@@ -291,7 +395,7 @@ function describeMatchedRule(
   return 'Manually assigned'
 }
 
-/** Get review items for a specific vendor review pack. */
+/** Get review items for a specific vendor review pack — and the linked evidence row id. */
 export async function getVendorReviewItems(vendorReviewPackId: string): Promise<VendorReviewItem[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
@@ -308,11 +412,36 @@ export async function getVendorReviewItems(vendorReviewPackId: string): Promise<
     .order('created_at')
   if (error) throw new Error(error.message)
 
+  // Look up vendor_id for this pack so we can find the corresponding vendor_documents rows
+  const { data: vrpRow } = await supabase
+    .from('vendor_review_packs')
+    .select('vendor_id')
+    .eq('id', vendorReviewPackId)
+    .maybeSingle()
+  const vendorId = (vrpRow as { vendor_id: string } | null)?.vendor_id
+
+  // Build a map: evidence_requirement_id → vendor_documents.id (one per requirement, per vendor)
+  const evidenceIdByReq = new Map<string, string>()
+  if (vendorId) {
+    const { data: docs } = await supabase
+      .from('vendor_documents')
+      .select('id, evidence_requirement_id')
+      .eq('vendor_id', vendorId)
+      .not('evidence_requirement_id', 'is', null)
+      .is('deleted_at', null)
+    for (const d of (docs ?? []) as { id: string; evidence_requirement_id: string }[]) {
+      evidenceIdByReq.set(d.evidence_requirement_id, d.id)
+    }
+  }
+
   return (data ?? []).map((row: Record<string, unknown>) => {
     const req = row.review_requirements as Record<string, unknown> | null
     const pack = req?.review_packs as { name: string } | null
+    const linkedReqId = req?.linked_evidence_requirement_id as string | null | undefined
+    const linkedVendorDocId = linkedReqId ? evidenceIdByReq.get(linkedReqId) : undefined
     return {
       ...(row as unknown as VendorReviewItem),
+      linked_evidence_id: linkedVendorDocId ?? null,
       requirement_name: req?.name as string | undefined,
       requirement_description: req?.description as string | undefined,
       compliance_references: req?.compliance_references as VendorReviewItem['compliance_references'],

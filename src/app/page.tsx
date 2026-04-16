@@ -27,6 +27,13 @@ export default async function DashboardPage() {
             View Remediation
           </Link>
           <Link
+            href="/vendors/new/wizard"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all hover:opacity-90"
+            style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}
+          >
+            ⚡ Guided Setup
+          </Link>
+          <Link
             href="/vendors/new"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-white transition-all hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}

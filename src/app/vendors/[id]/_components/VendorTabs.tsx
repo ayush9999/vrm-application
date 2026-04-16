@@ -59,6 +59,13 @@ export interface VendorTabsProps {
     vendorId: string,
     evidenceId: string,
   ) => Promise<{ message?: string; success?: boolean }>
+  getEvidenceVersionsAction: (
+    vendorId: string,
+    evidenceId: string,
+  ) => Promise<{ versions?: import('@/lib/evidence-ui').EvidenceVersion[]; message?: string }>
+  getEvidenceDownloadAction: (
+    fileKey: string,
+  ) => Promise<{ url?: string; message?: string }>
   issueCounts: VendorIssueCounts
   vendorId: string
 }
@@ -80,6 +87,8 @@ export function VendorTabs({
   uploadEvidenceAction,
   setEvidenceStatusAction,
   requestEvidenceAction,
+  getEvidenceVersionsAction,
+  getEvidenceDownloadAction,
   issueCounts,
   vendorId,
 }: VendorTabsProps) {
@@ -153,6 +162,8 @@ export function VendorTabs({
           uploadEvidenceAction={uploadEvidenceAction}
           setEvidenceStatusAction={setEvidenceStatusAction}
           requestEvidenceAction={requestEvidenceAction}
+          getVersionsAction={getEvidenceVersionsAction}
+          getDownloadUrlAction={getEvidenceDownloadAction}
         />
       )}
       {active === 'incidents' && (

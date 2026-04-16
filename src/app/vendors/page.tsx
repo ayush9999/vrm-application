@@ -91,16 +91,25 @@ export default async function VendorsPage({ searchParams }: PageProps) {
             )}
           </p>
         </div>
-        <Link
-          href="/vendors/new"
-          className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium text-white transition-all hover:opacity-90"
-          style={{
-            background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)',
-            boxShadow: '0 4px 12px rgba(108,93,211,0.3)',
-          }}
-        >
-          + Add Vendor
-        </Link>
+        <div className="flex items-center gap-2">
+          <a
+            href="/vendors/export"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all hover:opacity-90"
+            style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}
+          >
+            ↓ Export CSV
+          </a>
+          <Link
+            href="/vendors/new"
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium text-white transition-all hover:opacity-90"
+            style={{
+              background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)',
+              boxShadow: '0 4px 12px rgba(108,93,211,0.3)',
+            }}
+          >
+            + Add Vendor
+          </Link>
+        </div>
       </div>
 
       {/* Search / Filter */}

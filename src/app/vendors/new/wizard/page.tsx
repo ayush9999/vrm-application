@@ -2,10 +2,11 @@ import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorCategories } from '@/lib/db/vendor-categories'
 import { getOrgUsers } from '@/lib/db/organizations'
-import { VendorForm } from '../_components/VendorForm'
-import { createVendorAction } from '../actions'
+import { COUNTRIES } from '@/lib/countries'
+import { OnboardingWizard } from './_components/OnboardingWizard'
+import { createVendorAction, previewMatchedReviewPacksAction } from '@/app/vendors/actions'
 
-export default async function NewVendorPage() {
+export default async function NewVendorWizardPage() {
   const user = await requireCurrentUser()
   const [categories, users] = await Promise.all([
     getVendorCategories(user.orgId),
@@ -24,33 +25,30 @@ export default async function NewVendorPage() {
         </Link>
         <div className="flex items-end justify-between flex-wrap gap-3 mt-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Add Vendor</h1>
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
+              New Vendor — Guided Setup
+            </h1>
             <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
-              Quick form. Prefer a guided walkthrough? Use the wizard.
+              We&apos;ll walk you through the basics, classify the vendor, preview the matching Review Packs, and create the evidence checklist.
             </p>
           </div>
           <Link
-            href="/vendors/new/wizard"
+            href="/vendors/new"
             className="text-sm font-medium px-4 py-2 rounded-full transition-colors"
             style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}
           >
-            Switch to guided wizard →
+            Use single form →
           </Link>
         </div>
       </div>
 
-      <div
-        className="bg-white rounded-2xl p-6"
-        style={{ boxShadow: '0 2px 12px rgba(109,93,211,0.08)', border: '1px solid rgba(109,93,211,0.1)' }}
-      >
-        <VendorForm
-          action={createVendorAction}
-          categories={categories}
-          users={users}
-          submitLabel="Create Vendor & Continue"
-          cancelHref="/vendors"
-        />
-      </div>
+      <OnboardingWizard
+        categories={categories}
+        users={users}
+        countries={COUNTRIES}
+        createAction={createVendorAction}
+        previewAction={previewMatchedReviewPacksAction}
+      />
     </div>
   )
 }

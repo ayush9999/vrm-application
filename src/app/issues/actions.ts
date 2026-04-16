@@ -20,13 +20,14 @@ export async function createIssueAction(
   const description = (formData.get('description') as string)?.trim() || null
   const severity = (formData.get('severity') as IssueSeverity) || 'medium'
   const source = (formData.get('source') as IssueSource) || 'manual'
-  const type = (formData.get('type') as IssueType) || 'general'
+  const type = formData.get('type') as IssueType | null
   const ownerUserId = (formData.get('owner_user_id') as string)?.trim() || null
   const dueDate = (formData.get('due_date') as string)?.trim() || null
   const remediationPlan = (formData.get('remediation_plan') as string)?.trim() || null
 
   if (!title) return { message: 'Title is required.' }
   if (!vendorId) return { message: 'Vendor is required.' }
+  if (!type) return { message: 'Category is required — please pick one.' }
 
   try {
     const issue = await createIssue({

@@ -1,8 +1,12 @@
 import Link from 'next/link'
 
 const SETTINGS_SECTIONS = [
-  { href: '/settings/members',      label: 'Members & Invites' },
-  { href: '/settings/review-packs', label: 'Review Packs' },
+  { href: '/settings/company',          label: 'Company Profile' },
+  { href: '/settings/members',          label: 'Members & Invites' },
+  { href: '/settings/review-packs',     label: 'Review Packs' },
+  { href: '/settings/approval-workflows', label: 'Approval Workflows' },
+  { href: '/settings/reminders',        label: 'Reminder Rules' },
+  { href: '/settings/custom-fields',    label: 'Custom Fields' },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

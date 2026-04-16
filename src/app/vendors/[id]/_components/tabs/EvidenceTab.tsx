@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { EvidenceByPack, EvidenceRow } from '@/lib/evidence-ui'
+import type { EvidenceByPack, EvidenceRow, EvidenceVersion } from '@/lib/evidence-ui'
 import { computeEvidenceUiStatus } from '@/lib/evidence-ui'
 import type { EvidenceStatus } from '@/types/review-pack'
 
@@ -23,6 +23,13 @@ interface EvidenceTabProps {
     vendorId: string,
     evidenceId: string,
   ) => Promise<{ message?: string; success?: boolean }>
+  getVersionsAction: (
+    vendorId: string,
+    evidenceId: string,
+  ) => Promise<{ versions?: EvidenceVersion[]; message?: string }>
+  getDownloadUrlAction: (
+    fileKey: string,
+  ) => Promise<{ url?: string; message?: string }>
 }
 
 const STATUS_OPTIONS: { value: EvidenceStatus; label: string }[] = [
@@ -38,6 +45,8 @@ export function EvidenceTab({
   uploadEvidenceAction,
   setEvidenceStatusAction,
   requestEvidenceAction,
+  getVersionsAction,
+  getDownloadUrlAction,
 }: EvidenceTabProps) {
   if (groups.length === 0) {
     return (
@@ -64,6 +73,8 @@ export function EvidenceTab({
           uploadAction={uploadEvidenceAction}
           setStatusAction={setEvidenceStatusAction}
           requestAction={requestEvidenceAction}
+          getVersionsAction={getVersionsAction}
+          getDownloadUrlAction={getDownloadUrlAction}
         />
       ))}
     </div>
@@ -76,12 +87,16 @@ function PackGroup({
   uploadAction,
   setStatusAction,
   requestAction,
+  getVersionsAction,
+  getDownloadUrlAction,
 }: {
   vendorId: string
   group: EvidenceByPack
   uploadAction: EvidenceTabProps['uploadEvidenceAction']
   setStatusAction: EvidenceTabProps['setEvidenceStatusAction']
   requestAction: EvidenceTabProps['requestEvidenceAction']
+  getVersionsAction: EvidenceTabProps['getVersionsAction']
+  getDownloadUrlAction: EvidenceTabProps['getDownloadUrlAction']
 }) {
   return (
     <section>
@@ -107,6 +122,8 @@ function PackGroup({
             uploadAction={uploadAction}
             setStatusAction={setStatusAction}
             requestAction={requestAction}
+            getVersionsAction={getVersionsAction}
+            getDownloadUrlAction={getDownloadUrlAction}
             isLast={idx === group.rows.length - 1}
           />
         ))}
@@ -121,6 +138,8 @@ function EvidenceRowItem({
   uploadAction,
   setStatusAction,
   requestAction,
+  getVersionsAction,
+  getDownloadUrlAction,
   isLast,
 }: {
   vendorId: string
@@ -128,12 +147,33 @@ function EvidenceRowItem({
   uploadAction: EvidenceTabProps['uploadEvidenceAction']
   setStatusAction: EvidenceTabProps['setEvidenceStatusAction']
   requestAction: EvidenceTabProps['requestEvidenceAction']
+  getVersionsAction: EvidenceTabProps['getVersionsAction']
+  getDownloadUrlAction: EvidenceTabProps['getDownloadUrlAction']
   isLast: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [reviewerComment, setReviewerComment] = useState(row.verification_notes ?? '')
+  const [versions, setVersions] = useState<EvidenceVersion[] | null>(null)
+  const [showVersions, setShowVersions] = useState(false)
+  const [versionsLoading, setVersionsLoading] = useState(false)
+
+  const loadVersions = async () => {
+    setShowVersions((v) => !v)
+    if (versions !== null) return
+    setVersionsLoading(true)
+    const result = await getVersionsAction(vendorId, row.id)
+    setVersionsLoading(false)
+    if (result.versions) setVersions(result.versions)
+    else if (result.message) setError(result.message)
+  }
+
+  const handleDownload = async (fileKey: string) => {
+    const r = await getDownloadUrlAction(fileKey)
+    if (r.url) window.open(r.url, '_blank')
+    else if (r.message) setError(r.message)
+  }
 
   const ui = computeEvidenceUiStatus(row)
 
@@ -312,6 +352,50 @@ function EvidenceRowItem({
             >
               Request from Vendor
             </button>
+          </div>
+
+          {/* Version history toggle */}
+          <div>
+            <button
+              type="button"
+              onClick={loadVersions}
+              className="text-[11px] font-medium hover:underline"
+              style={{ color: '#6c5dd3' }}
+            >
+              {showVersions ? '▼ Hide version history' : '▶ Show version history'}
+              {versionsLoading && ' …'}
+            </button>
+            {showVersions && versions && (
+              <div className="mt-2 rounded-lg overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}>
+                {versions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs" style={{ color: '#a99fd8' }}>No previous uploads.</p>
+                ) : (
+                  versions.map((v, i) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center gap-3 px-3 py-2 text-xs"
+                      style={{ borderBottom: i === versions.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}
+                    >
+                      <span className="font-medium truncate flex-1" style={{ color: '#1e1550' }}>
+                        {v.file_name ?? 'Unnamed file'}
+                      </span>
+                      <span style={{ color: '#a99fd8' }}>{v.uploaded_by_name ?? 'Unknown'}</span>
+                      <span style={{ color: '#a99fd8' }}>
+                        {new Date(v.uploaded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(v.file_key)}
+                        className="font-medium hover:underline"
+                        style={{ color: '#6c5dd3' }}
+                      >
+                        Download
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {error && <p className="text-xs" style={{ color: '#e11d48' }}>{error}</p>}

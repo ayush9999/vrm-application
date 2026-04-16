@@ -19,6 +19,8 @@ import {
   uploadEvidenceFileAction,
   setEvidenceStatusAction,
   requestEvidenceFromVendorAction,
+  getEvidenceVersionsAction,
+  getEvidenceVersionDownloadAction,
 } from './evidence-actions'
 import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
@@ -146,6 +148,8 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           uploadEvidenceAction={uploadEvidenceFileAction}
           setEvidenceStatusAction={setEvidenceStatusAction}
           requestEvidenceAction={requestEvidenceFromVendorAction}
+          getEvidenceVersionsAction={getEvidenceVersionsAction}
+          getEvidenceDownloadAction={getEvidenceVersionDownloadAction}
           issueCounts={issueCounts}
           vendorId={id}
         />

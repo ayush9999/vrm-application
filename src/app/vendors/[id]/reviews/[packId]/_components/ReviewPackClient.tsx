@@ -36,9 +36,14 @@ interface Props {
   aiAssistAction: (
     itemId: string,
   ) => Promise<{ suggestion?: ReviewItemDecision; rationale?: string; message?: string }>
+  uploadEvidenceAction: (
+    vendorId: string,
+    evidenceId: string,
+    formData: FormData,
+  ) => Promise<{ message?: string; success?: boolean }>
 }
 
-export function ReviewPackClient({ vendorId, packId, items: initialItems, setDecisionAction, aiAssistAction }: Props) {
+export function ReviewPackClient({ vendorId, packId, items: initialItems, setDecisionAction, aiAssistAction, uploadEvidenceAction }: Props) {
   const [items, setItems] = useState(initialItems)
   const [filter, setFilter] = useState<Filter>('all')
   const [openItem, setOpenItem] = useState<string | null>(null)
@@ -237,11 +242,13 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
           visible.map((item, idx) => (
             <ReviewItemRow
               key={item.id}
+              vendorId={vendorId}
               item={item}
               isOpen={openItem === item.id}
               onToggle={() => setOpenItem(openItem === item.id ? null : item.id)}
               onSetDecision={(decision, comment) => handleSetDecision(item.id, decision, comment)}
               onAiAssist={() => aiAssistAction(item.id)}
+              uploadEvidenceAction={uploadEvidenceAction}
               isLast={idx === visible.length - 1}
               isSelected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
@@ -265,20 +272,28 @@ function SummaryStat({ label, count, color }: { label: string; count: number; co
 // ─── Single item row + drawer ──────────────────────────────────────────────
 
 function ReviewItemRow({
+  vendorId,
   item,
   isOpen,
   onToggle,
   onSetDecision,
   onAiAssist,
+  uploadEvidenceAction,
   isLast,
   isSelected,
   onToggleSelect,
 }: {
+  vendorId: string
   item: VendorReviewItem
   isOpen: boolean
   onToggle: () => void
   onSetDecision: (decision: ReviewItemDecision, comment: string | null) => Promise<void> | void
   onAiAssist: () => Promise<{ suggestion?: ReviewItemDecision; rationale?: string; message?: string }>
+  uploadEvidenceAction: (
+    vendorId: string,
+    evidenceId: string,
+    formData: FormData,
+  ) => Promise<{ message?: string; success?: boolean }>
   isLast: boolean
   isSelected: boolean
   onToggleSelect: () => void
@@ -287,6 +302,21 @@ function ReviewItemRow({
   const [aiResult, setAiResult] = useState<{ suggestion?: ReviewItemDecision; rationale?: string } | null>(null)
   const [isAiPending, startAi] = useTransition()
   const [isPending, startDecision] = useTransition()
+  const [isUploading, startUpload] = useTransition()
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null)
+
+  const handleUpload = (formData: FormData) => {
+    if (!item.linked_evidence_id) {
+      setUploadMessage('No evidence requirement is linked to this review item.')
+      return
+    }
+    setUploadMessage(null)
+    startUpload(async () => {
+      const r = await uploadEvidenceAction(vendorId, item.linked_evidence_id!, formData)
+      if (r.success) setUploadMessage('Evidence uploaded successfully.')
+      else setUploadMessage(r.message ?? 'Upload failed')
+    })
+  }
 
   const decisionStyle = DECISIONS.find((d) => d.value === item.decision)
 
@@ -418,6 +448,38 @@ function ReviewItemRow({
               style={{ border: '1px solid rgba(109,93,211,0.2)', background: 'white', color: '#1e1550' }}
             />
           </div>
+
+          {/* Evidence upload (if this requirement has linked evidence) */}
+          {item.linked_evidence_requirement_id && (
+            <div className="rounded-lg p-2 flex items-center gap-2" style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}>
+              <span className="text-[10px] font-bold uppercase tracking-widest shrink-0" style={{ color: '#a99fd8' }}>
+                Evidence:
+              </span>
+              <form action={handleUpload} className="flex items-center gap-2 flex-1">
+                <input
+                  type="file"
+                  name="file"
+                  required
+                  className="text-xs flex-1"
+                  style={{ color: '#4a4270' }}
+                />
+                <button
+                  type="submit"
+                  disabled={isUploading || !item.linked_evidence_id}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white disabled:opacity-50"
+                  style={{ background: '#6c5dd3' }}
+                  title={!item.linked_evidence_id ? 'No evidence row is linked yet — re-apply Review Packs from the Reviews tab' : ''}
+                >
+                  {isUploading ? 'Uploading…' : 'Upload'}
+                </button>
+              </form>
+              {uploadMessage && (
+                <span className="text-[10px]" style={{ color: uploadMessage.includes('success') ? '#059669' : '#e11d48' }}>
+                  {uploadMessage}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Existing remediation link */}
           {item.created_remediation_id && (

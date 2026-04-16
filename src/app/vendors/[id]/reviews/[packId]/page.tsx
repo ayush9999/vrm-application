@@ -2,10 +2,19 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorById } from '@/lib/db/vendors'
-import { getVendorReviewItems } from '@/lib/db/review-packs'
+import { getVendorReviewItems, getVendorListMetrics } from '@/lib/db/review-packs'
+import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import { createServerClient } from '@/lib/supabase/server'
 import { ReviewPackClient } from './_components/ReviewPackClient'
-import { setReviewItemDecisionAction, aiAssistReviewItemAction } from './actions'
+import { PortalPanel } from './_components/PortalPanel'
+import {
+  setReviewItemDecisionAction,
+  aiAssistReviewItemAction,
+  createPortalLinkAction,
+  revokePortalLinkAction,
+} from './actions'
+import { uploadEvidenceFileAction } from '../../evidence-actions'
+import { listPortalLinks } from '@/lib/db/vendor-portal'
 
 interface PageProps {
   params: Promise<{ id: string; packId: string }>
@@ -36,6 +45,14 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
   const items = await getVendorReviewItems(packId)
   const pack = (vrp as { review_packs: { id: string; name: string; code: string | null; description: string | null } }).review_packs
 
+  // Vendor-level risk + readiness for the header badges
+  const metricsMap = await getVendorListMetrics([{ id: vendorId, approval_status: vendor.approval_status }])
+  const m = metricsMap.get(vendorId)
+  const riskStyle = m ? RISK_BAND_STYLE[m.risk.band] : null
+
+  // Portal links for this pack
+  const portalLinks = await listPortalLinks(packId)
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Breadcrumb */}
@@ -51,10 +68,51 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>{pack.name}</h1>
-        {pack.description && (
-          <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>{pack.description}</p>
-        )}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>{pack.name}</h1>
+            {pack.description && (
+              <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>{pack.description}</p>
+            )}
+          </div>
+          {/* Vendor-level summary badges */}
+          {m && riskStyle && (
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                  Vendor Risk
+                </div>
+                <span
+                  className="inline-flex items-center gap-1.5 mt-1 text-xs px-2 py-0.5 rounded-full font-bold uppercase"
+                  style={{ background: riskStyle.bg, color: riskStyle.color }}
+                  title={m.risk.formula}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: riskStyle.dot }} />
+                  {riskStyle.label} · {m.risk.score}
+                </span>
+              </div>
+              <div className="h-10 w-px" style={{ background: 'rgba(109,93,211,0.1)' }} />
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                  Vendor Readiness
+                </div>
+                <div className="text-sm font-semibold mt-1" style={{ color: '#1e1550' }}>
+                  {m.readinessPct}% · {m.completed} / {m.applicable}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <PortalPanel
+          vendorId={vendorId}
+          vendorReviewPackId={packId}
+          initialLinks={portalLinks}
+          createAction={createPortalLinkAction}
+          revokeAction={revokePortalLinkAction}
+        />
       </div>
 
       <ReviewPackClient
@@ -63,6 +121,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         items={items}
         setDecisionAction={setReviewItemDecisionAction}
         aiAssistAction={aiAssistReviewItemAction}
+        uploadEvidenceAction={uploadEvidenceFileAction}
       />
     </div>
   )

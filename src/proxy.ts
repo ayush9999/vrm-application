@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
   '/reset-password',
   '/auth/callback',
   '/invite', // /invite/[token] for accepting invites
+  '/portal', // /portal/[token] for vendor portal access (no auth, token-validated)
 ]
 
 function isPublicPath(pathname: string): boolean {

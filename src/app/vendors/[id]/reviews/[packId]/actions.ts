@@ -1,11 +1,15 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { requireCurrentUser } from '@/lib/current-user'
 import { updateReviewItemDecision } from '@/lib/db/review-packs'
 import { createIssue } from '@/lib/db/issues'
+import { createPortalLink, listPortalLinks, revokePortalLink } from '@/lib/db/vendor-portal'
+import { logActivity } from '@/lib/db/activity-log'
 import { createServerClient } from '@/lib/supabase/server'
 import type { ReviewItemDecision } from '@/types/review-pack'
+import type { VendorPortalLink } from '@/lib/db/vendor-portal'
 
 export async function setReviewItemDecisionAction(
   vendorId: string,
@@ -83,6 +87,83 @@ export async function setReviewItemDecisionAction(
     return { success: true, remediationId }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to update review item' }
+  }
+}
+
+// ─── Vendor Portal: create / list / revoke ───────────────────────────────────
+
+export async function createPortalLinkAction(
+  vendorId: string,
+  vendorReviewPackId: string,
+  recipientEmail: string | null,
+  expiryDays: number,
+): Promise<{ url?: string; link?: VendorPortalLink; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const link = await createPortalLink({
+      orgId: user.orgId,
+      vendorId,
+      vendorReviewPackId,
+      createdByUserId: user.userId,
+      recipientEmail,
+      expiryDays,
+    })
+
+    const h = await headers()
+    const proto = h.get('x-forwarded-proto') ?? 'http'
+    const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+    const url = `${proto}://${host}/portal/${link.token}`
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_portal_link',
+      entityId: link.id,
+      action: 'portal_link_created',
+      title: `Portal link created${recipientEmail ? ` for ${recipientEmail}` : ''}`,
+    })
+
+    revalidatePath(`/vendors/${vendorId}/reviews/${vendorReviewPackId}`)
+    return { url, link }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to create portal link' }
+  }
+}
+
+export async function listPortalLinksAction(
+  vendorReviewPackId: string,
+): Promise<{ links?: VendorPortalLink[]; message?: string }> {
+  try {
+    await requireCurrentUser()
+    const links = await listPortalLinks(vendorReviewPackId)
+    return { links }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to list portal links' }
+  }
+}
+
+export async function revokePortalLinkAction(
+  linkId: string,
+  vendorId: string,
+  vendorReviewPackId: string,
+): Promise<{ message?: string; success?: boolean }> {
+  try {
+    const user = await requireCurrentUser()
+    await revokePortalLink(linkId)
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_portal_link',
+      entityId: linkId,
+      action: 'portal_link_revoked',
+      title: 'Portal link revoked',
+    })
+    revalidatePath(`/vendors/${vendorId}/reviews/${vendorReviewPackId}`)
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to revoke link' }
   }
 }
 

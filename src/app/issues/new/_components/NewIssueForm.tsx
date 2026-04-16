@@ -85,8 +85,23 @@ export function NewIssueForm({
         />
       </div>
 
-      {/* Severity + Due Date */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Category + Severity + Due Date */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#6b5fa8' }}>Category *</label>
+          <select
+            name="type"
+            required
+            defaultValue={prefill.type ?? ''}
+            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+            style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+          >
+            <option value="" disabled>Pick a category…</option>
+            <option value="control_level">Control-level (single review item)</option>
+            <option value="grouped">Grouped (multiple review items)</option>
+            <option value="general">General (other / ad hoc)</option>
+          </select>
+        </div>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: '#6b5fa8' }}>Severity</label>
           <select
@@ -140,7 +155,6 @@ export function NewIssueForm({
       </div>
 
       <input type="hidden" name="source" value={prefill.source ?? 'manual'} />
-      <input type="hidden" name="type" value={prefill.type ?? 'general'} />
 
       <button
         type="submit"

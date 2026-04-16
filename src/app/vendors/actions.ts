@@ -114,6 +114,67 @@ export async function createVendorAction(
   redirect(`/vendors/${vendorId}?tab=reviews`)
 }
 
+// ─── Preview matched Review Packs (for the onboarding wizard) ────────────────
+
+export async function previewMatchedReviewPacksAction(input: {
+  category_id?: string | null
+  criticality_tier?: number | null
+  service_type: import('@/types/vendor').VendorServiceType
+  data_access_level: import('@/types/vendor').VendorDataAccessLevel
+  processes_personal_data: boolean
+}): Promise<{ packs?: Array<{ id: string; name: string; code: string | null; description: string | null; matched_rule: string }>; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+    const { data, error } = await supabase
+      .from('review_packs')
+      .select('*')
+      .or(`org_id.is.null,org_id.eq.${user.orgId}`)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+    if (error) throw new Error(error.message)
+
+    const { matchReviewPacks } = await import('@/lib/db/review-packs')
+    const fakeVendor = {
+      id: 'preview',
+      org_id: user.orgId,
+      category_id: input.category_id ?? null,
+      criticality_tier: input.criticality_tier ?? null,
+      service_type: input.service_type,
+      data_access_level: input.data_access_level,
+      processes_personal_data: input.processes_personal_data,
+    }
+    const matched = matchReviewPacks((data ?? []) as import('@/types/review-pack').ReviewPack[], fakeVendor, false)
+
+    return {
+      packs: matched.map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        description: p.description,
+        matched_rule: describeRule(p.applicability_rules, fakeVendor),
+      })),
+    }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to preview packs' }
+  }
+}
+
+function describeRule(
+  rules: import('@/types/review-pack').ApplicabilityRules,
+  v: { criticality_tier: number | null; service_type: string; data_access_level: string; processes_personal_data: boolean },
+): string {
+  if (v.criticality_tier === 1) return 'Tier 1 critical → all packs apply'
+  if (rules.always) return 'Always assigned'
+  if (rules.processes_personal_data && v.processes_personal_data) return 'Processes personal data'
+  if (rules.data_access_levels?.includes(v.data_access_level as never)) return `Data access: ${v.data_access_level.replace(/_/g, ' ')}`
+  if (rules.min_criticality_tier && v.criticality_tier && v.criticality_tier <= rules.min_criticality_tier) {
+    return `Criticality tier ${v.criticality_tier} ≤ ${rules.min_criticality_tier}`
+  }
+  if (rules.service_types?.includes(v.service_type as never)) return `Service type: ${v.service_type.replace(/_/g, ' ')}`
+  return 'Manually included'
+}
+
 // ─── Update Approval Status ───────────────────────────────────────────────────
 
 export async function updateApprovalStatusAction(

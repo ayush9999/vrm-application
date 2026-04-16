@@ -2,11 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
-import { setEvidenceStatus, setEvidenceExpiry } from '@/lib/db/evidence'
-import { uploadDocumentFile } from '@/lib/db/documents'
+import { setEvidenceStatus, setEvidenceExpiry, getEvidenceVersions } from '@/lib/db/evidence'
+import { uploadDocumentFile, getDocumentSignedUrl } from '@/lib/db/documents'
 import { logActivity } from '@/lib/db/activity-log'
 import { createServerClient } from '@/lib/supabase/server'
 import type { EvidenceStatus } from '@/types/review-pack'
+import type { EvidenceVersion } from '@/lib/evidence-ui'
 
 /**
  * Upload a new file for an evidence requirement.
@@ -129,6 +130,37 @@ export async function requestEvidenceFromVendorAction(
     return { success: true }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to request' }
+  }
+}
+
+/**
+ * Get the version history (all uploads) for an evidence row.
+ */
+export async function getEvidenceVersionsAction(
+  _vendorId: string,
+  evidenceId: string,
+): Promise<{ versions?: EvidenceVersion[]; message?: string }> {
+  try {
+    await requireCurrentUser()
+    const versions = await getEvidenceVersions(evidenceId)
+    return { versions }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to load versions' }
+  }
+}
+
+/**
+ * Get a signed URL to download a specific version's file.
+ */
+export async function getEvidenceVersionDownloadAction(
+  fileKey: string,
+): Promise<{ url?: string; message?: string }> {
+  try {
+    await requireCurrentUser()
+    const url = await getDocumentSignedUrl(fileKey)
+    return { url }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to get download URL' }
   }
 }
 
