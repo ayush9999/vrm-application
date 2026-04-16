@@ -18,7 +18,7 @@ import { IncidentsTab } from './tabs/IncidentsTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
 import { ApprovalWorkflow } from './ApprovalWorkflow'
 import type { VendorApprovalStatus } from '@/types/vendor'
-import type { EvidenceByPack } from '@/lib/db/evidence'
+import type { EvidenceByPack } from '@/lib/evidence-ui'
 import type { EvidenceStatus } from '@/types/review-pack'
 
 type Tab = 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'

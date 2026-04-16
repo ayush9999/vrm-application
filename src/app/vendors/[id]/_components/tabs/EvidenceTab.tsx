@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { EvidenceByPack, EvidenceRow } from '@/lib/db/evidence'
-import { computeEvidenceUiStatus } from '@/lib/db/evidence'
+import type { EvidenceByPack, EvidenceRow } from '@/lib/evidence-ui'
+import { computeEvidenceUiStatus } from '@/lib/evidence-ui'
 import type { EvidenceStatus } from '@/types/review-pack'
 
 interface EvidenceTabProps {

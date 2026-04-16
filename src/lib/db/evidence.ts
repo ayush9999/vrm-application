@@ -1,49 +1,10 @@
 import { createServerClient } from '@/lib/supabase/server'
 import type { EvidenceStatus } from '@/types/review-pack'
+import type { EvidenceRow, EvidenceByPack, EvidenceVersion } from '@/lib/evidence-ui'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-export interface EvidenceRow {
-  /** vendor_documents row id (the instance for this vendor) */
-  id: string
-  vendor_id: string
-  evidence_requirement_id: string | null
-  evidence_status: EvidenceStatus
-  expiry_date: string | null
-  current_version_id: string | null
-  last_verified_at: string | null
-  verified_by_user_id: string | null
-  verification_notes: string | null
-  // joined evidence requirement
-  requirement_name: string | null
-  requirement_description: string | null
-  requirement_required: boolean
-  requirement_expiry_applies: boolean
-  // joined review pack (parent of requirement)
-  pack_id: string | null
-  pack_name: string | null
-  pack_code: string | null
-  // joined current version (latest file)
-  file_name: string | null
-  file_key: string | null
-  uploaded_at: string | null
-}
-
-export interface EvidenceVersion {
-  id: string
-  file_name: string | null
-  file_key: string
-  uploaded_at: string
-  uploaded_by_user_id: string | null
-  uploaded_by_name?: string | null
-}
-
-export interface EvidenceByPack {
-  pack_id: string | null
-  pack_name: string | null
-  pack_code: string | null
-  rows: EvidenceRow[]
-}
+// Re-export types for back-compat (callers that previously imported from here keep working)
+export type { EvidenceRow, EvidenceByPack, EvidenceVersion } from '@/lib/evidence-ui'
+export { computeEvidenceUiStatus } from '@/lib/evidence-ui'
 
 // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -180,40 +141,6 @@ export async function getEvidenceVersions(vendorDocumentId: string): Promise<Evi
       uploaded_by_name: row.users?.name ?? null,
     }
   })
-}
-
-// ─── Status helpers ─────────────────────────────────────────────────────────
-
-export function computeEvidenceUiStatus(row: EvidenceRow): {
-  status: EvidenceStatus
-  label: string
-  color: string
-  bg: string
-  showExpiry: boolean
-} {
-  let status: EvidenceStatus = row.evidence_status
-
-  // Auto-mark Expired if past expiry date AND was approved
-  if (status === 'approved' && row.expiry_date) {
-    const exp = new Date(row.expiry_date)
-    if (exp < new Date()) status = 'expired'
-  }
-
-  const map: Record<EvidenceStatus, { label: string; color: string; bg: string }> = {
-    missing:       { label: 'Missing',       color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' },
-    uploaded:      { label: 'Uploaded',      color: '#0284c7', bg: 'rgba(14,165,233,0.1)' },
-    under_review:  { label: 'Under Review',  color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-    approved:      { label: 'Approved',      color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-    rejected:      { label: 'Rejected',      color: '#e11d48', bg: 'rgba(225,29,72,0.1)' },
-    expired:       { label: 'Expired',       color: '#e11d48', bg: 'rgba(225,29,72,0.1)' },
-    waived:        { label: 'Waived',        color: '#64748b', bg: 'rgba(148,163,184,0.15)' },
-  }
-
-  return {
-    status,
-    ...map[status],
-    showExpiry: status === 'approved' || status === 'expired',
-  }
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────────
