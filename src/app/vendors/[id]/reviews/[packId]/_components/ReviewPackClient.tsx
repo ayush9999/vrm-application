@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import Link from 'next/link'
 import type { VendorReviewItem, ReviewItemDecision } from '@/types/review-pack'
 
 const DECISIONS: { value: ReviewItemDecision; label: string; color: string; bg: string }[] = [
@@ -31,7 +32,7 @@ interface Props {
     itemId: string,
     decision: ReviewItemDecision,
     comment: string | null,
-  ) => Promise<{ message?: string; success?: boolean }>
+  ) => Promise<{ message?: string; success?: boolean; remediationId?: string }>
   aiAssistAction: (
     itemId: string,
   ) => Promise<{ suggestion?: ReviewItemDecision; rationale?: string; message?: string }>
@@ -58,7 +59,9 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
     return { total, passed, failed, not_started, na, applicable, pct }
   }, [items])
 
-  const handleSetDecision = (itemId: string, decision: ReviewItemDecision, comment: string | null) => {
+  const [createdRemediation, setCreatedRemediation] = useState<{ itemId: string; remediationId: string } | null>(null)
+
+  const handleSetDecision = async (itemId: string, decision: ReviewItemDecision, comment: string | null) => {
     // Optimistic update
     setItems((prev) =>
       prev.map((i) =>
@@ -67,14 +70,43 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
           : i,
       ),
     )
-    setDecisionAction(vendorId, packId, itemId, decision, comment).catch(() => {
-      // revert on error — for simplicity just reload
+    const result = await setDecisionAction(vendorId, packId, itemId, decision, comment)
+    if (!result.success) {
       window.location.reload()
-    })
+      return
+    }
+    if (result.remediationId) {
+      setCreatedRemediation({ itemId, remediationId: result.remediationId })
+      setItems((prev) =>
+        prev.map((i) => (i.id === itemId ? { ...i, created_remediation_id: result.remediationId! } : i)),
+      )
+    }
   }
 
   return (
     <div className="space-y-4">
+      {/* Remediation created banner */}
+      {createdRemediation && (
+        <div
+          className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+          style={{ background: 'rgba(225,29,72,0.05)', border: '1px solid rgba(225,29,72,0.15)' }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ background: '#e11d48' }} />
+            <span className="text-xs font-semibold" style={{ color: '#be123c' }}>
+              A remediation has been auto-created for the failed item.
+            </span>
+          </div>
+          <Link
+            href={`/issues/${createdRemediation.remediationId}`}
+            className="text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ background: 'white', color: '#e11d48', border: '1px solid rgba(225,29,72,0.3)' }}
+          >
+            View Remediation →
+          </Link>
+        </div>
+      )}
+
       {/* Summary bar */}
       <div
         className="rounded-2xl p-4 flex items-center gap-6"
@@ -167,7 +199,7 @@ function ReviewItemRow({
   item: VendorReviewItem
   isOpen: boolean
   onToggle: () => void
-  onSetDecision: (decision: ReviewItemDecision, comment: string | null) => void
+  onSetDecision: (decision: ReviewItemDecision, comment: string | null) => Promise<void> | void
   onAiAssist: () => Promise<{ suggestion?: ReviewItemDecision; rationale?: string; message?: string }>
   isLast: boolean
 }) {
@@ -293,6 +325,20 @@ function ReviewItemRow({
               style={{ border: '1px solid rgba(109,93,211,0.2)', background: 'white', color: '#1e1550' }}
             />
           </div>
+
+          {/* Existing remediation link */}
+          {item.created_remediation_id && (
+            <div className="text-xs flex items-center gap-2">
+              <span style={{ color: '#a99fd8' }}>Remediation:</span>
+              <Link
+                href={`/issues/${item.created_remediation_id}`}
+                className="font-medium hover:underline"
+                style={{ color: '#e11d48' }}
+              >
+                View open remediation →
+              </Link>
+            </div>
+          )}
 
           {/* Decision buttons + AI Assist */}
           <div className="flex items-center gap-2 flex-wrap">

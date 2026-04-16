@@ -17,7 +17,7 @@ import {
   updateIncidentAction,
   deleteIncidentAction,
 } from './actions'
-import { deleteVendorAction, reapplyReviewPacksAction } from '@/app/vendors/actions'
+import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
 
 const STATUS_BADGE: Record<VendorStatus, { label: string; className: string }> = {
@@ -129,6 +129,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           deleteIncidentAction={boundDeleteIncident}
           deleteVendorAction={boundDeleteVendor}
           reapplyReviewPacksAction={boundReapplyPacks}
+          updateApprovalStatusAction={updateApprovalStatusAction}
           issueCounts={issueCounts}
           vendorId={id}
         />

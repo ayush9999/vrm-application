@@ -16,6 +16,8 @@ import { DocumentsTab } from './tabs/DocumentsTab'
 import { ActivityTab } from './tabs/ActivityTab'
 import { IncidentsTab } from './tabs/IncidentsTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
+import { ApprovalWorkflow } from './ApprovalWorkflow'
+import type { VendorApprovalStatus } from '@/types/vendor'
 
 type Tab = 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
 
@@ -45,6 +47,11 @@ export interface VendorTabsProps {
   deleteIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteVendorAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   reapplyReviewPacksAction: () => Promise<{ message?: string; success?: boolean }>
+  updateApprovalStatusAction: (
+    vendorId: string,
+    newStatus: VendorApprovalStatus,
+    exceptionReason?: string,
+  ) => Promise<{ message?: string; success?: boolean }>
   issueCounts: VendorIssueCounts
   vendorId: string
 }
@@ -67,6 +74,7 @@ export function VendorTabs({
   deleteIncidentAction,
   deleteVendorAction,
   reapplyReviewPacksAction,
+  updateApprovalStatusAction,
   issueCounts,
   vendorId,
 }: VendorTabsProps) {
@@ -124,6 +132,7 @@ export function VendorTabs({
           issueCounts={issueCounts}
           vendorId={vendorId}
           onSwitchTab={setActive}
+          updateApprovalStatusAction={updateApprovalStatusAction}
         />
       )}
       {active === 'reviews' && (
@@ -166,6 +175,7 @@ function OverviewTab({
   issueCounts,
   vendorId,
   onSwitchTab,
+  updateApprovalStatusAction,
 }: {
   vendor: Vendor
   currentRole: OrgRole
@@ -174,6 +184,11 @@ function OverviewTab({
   issueCounts: VendorIssueCounts
   vendorId: string
   onSwitchTab: (tab: Tab) => void
+  updateApprovalStatusAction: (
+    vendorId: string,
+    newStatus: VendorApprovalStatus,
+    exceptionReason?: string,
+  ) => Promise<{ message?: string; success?: boolean }>
 }) {
   const fields: { label: string; value: React.ReactNode }[] = [
     { label: 'Name', value: vendor.name },
@@ -295,6 +310,15 @@ function OverviewTab({
           </div>
         )}
       </div>
+
+      {/* Approval Workflow */}
+      <ApprovalWorkflow
+        vendorId={vendorId}
+        currentStatus={vendor.approval_status}
+        approvedAt={vendor.approved_at}
+        exceptionReason={vendor.exception_reason}
+        updateAction={updateApprovalStatusAction}
+      />
 
       {/* Document Expiry Alerts */}
       <ExpiryAlertCard documents={documents} onSwitchTab={onSwitchTab} />

@@ -112,6 +112,53 @@ export async function createVendorAction(
   redirect(`/vendors/${vendorId}?tab=reviews`)
 }
 
+// ─── Update Approval Status ───────────────────────────────────────────────────
+
+export async function updateApprovalStatusAction(
+  vendorId: string,
+  newStatus: 'draft' | 'waiting_on_vendor' | 'in_internal_review' | 'approved' | 'approved_with_exception' | 'blocked' | 'suspended' | 'offboarded',
+  exceptionReason?: string,
+): Promise<{ message?: string; success?: boolean }> {
+  try {
+    const user = await requireCurrentUser()
+    const { createServerClient } = await import('@/lib/supabase/server')
+    const { logActivity } = await import('@/lib/db/activity-log')
+    const supabase = await createServerClient()
+
+    const update: Record<string, unknown> = { approval_status: newStatus }
+    if (newStatus === 'approved' || newStatus === 'approved_with_exception') {
+      update.approved_at = new Date().toISOString()
+      update.approved_by_user_id = user.userId
+    }
+    if (newStatus === 'approved_with_exception' && exceptionReason) {
+      update.exception_reason = exceptionReason
+    }
+
+    const { error } = await supabase
+      .from('vendors')
+      .update(update)
+      .eq('id', vendorId)
+      .eq('org_id', user.orgId)
+    if (error) throw new Error(error.message)
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor',
+      entityId: vendorId,
+      action: 'approval_status_changed',
+      title: `Approval status set to ${newStatus.replace(/_/g, ' ')}`,
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath('/vendors')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to update approval status' }
+  }
+}
+
 // ─── Re-apply Review Packs (for existing vendors) ─────────────────────────────
 
 export async function reapplyReviewPacksAction(

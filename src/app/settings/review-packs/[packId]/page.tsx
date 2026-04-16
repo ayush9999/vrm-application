@@ -1,0 +1,182 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { requireCurrentUser } from '@/lib/current-user'
+import { getReviewPackWithRequirements } from '@/lib/db/review-packs'
+
+interface PageProps {
+  params: Promise<{ packId: string }>
+}
+
+export default async function ReviewPackDetailPage({ params }: PageProps) {
+  const { packId } = await params
+  const user = await requireCurrentUser()
+
+  let data
+  try {
+    data = await getReviewPackWithRequirements(packId)
+  } catch {
+    notFound()
+  }
+
+  const { pack, evidenceRequirements, reviewRequirements } = data
+
+  // Check this pack is visible to the user (RLS would have filtered, but defensive)
+  if (pack.org_id !== null && pack.org_id !== user.orgId) notFound()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
+        <Link href="/settings/review-packs" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>
+          Review Packs
+        </Link>
+        <span>/</span>
+        <span className="font-medium" style={{ color: '#1e1550' }}>{pack.name}</span>
+      </div>
+
+      <div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>{pack.name}</h2>
+          {pack.code && (
+            <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.08)', color: '#6b5fa8' }}>
+              {pack.code}
+            </span>
+          )}
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+            style={{
+              background: pack.source_type === 'standard' ? 'rgba(108,93,211,0.08)' : 'rgba(5,150,105,0.08)',
+              color: pack.source_type === 'standard' ? '#6c5dd3' : '#059669',
+            }}
+          >
+            {pack.source_type}
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(245,158,11,0.06)', color: '#d97706' }}>
+            {pack.review_cadence}
+          </span>
+        </div>
+        {pack.description && (
+          <p className="text-sm mt-2 leading-relaxed" style={{ color: '#4a4270' }}>
+            {pack.description}
+          </p>
+        )}
+      </div>
+
+      {/* Applicability */}
+      <Section title="Applicability Rules">
+        <pre
+          className="text-xs p-3 rounded-lg font-mono overflow-x-auto"
+          style={{ background: 'rgba(109,93,211,0.04)', color: '#4a4270', border: '1px solid rgba(109,93,211,0.08)' }}
+        >
+          {JSON.stringify(pack.applicability_rules, null, 2)}
+        </pre>
+        <p className="text-xs mt-2" style={{ color: '#a99fd8' }}>
+          These rules drive auto-assignment of this pack to vendors based on their profile.
+        </p>
+      </Section>
+
+      {/* Evidence requirements */}
+      <Section title={`Evidence Requirements (${evidenceRequirements.length})`}>
+        {evidenceRequirements.length === 0 ? (
+          <p className="text-sm" style={{ color: '#a99fd8' }}>No evidence requirements defined.</p>
+        ) : (
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
+          >
+            {evidenceRequirements.map((er, idx) => (
+              <div
+                key={er.id}
+                className="px-4 py-3 flex items-start gap-3"
+                style={{ borderBottom: idx === evidenceRequirements.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}
+              >
+                <span className="text-xs font-mono pt-0.5 shrink-0" style={{ color: '#a99fd8' }}>{idx + 1}.</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{er.name}</span>
+                    {er.required && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
+                        Required
+                      </span>
+                    )}
+                    {er.expiry_applies && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(245,158,11,0.08)', color: '#d97706' }}>
+                        Has Expiry
+                      </span>
+                    )}
+                  </div>
+                  {er.description && (
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{er.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* Review requirements */}
+      <Section title={`Review Items (${reviewRequirements.length})`}>
+        {reviewRequirements.length === 0 ? (
+          <p className="text-sm" style={{ color: '#a99fd8' }}>No review items defined.</p>
+        ) : (
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
+          >
+            {reviewRequirements.map((rr, idx) => (
+              <div
+                key={rr.id}
+                className="px-4 py-3 flex items-start gap-3"
+                style={{ borderBottom: idx === reviewRequirements.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}
+              >
+                <span className="text-xs font-mono pt-0.5 shrink-0" style={{ color: '#a99fd8' }}>{idx + 1}.</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{rr.name}</span>
+                    {rr.required && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
+                        Required
+                      </span>
+                    )}
+                    {rr.creates_remediation_on_fail && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(108,93,211,0.08)', color: '#6c5dd3' }}>
+                        Auto-Remediation
+                      </span>
+                    )}
+                  </div>
+                  {rr.description && (
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{rr.description}</p>
+                  )}
+                  {rr.compliance_references && rr.compliance_references.length > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      {rr.compliance_references.map((ref, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                          style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}
+                        >
+                          {ref.standard} {ref.reference}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#a99fd8' }}>
+        {title}
+      </h3>
+      {children}
+    </section>
+  )
+}

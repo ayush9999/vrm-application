@@ -313,6 +313,120 @@ export async function updateReviewItemDecision(
 
 // ─── Readiness calculation ──────────────────────────────────────────────────
 
+/**
+ * Get readiness + counts for a batch of vendors (for the vendor list).
+ * Returns a Map keyed by vendor_id.
+ */
+export async function getVendorListMetrics(vendorIds: string[]): Promise<Map<string, {
+  readinessPct: number
+  applicable: number
+  completed: number
+  missingEvidenceCount: number
+  openRemediationCount: number
+}>> {
+  const result = new Map<string, {
+    readinessPct: number
+    applicable: number
+    completed: number
+    missingEvidenceCount: number
+    openRemediationCount: number
+  }>()
+  if (vendorIds.length === 0) return result
+
+  const supabase = await createServerClient()
+
+  // Get all vendor_review_packs for these vendors
+  const { data: vrps } = await supabase
+    .from('vendor_review_packs')
+    .select('id, vendor_id')
+    .in('vendor_id', vendorIds)
+    .is('deleted_at', null)
+
+  const vrpByVendor = new Map<string, string[]>()
+  for (const v of (vrps ?? []) as { id: string; vendor_id: string }[]) {
+    if (!vrpByVendor.has(v.vendor_id)) vrpByVendor.set(v.vendor_id, [])
+    vrpByVendor.get(v.vendor_id)!.push(v.id)
+  }
+
+  // Get all review items for those packs
+  const allVrpIds = (vrps ?? []).map((v: { id: string }) => v.id)
+  const itemsByVendor = new Map<string, { decision: ReviewItemDecision }[]>()
+  if (allVrpIds.length > 0) {
+    const { data: items } = await supabase
+      .from('vendor_review_items')
+      .select('vendor_review_pack_id, decision')
+      .in('vendor_review_pack_id', allVrpIds)
+
+    const itemsByVrp = new Map<string, ReviewItemDecision[]>()
+    for (const it of (items ?? []) as { vendor_review_pack_id: string; decision: ReviewItemDecision }[]) {
+      if (!itemsByVrp.has(it.vendor_review_pack_id)) itemsByVrp.set(it.vendor_review_pack_id, [])
+      itemsByVrp.get(it.vendor_review_pack_id)!.push(it.decision)
+    }
+
+    for (const [vendorId, vrpIds] of vrpByVendor) {
+      const allDecisions: { decision: ReviewItemDecision }[] = []
+      for (const vrpId of vrpIds) {
+        const decs = itemsByVrp.get(vrpId) ?? []
+        for (const d of decs) allDecisions.push({ decision: d })
+      }
+      itemsByVendor.set(vendorId, allDecisions)
+    }
+  }
+
+  // Get evidence counts (missing) for these vendors
+  const { data: evidence } = await supabase
+    .from('vendor_documents')
+    .select('vendor_id, evidence_status')
+    .in('vendor_id', vendorIds)
+    .not('evidence_requirement_id', 'is', null)
+    .is('deleted_at', null)
+
+  const evidenceByVendor = new Map<string, { status: string }[]>()
+  for (const e of (evidence ?? []) as { vendor_id: string; evidence_status: string }[]) {
+    if (!evidenceByVendor.has(e.vendor_id)) evidenceByVendor.set(e.vendor_id, [])
+    evidenceByVendor.get(e.vendor_id)!.push({ status: e.evidence_status })
+  }
+
+  // Get open remediation (issues) counts
+  const { data: openIssues } = await supabase
+    .from('issues')
+    .select('vendor_id, status')
+    .in('vendor_id', vendorIds)
+    .is('deleted_at', null)
+    .in('status', ['open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred'])
+
+  const remediationByVendor = new Map<string, number>()
+  for (const i of (openIssues ?? []) as { vendor_id: string }[]) {
+    remediationByVendor.set(i.vendor_id, (remediationByVendor.get(i.vendor_id) ?? 0) + 1)
+  }
+
+  // Compute final metrics per vendor
+  for (const vendorId of vendorIds) {
+    const decisions = itemsByVendor.get(vendorId) ?? []
+    const reviewApplicable = decisions.filter((d) => d.decision !== 'na').length
+    const reviewCompleted = decisions.filter((d) => d.decision === 'pass' || d.decision === 'exception_approved').length
+
+    const evidenceItems = evidenceByVendor.get(vendorId) ?? []
+    const evidenceApplicable = evidenceItems.length
+    const evidenceCompleted = evidenceItems.filter((e) => e.status === 'approved').length
+    const missingEvidenceCount = evidenceItems.filter((e) => e.status === 'missing' || e.status === 'rejected').length
+
+    const totalApplicable = reviewApplicable + evidenceApplicable
+    const totalCompleted = reviewCompleted + evidenceCompleted
+    const pct = totalApplicable > 0 ? Math.round((totalCompleted / totalApplicable) * 100) : 0
+
+    result.set(vendorId, {
+      readinessPct: pct,
+      applicable: totalApplicable,
+      completed: totalCompleted,
+      missingEvidenceCount,
+      openRemediationCount: remediationByVendor.get(vendorId) ?? 0,
+    })
+  }
+
+  return result
+}
+
 /** Calculate readiness score for a vendor across all assigned review packs. */
 export async function getVendorReadiness(vendorId: string): Promise<ReadinessScore> {
   const supabase = await createServerClient()
