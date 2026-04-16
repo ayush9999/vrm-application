@@ -6,17 +6,20 @@ import { getVendorDocumentsData, getAssessmentDocRequestsForVendor } from '@/lib
 import { getVendorActivityLog } from '@/lib/db/activity-log'
 import { getVendorIncidents } from '@/lib/db/incidents'
 import { getVendorIssueCounts } from '@/lib/db/issues'
-import { getVendorReviewPacks } from '@/lib/db/review-packs'
+import { getVendorReviewPacks, getVendorListMetrics } from '@/lib/db/review-packs'
+import { getVendorEvidenceGrouped } from '@/lib/db/evidence'
+import { VendorHeaderStats } from './_components/VendorHeaderStats'
 import { VendorTabs } from './_components/VendorTabs'
 import {
-  uploadDocumentAction,
-  addCustomDocumentAction,
-  deleteDocumentAction,
-  deleteCustomDocumentAction,
   createIncidentAction,
   updateIncidentAction,
   deleteIncidentAction,
 } from './actions'
+import {
+  uploadEvidenceFileAction,
+  setEvidenceStatusAction,
+  requestEvidenceFromVendorAction,
+} from './evidence-actions'
 import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
 
@@ -39,24 +42,23 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
     getAssessmentDocRequestsForVendor(user.orgId, id),
     getVendorIssueCounts(user.orgId, id),
     getVendorReviewPacks(id),
+    getVendorEvidenceGrouped(id),
+    getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
   ])
+  const metrics = metricsMap.get(id)!
 
   const tabParam = sp.tab as
     | 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
     | undefined
   const defaultTab = tabParam ?? 'overview'
 
-  const boundUploadDoc        = uploadDocumentAction.bind(null, id)
-  const boundAddCustomDoc     = addCustomDocumentAction.bind(null, id)
-  const boundDeleteDoc        = deleteDocumentAction.bind(null, id)
-  const boundDeleteCustomDoc  = deleteCustomDocumentAction.bind(null, id)
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)
   const boundCreateIncident   = createIncidentAction.bind(null, id)
   const boundUpdateIncident   = updateIncidentAction.bind(null, id)
@@ -106,6 +108,17 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         </div>
       </div>
 
+      {/* Three-concept header */}
+      <VendorHeaderStats
+        readinessPct={metrics.readinessPct}
+        applicable={metrics.applicable}
+        completed={metrics.completed}
+        riskBand={metrics.risk.band}
+        riskScore={metrics.risk.score}
+        riskFormula={metrics.risk.formula}
+        approvalStatus={vendor.approval_status}
+      />
+
       {/* Tabs */}
       <div
         className="bg-white rounded-2xl p-6"
@@ -119,17 +132,17 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           incidents={incidents}
           activityLog={activityLog}
           reviewPacks={reviewPacks}
+          evidenceGroups={evidenceGroups}
           defaultTab={defaultTab}
-          uploadDocAction={boundUploadDoc}
-          addCustomDocAction={boundAddCustomDoc}
-          deleteDocAction={boundDeleteDoc}
-          deleteCustomDocAction={boundDeleteCustomDoc}
           createIncidentAction={boundCreateIncident}
           updateIncidentAction={boundUpdateIncident}
           deleteIncidentAction={boundDeleteIncident}
           deleteVendorAction={boundDeleteVendor}
           reapplyReviewPacksAction={boundReapplyPacks}
           updateApprovalStatusAction={updateApprovalStatusAction}
+          uploadEvidenceAction={uploadEvidenceFileAction}
+          setEvidenceStatusAction={setEvidenceStatusAction}
+          requestEvidenceAction={requestEvidenceFromVendorAction}
           issueCounts={issueCounts}
           vendorId={id}
         />

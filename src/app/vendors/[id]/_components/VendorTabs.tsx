@@ -12,12 +12,14 @@ import type { VendorIssueCounts } from '@/lib/db/issues'
 import type { VendorReviewPack } from '@/types/review-pack'
 import { getCountryName } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
-import { DocumentsTab } from './tabs/DocumentsTab'
+import { EvidenceTab } from './tabs/EvidenceTab'
 import { ActivityTab } from './tabs/ActivityTab'
 import { IncidentsTab } from './tabs/IncidentsTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
 import { ApprovalWorkflow } from './ApprovalWorkflow'
 import type { VendorApprovalStatus } from '@/types/vendor'
+import type { EvidenceByPack } from '@/lib/db/evidence'
+import type { EvidenceStatus } from '@/types/review-pack'
 
 type Tab = 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
 
@@ -37,11 +39,8 @@ export interface VendorTabsProps {
   incidents: VendorIncident[]
   activityLog: ActivityLogEntry[]
   reviewPacks: VendorReviewPack[]
+  evidenceGroups: EvidenceByPack[]
   defaultTab?: Tab
-  uploadDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  addCustomDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  deleteDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  deleteCustomDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   createIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   updateIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
@@ -52,6 +51,21 @@ export interface VendorTabsProps {
     newStatus: VendorApprovalStatus,
     exceptionReason?: string,
   ) => Promise<{ message?: string; success?: boolean }>
+  uploadEvidenceAction: (
+    vendorId: string,
+    evidenceId: string,
+    formData: FormData,
+  ) => Promise<{ message?: string; success?: boolean }>
+  setEvidenceStatusAction: (
+    vendorId: string,
+    evidenceId: string,
+    status: EvidenceStatus,
+    comment: string | null,
+  ) => Promise<{ message?: string; success?: boolean }>
+  requestEvidenceAction: (
+    vendorId: string,
+    evidenceId: string,
+  ) => Promise<{ message?: string; success?: boolean }>
   issueCounts: VendorIssueCounts
   vendorId: string
 }
@@ -60,21 +74,20 @@ export function VendorTabs({
   vendor,
   currentRole,
   documents,
-  assessmentDocRequests,
   incidents,
   activityLog,
   reviewPacks,
+  evidenceGroups,
   defaultTab = 'overview',
-  uploadDocAction,
-  addCustomDocAction,
-  deleteDocAction,
-  deleteCustomDocAction,
   createIncidentAction,
   updateIncidentAction,
   deleteIncidentAction,
   deleteVendorAction,
   reapplyReviewPacksAction,
   updateApprovalStatusAction,
+  uploadEvidenceAction,
+  setEvidenceStatusAction,
+  requestEvidenceAction,
   issueCounts,
   vendorId,
 }: VendorTabsProps) {
@@ -105,12 +118,12 @@ export function VendorTabs({
                   {reviewPacks.length}
                 </span>
               )}
-              {tab.id === 'evidence' && documents.suggested.length > 0 && (
+              {tab.id === 'evidence' && evidenceGroups.reduce((s, g) => s + g.rows.length, 0) > 0 && (
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full leading-none"
                   style={{ background: 'rgba(109,93,211,0.1)', color: '#6b5fa8' }}
                 >
-                  {documents.suggested.length}
+                  {evidenceGroups.reduce((s, g) => s + g.rows.length, 0)}
                 </span>
               )}
               {tab.id === 'incidents' && incidents.filter(i => i.status === 'open').length > 0 && (
@@ -143,13 +156,12 @@ export function VendorTabs({
         />
       )}
       {active === 'evidence' && (
-        <DocumentsTab
-          documents={documents}
-          assessmentDocRequests={assessmentDocRequests}
-          uploadDocAction={uploadDocAction}
-          addCustomDocAction={addCustomDocAction}
-          deleteDocAction={deleteDocAction}
-          deleteCustomDocAction={deleteCustomDocAction}
+        <EvidenceTab
+          vendorId={vendor.id}
+          groups={evidenceGroups}
+          uploadEvidenceAction={uploadEvidenceAction}
+          setEvidenceStatusAction={setEvidenceStatusAction}
+          requestEvidenceAction={requestEvidenceAction}
         />
       )}
       {active === 'incidents' && (

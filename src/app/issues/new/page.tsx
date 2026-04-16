@@ -9,11 +9,12 @@ export default async function NewIssuePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const user = await requireCurrentUser()
-  const [vendors, orgUsers, sp] = await Promise.all([
-    getVendors(user.orgId, {}),
+  const [vendorsPage, orgUsers, sp] = await Promise.all([
+    getVendors(user.orgId, { pageSize: 500 }),
     getOrgUsers(user.orgId),
     searchParams,
   ])
+  const vendors = vendorsPage.rows
 
   const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 

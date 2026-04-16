@@ -125,6 +125,19 @@ export async function updateApprovalStatusAction(
     const { logActivity } = await import('@/lib/db/activity-log')
     const supabase = await createServerClient()
 
+    // Read previous status for audit trail
+    const { data: existing } = await supabase
+      .from('vendors')
+      .select('approval_status, name')
+      .eq('id', vendorId)
+      .eq('org_id', user.orgId)
+      .maybeSingle()
+    const oldStatus = existing?.approval_status as string | undefined
+
+    if (oldStatus === newStatus && !exceptionReason) {
+      return { success: true } // no-op
+    }
+
     const update: Record<string, unknown> = { approval_status: newStatus }
     if (newStatus === 'approved' || newStatus === 'approved_with_exception') {
       update.approved_at = new Date().toISOString()
@@ -141,6 +154,11 @@ export async function updateApprovalStatusAction(
       .eq('org_id', user.orgId)
     if (error) throw new Error(error.message)
 
+    const friendly = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    const title = oldStatus
+      ? `Approval status changed from "${friendly(oldStatus)}" to "${friendly(newStatus)}"`
+      : `Approval status set to "${friendly(newStatus)}"`
+
     await logActivity({
       orgId: user.orgId,
       vendorId,
@@ -148,7 +166,9 @@ export async function updateApprovalStatusAction(
       entityType: 'vendor',
       entityId: vendorId,
       action: 'approval_status_changed',
-      title: `Approval status set to ${newStatus.replace(/_/g, ' ')}`,
+      title,
+      description: exceptionReason ? `Exception: ${exceptionReason}` : undefined,
+      metadata: { from: oldStatus ?? null, to: newStatus, exception_reason: exceptionReason ?? null },
     })
 
     revalidatePath(`/vendors/${vendorId}`)

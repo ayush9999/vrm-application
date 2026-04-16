@@ -49,7 +49,7 @@ export async function getAssessmentActivityLog(
   return (data ?? []) as ActivityLogEntry[]
 }
 
-/** Fetch activity log for a vendor, most recent first */
+/** Fetch activity log for a vendor, most recent first, with actor name joined. */
 export async function getVendorActivityLog(
   orgId: string,
   vendorId: string,
@@ -58,12 +58,21 @@ export async function getVendorActivityLog(
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('activity_log')
-    .select('*')
+    .select(`
+      *,
+      actor:users!activity_log_actor_user_id_fkey ( name, email )
+    `)
     .eq('org_id', orgId)
     .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false })
     .limit(limit)
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as ActivityLogEntry[]
+
+  type Row = ActivityLogEntry & { actor: { name: string | null; email: string | null } | null }
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    ...r,
+    actor_name: r.actor?.name ?? r.actor?.email ?? null,
+    actor: undefined,
+  })) as ActivityLogEntry[]
 }

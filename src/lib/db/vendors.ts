@@ -8,36 +8,66 @@ import type {
   VendorStatus,
 } from '@/types/vendor'
 
+export type VendorSortField = 'name' | 'created_at' | 'criticality_tier' | 'next_review_due_at' | 'approval_status'
+
 export interface GetVendorsOptions {
   search?: string
   status?: VendorStatus | ''
   criticalOnly?: boolean
+  sort?: VendorSortField
+  sortDir?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
 }
 
-/** List vendors for an org with optional search/filter */
+export interface VendorListPage {
+  rows: Vendor[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+/** List vendors for an org with optional search/filter/sort/paginate. */
 export async function getVendors(
   orgId: string,
   opts: GetVendorsOptions = {},
-): Promise<Vendor[]> {
+): Promise<VendorListPage> {
   const supabase = await createServerClient()
+  const sort = opts.sort ?? 'name'
+  const sortDir = opts.sortDir ?? 'asc'
+  const page = Math.max(1, opts.page ?? 1)
+  const pageSize = opts.pageSize ?? 25
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('vendors')
     .select(
       `*, vendor_categories(name), internal_owner:users!vendors_internal_owner_user_id_fkey(name, email)`,
+      { count: 'exact' },
     )
     .eq('org_id', orgId)
     .is('deleted_at', null)
     .is('archived_at', null)
-    .order('name')
+    .order(sort, { ascending: sortDir === 'asc', nullsFirst: false })
+    .range(from, to)
 
   if (opts.search) query = query.ilike('name', `%${opts.search}%`)
   if (opts.status) query = query.eq('status', opts.status)
   if (opts.criticalOnly) query = query.eq('is_critical', true)
 
-  const { data, error } = await query
+  const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return (data ?? []) as Vendor[]
+
+  const total = count ?? 0
+  return {
+    rows: (data ?? []) as Vendor[],
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  }
 }
 
 /** Fetch a single vendor by id (scoped to org) */

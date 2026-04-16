@@ -99,6 +99,7 @@ export interface VendorReviewPack {
   review_pack_name?: string
   review_pack_code?: string
   vendor_name?: string
+  matched_rule?: string
   item_counts?: {
     total: number
     passed: number

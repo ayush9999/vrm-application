@@ -3,7 +3,9 @@ import { Suspense } from 'react'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendors } from '@/lib/db/vendors'
 import { getVendorListMetrics } from '@/lib/db/review-packs'
+import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import { VendorSearch } from './_components/VendorSearch'
+import { QuickApprovalMenu } from './_components/QuickApprovalMenu'
 import type { VendorStatus, VendorApprovalStatus } from '@/types/vendor'
 
 const STATUS_BADGE: Record<VendorStatus, { label: string; className: string }> = {
@@ -24,20 +26,57 @@ const APPROVAL_BADGE: Record<VendorApprovalStatus, { label: string; bg: string; 
 }
 
 interface PageProps {
-  searchParams: Promise<{ search?: string; status?: string; critical?: string }>
+  searchParams: Promise<{
+    search?: string; status?: string; critical?: string;
+    sort?: string; dir?: string; page?: string
+  }>
+}
+
+const SORTABLE: Record<string, { label: string; field: 'name' | 'created_at' | 'criticality_tier' | 'next_review_due_at' | 'approval_status' }> = {
+  Name:        { label: 'Name',        field: 'name' },
+  Approval:    { label: 'Approval',    field: 'approval_status' },
+  Criticality: { label: 'Criticality', field: 'criticality_tier' },
 }
 
 export default async function VendorsPage({ searchParams }: PageProps) {
   const params = await searchParams
   const user = await requireCurrentUser()
 
-  const vendors = await getVendors(user.orgId, {
+  const sort = (params.sort as 'name' | 'created_at' | 'criticality_tier' | 'next_review_due_at' | 'approval_status') ?? 'name'
+  const sortDir = (params.dir === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc'
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
+  const pageSize = 25
+
+  const result = await getVendors(user.orgId, {
     search: params.search,
     status: (params.status as VendorStatus) || undefined,
     criticalOnly: params.critical === 'true',
+    sort,
+    sortDir,
+    page,
+    pageSize,
   })
+  const vendors = result.rows
 
-  const metrics = await getVendorListMetrics(vendors.map((v) => v.id))
+  const metrics = await getVendorListMetrics(
+    vendors.map((v) => ({ id: v.id, approval_status: v.approval_status })),
+  )
+
+  // Build query string preserving filters
+  const buildHref = (overrides: Record<string, string | undefined>) => {
+    const sp = new URLSearchParams()
+    if (params.search) sp.set('search', params.search)
+    if (params.status) sp.set('status', params.status)
+    if (params.critical) sp.set('critical', params.critical)
+    sp.set('sort', sort)
+    sp.set('dir', sortDir)
+    sp.set('page', String(page))
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === undefined) sp.delete(k)
+      else sp.set(k, v)
+    }
+    return `/vendors?${sp.toString()}`
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -46,7 +85,10 @@ export default async function VendorsPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Vendors</h1>
           <p className="text-sm mt-0.5" style={{ color: '#a99fd8' }}>
-            {vendors.length} vendor{vendors.length !== 1 ? 's' : ''}
+            {result.total} vendor{result.total !== 1 ? 's' : ''}
+            {result.total > pageSize && (
+              <span> · page {page} of {result.totalPages}</span>
+            )}
           </p>
         </div>
         <Link
@@ -91,22 +133,42 @@ export default async function VendorsPage({ searchParams }: PageProps) {
           <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(109,93,211,0.08)', background: 'rgba(109,93,211,0.03)' }}>
-                {['Name', 'Type', 'Owner', 'Criticality', 'Approval', 'Readiness', 'Missing', 'Open Rem.'].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest"
-                    style={{ color: '#a99fd8' }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                {['Name', 'Type', 'Owner', 'Criticality', 'Approval', 'Readiness', 'Risk', 'Missing', 'Open Rem.'].map((h) => {
+                  const sortable = SORTABLE[h]
+                  if (!sortable) {
+                    return (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest"
+                        style={{ color: '#a99fd8' }}
+                      >
+                        {h}
+                      </th>
+                    )
+                  }
+                  const isActive = sort === sortable.field
+                  const nextDir = isActive && sortDir === 'asc' ? 'desc' : 'asc'
+                  return (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+                      <Link href={buildHref({ sort: sortable.field, dir: nextDir, page: '1' })} className="inline-flex items-center gap-1 hover:text-[#6c5dd3] transition-colors">
+                        {h}
+                        {isActive && (
+                          <span className="text-[10px]">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </Link>
+                    </th>
+                  )
+                })}
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {vendors.map((v) => {
                 const approvalBadge = APPROVAL_BADGE[v.approval_status]
-                const m = metrics.get(v.id) ?? { readinessPct: 0, applicable: 0, completed: 0, missingEvidenceCount: 0, openRemediationCount: 0 }
+                const m = metrics.get(v.id) ?? {
+                  readinessPct: 0, applicable: 0, completed: 0, missingEvidenceCount: 0, openRemediationCount: 0,
+                  risk: { score: 0, band: 'critical' as const, rawScore: 0, remediationPenalty: 0, isApprovalOverride: false, formula: 'No data' },
+                }
                 return (
                   <tr
                     key={v.id}
@@ -164,6 +226,9 @@ export default async function VendorsPage({ searchParams }: PageProps) {
                     <td className="px-4 py-3.5">
                       <ReadinessCell pct={m.readinessPct} applicable={m.applicable} completed={m.completed} />
                     </td>
+                    <td className="px-4 py-3.5">
+                      <RiskBadgeCell band={m.risk.band} score={m.risk.score} formula={m.risk.formula} />
+                    </td>
                     <td className="px-4 py-3.5 text-center">
                       {m.missingEvidenceCount > 0 ? (
                         <span className="text-xs font-bold" style={{ color: '#d97706' }}>{m.missingEvidenceCount}</span>
@@ -178,10 +243,11 @@ export default async function VendorsPage({ searchParams }: PageProps) {
                         <span className="text-xs" style={{ color: '#c4bae8' }}>—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <QuickApprovalMenu vendorId={v.id} current={v.approval_status} />
                       <Link
                         href={`/vendors/${v.id}/edit`}
-                        className="text-xs font-medium transition-all opacity-0 group-hover:opacity-100 hover:opacity-80"
+                        className="text-xs font-medium transition-all opacity-0 group-hover:opacity-100 hover:opacity-80 ml-2"
                         style={{ color: '#6c5dd3' }}
                       >
                         Edit
@@ -192,6 +258,38 @@ export default async function VendorsPage({ searchParams }: PageProps) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {result.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs" style={{ color: '#a99fd8' }}>
+            Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, result.total)} of {result.total}
+          </p>
+          <div className="flex items-center gap-1.5">
+            {page > 1 && (
+              <Link
+                href={buildHref({ page: String(page - 1) })}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+              >
+                ← Prev
+              </Link>
+            )}
+            <span className="text-xs px-2" style={{ color: '#4a4270' }}>
+              {page} / {result.totalPages}
+            </span>
+            {page < result.totalPages && (
+              <Link
+                href={buildHref({ page: String(page + 1) })}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+              >
+                Next →
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -211,6 +309,23 @@ function ServiceTypeChip({ type }: { type: string }) {
     <span className="text-xs font-medium" style={{ color: '#1e1550' }}>
       {labels[type] ?? type}
     </span>
+  )
+}
+
+function RiskBadgeCell({ band, score, formula }: { band: 'low' | 'medium' | 'high' | 'critical'; score: number; formula: string }) {
+  const style = RISK_BAND_STYLE[band]
+  return (
+    <div className="group relative inline-block">
+      <span
+        className="inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap"
+        style={{ background: style.bg, color: style.color }}
+        title={formula}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: style.dot }} />
+        {style.label}
+        <span className="font-mono opacity-70">{score}</span>
+      </span>
+    </div>
   )
 }
 

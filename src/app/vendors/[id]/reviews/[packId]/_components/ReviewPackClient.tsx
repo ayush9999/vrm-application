@@ -60,6 +60,37 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
   }, [items])
 
   const [createdRemediation, setCreatedRemediation] = useState<{ itemId: string; remediationId: string } | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(visible.map((v) => v.id)))
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const handleBulkDecision = async (decision: ReviewItemDecision) => {
+    const ids = Array.from(selectedIds)
+    // Optimistic update
+    setItems((prev) =>
+      prev.map((i) =>
+        ids.includes(i.id)
+          ? { ...i, decision, decided_at: new Date().toISOString() }
+          : i,
+      ),
+    )
+    clearSelection()
+    // Fire all in parallel
+    await Promise.all(ids.map((id) => setDecisionAction(vendorId, packId, id, decision, null)))
+  }
 
   const handleSetDecision = async (itemId: string, decision: ReviewItemDecision, comment: string | null) => {
     // Optimistic update
@@ -150,6 +181,49 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
         ))}
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div
+          className="flex items-center gap-3 px-4 py-2 rounded-xl sticky top-2 z-10"
+          style={{ background: '#1c1c2e', color: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
+        >
+          <span className="text-xs font-semibold">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-5 w-px bg-white/20" />
+          <button
+            type="button"
+            onClick={() => handleBulkDecision('pass')}
+            className="text-xs font-medium px-3 py-1 rounded-full"
+            style={{ background: 'rgba(5,150,105,0.2)', color: '#10b981' }}
+          >
+            Mark Pass
+          </button>
+          <button
+            type="button"
+            onClick={() => handleBulkDecision('na')}
+            className="text-xs font-medium px-3 py-1 rounded-full"
+            style={{ background: 'rgba(148,163,184,0.2)', color: '#cbd5e1' }}
+          >
+            Mark N/A
+          </button>
+          <button
+            type="button"
+            onClick={() => handleBulkDecision('not_started')}
+            className="text-xs font-medium px-3 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}
+          >
+            Reset to Skip
+          </button>
+          <button type="button" onClick={selectAllVisible} className="ml-auto text-xs hover:underline opacity-80">
+            Select all visible ({visible.length})
+          </button>
+          <button type="button" onClick={clearSelection} className="text-xs hover:underline opacity-80">
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Items */}
       <div
         className="rounded-2xl overflow-hidden"
@@ -169,6 +243,8 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
               onSetDecision={(decision, comment) => handleSetDecision(item.id, decision, comment)}
               onAiAssist={() => aiAssistAction(item.id)}
               isLast={idx === visible.length - 1}
+              isSelected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
             />
           ))
         )}
@@ -195,6 +271,8 @@ function ReviewItemRow({
   onSetDecision,
   onAiAssist,
   isLast,
+  isSelected,
+  onToggleSelect,
 }: {
   item: VendorReviewItem
   isOpen: boolean
@@ -202,6 +280,8 @@ function ReviewItemRow({
   onSetDecision: (decision: ReviewItemDecision, comment: string | null) => Promise<void> | void
   onAiAssist: () => Promise<{ suggestion?: ReviewItemDecision; rationale?: string; message?: string }>
   isLast: boolean
+  isSelected: boolean
+  onToggleSelect: () => void
 }) {
   const [comment, setComment] = useState(item.reviewer_comment ?? '')
   const [aiResult, setAiResult] = useState<{ suggestion?: ReviewItemDecision; rationale?: string } | null>(null)
@@ -229,6 +309,19 @@ function ReviewItemRow({
         className="flex items-center gap-3 px-5 py-3 cursor-pointer transition-colors hover:bg-[rgba(109,93,211,0.02)]"
         onClick={onToggle}
       >
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => {
+            e.stopPropagation()
+            onToggleSelect()
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-3.5 h-3.5 rounded shrink-0"
+          style={{ accentColor: '#6c5dd3' }}
+        />
+
         {/* Decision indicator */}
         <span
           className="w-2 h-2 rounded-full shrink-0"

@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { computeRiskScore, type RiskScoreOutput } from '@/lib/risk-score'
 import type {
   ReviewPack,
   EvidenceRequirement,
@@ -12,6 +13,7 @@ import type {
   ReadinessScore,
   VendorDataAccessLevel,
   VendorServiceType,
+  VendorApprovalStatus,
 } from '@/types/review-pack'
 
 // ─── Review Pack queries ────────────────────────────────────────────────────
@@ -202,15 +204,10 @@ export async function autoAssignReviewPacks(
         const { error: docErr } = await service.from('vendor_documents').insert({
           org_id: vendor.org_id,
           vendor_id: vendor.id,
-          doc_type_id: null as unknown as string, // Will be nullable after we update the constraint
           evidence_requirement_id: ereq.id,
           evidence_status: 'missing',
         })
-        // Ignore errors if doc_type_id NOT NULL constraint fails — evidence
-        // linking is best-effort during auto-assign
-        if (docErr && !docErr.message.includes('null value')) {
-          throw new Error(docErr.message)
-        }
+        if (docErr) throw new Error(docErr.message)
       }
     }
   }
@@ -218,7 +215,7 @@ export async function autoAssignReviewPacks(
 
 // ─── Vendor Review Pack queries ─────────────────────────────────────────────
 
-/** Get all review packs assigned to a vendor with item counts. */
+/** Get all review packs assigned to a vendor with item counts + matched rule. */
 export async function getVendorReviewPacks(vendorId: string): Promise<VendorReviewPack[]> {
   const supabase = await createServerClient()
 
@@ -226,7 +223,8 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
     .from('vendor_review_packs')
     .select(`
       *,
-      review_packs!inner ( name, code )
+      review_packs!inner ( name, code, applicability_rules ),
+      vendors!inner ( criticality_tier, service_type, data_access_level, processes_personal_data )
     `)
     .eq('vendor_id', vendorId)
     .is('deleted_at', null)
@@ -236,7 +234,18 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
   // Fetch item counts for each pack
   const packs: VendorReviewPack[] = []
   for (const row of (data ?? []) as Array<Record<string, unknown>>) {
-    const rp = row.review_packs as { name: string; code: string } | null
+    const rp = row.review_packs as {
+      name: string
+      code: string
+      applicability_rules: ApplicabilityRules
+    } | null
+    const v = row.vendors as {
+      criticality_tier: number | null
+      service_type: VendorServiceType
+      data_access_level: VendorDataAccessLevel
+      processes_personal_data: boolean
+    } | null
+
     const { data: items } = await supabase
       .from('vendor_review_items')
       .select('decision')
@@ -247,6 +256,7 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
       ...(row as unknown as VendorReviewPack),
       review_pack_name: rp?.name,
       review_pack_code: rp?.code,
+      matched_rule: rp && v ? describeMatchedRule(rp.applicability_rules, v) : undefined,
       item_counts: {
         total: decisions.length,
         passed: decisions.filter((d) => d.decision === 'pass').length,
@@ -257,6 +267,28 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
     })
   }
   return packs
+}
+
+/** Returns a human-readable explanation of why this pack was assigned to this vendor. */
+function describeMatchedRule(
+  rules: ApplicabilityRules,
+  vendor: {
+    criticality_tier: number | null
+    service_type: VendorServiceType
+    data_access_level: VendorDataAccessLevel
+    processes_personal_data: boolean
+  },
+): string {
+  if (vendor.criticality_tier === 1) return 'Tier 1 critical vendor — all packs apply'
+  if (rules.always) return 'Always assigned'
+  if (rules.processes_personal_data && vendor.processes_personal_data) return 'Vendor processes personal data'
+  if (rules.data_access_levels?.includes(vendor.data_access_level)) return `Data access level: ${vendor.data_access_level.replace(/_/g, ' ')}`
+  if (rules.min_criticality_tier && vendor.criticality_tier && vendor.criticality_tier <= rules.min_criticality_tier) {
+    return `Criticality tier ${vendor.criticality_tier} ≤ ${rules.min_criticality_tier}`
+  }
+  if (rules.service_types?.includes(vendor.service_type)) return `Service type: ${vendor.service_type.replace(/_/g, ' ')}`
+  if (rules.requires_esg_setting) return 'ESG enabled in org settings'
+  return 'Manually assigned'
 }
 
 /** Get review items for a specific vendor review pack. */
@@ -314,15 +346,21 @@ export async function updateReviewItemDecision(
 // ─── Readiness calculation ──────────────────────────────────────────────────
 
 /**
- * Get readiness + counts for a batch of vendors (for the vendor list).
+ * Get readiness + risk + counts for a batch of vendors (for the vendor list and profile header).
  * Returns a Map keyed by vendor_id.
+ *
+ * Requires the vendor's approval_status to compute the risk score override.
+ * Pass an array of `{ vendor_id, approval_status }` objects.
  */
-export async function getVendorListMetrics(vendorIds: string[]): Promise<Map<string, {
+export async function getVendorListMetrics(
+  vendors: { id: string; approval_status: VendorApprovalStatus }[],
+): Promise<Map<string, {
   readinessPct: number
   applicable: number
   completed: number
   missingEvidenceCount: number
   openRemediationCount: number
+  risk: RiskScoreOutput
 }>> {
   const result = new Map<string, {
     readinessPct: number
@@ -330,9 +368,12 @@ export async function getVendorListMetrics(vendorIds: string[]): Promise<Map<str
     completed: number
     missingEvidenceCount: number
     openRemediationCount: number
+    risk: RiskScoreOutput
   }>()
-  if (vendorIds.length === 0) return result
+  if (vendors.length === 0) return result
 
+  const vendorIds = vendors.map((v) => v.id)
+  const approvalByVendor = new Map(vendors.map((v) => [v.id, v.approval_status]))
   const supabase = await createServerClient()
 
   // Get all vendor_review_packs for these vendors
@@ -348,79 +389,140 @@ export async function getVendorListMetrics(vendorIds: string[]): Promise<Map<str
     vrpByVendor.get(v.vendor_id)!.push(v.id)
   }
 
-  // Get all review items for those packs
+  // Get all review items + their requirement.required for those packs
   const allVrpIds = (vrps ?? []).map((v: { id: string }) => v.id)
-  const itemsByVendor = new Map<string, { decision: ReviewItemDecision }[]>()
+  const itemsByVendor = new Map<string, { decision: ReviewItemDecision; required: boolean }[]>()
   if (allVrpIds.length > 0) {
     const { data: items } = await supabase
       .from('vendor_review_items')
-      .select('vendor_review_pack_id, decision')
+      .select(`
+        vendor_review_pack_id, decision,
+        review_requirements!inner ( required )
+      `)
       .in('vendor_review_pack_id', allVrpIds)
 
-    const itemsByVrp = new Map<string, ReviewItemDecision[]>()
-    for (const it of (items ?? []) as { vendor_review_pack_id: string; decision: ReviewItemDecision }[]) {
+    type ItemRow = {
+      vendor_review_pack_id: string
+      decision: ReviewItemDecision
+      review_requirements: { required: boolean } | null
+    }
+
+    const itemsByVrp = new Map<string, { decision: ReviewItemDecision; required: boolean }[]>()
+    for (const it of (items ?? []) as unknown as ItemRow[]) {
       if (!itemsByVrp.has(it.vendor_review_pack_id)) itemsByVrp.set(it.vendor_review_pack_id, [])
-      itemsByVrp.get(it.vendor_review_pack_id)!.push(it.decision)
+      itemsByVrp.get(it.vendor_review_pack_id)!.push({
+        decision: it.decision,
+        required: it.review_requirements?.required ?? false,
+      })
     }
 
     for (const [vendorId, vrpIds] of vrpByVendor) {
-      const allDecisions: { decision: ReviewItemDecision }[] = []
+      const all: { decision: ReviewItemDecision; required: boolean }[] = []
       for (const vrpId of vrpIds) {
-        const decs = itemsByVrp.get(vrpId) ?? []
-        for (const d of decs) allDecisions.push({ decision: d })
+        for (const d of (itemsByVrp.get(vrpId) ?? [])) all.push(d)
       }
-      itemsByVendor.set(vendorId, allDecisions)
+      itemsByVendor.set(vendorId, all)
     }
   }
 
-  // Get evidence counts (missing) for these vendors
+  // Get evidence rows + their requirement.required + status
   const { data: evidence } = await supabase
     .from('vendor_documents')
-    .select('vendor_id, evidence_status')
+    .select(`
+      vendor_id, evidence_status,
+      evidence_requirements ( required )
+    `)
     .in('vendor_id', vendorIds)
     .not('evidence_requirement_id', 'is', null)
     .is('deleted_at', null)
 
-  const evidenceByVendor = new Map<string, { status: string }[]>()
-  for (const e of (evidence ?? []) as { vendor_id: string; evidence_status: string }[]) {
-    if (!evidenceByVendor.has(e.vendor_id)) evidenceByVendor.set(e.vendor_id, [])
-    evidenceByVendor.get(e.vendor_id)!.push({ status: e.evidence_status })
+  type EvidenceRow = {
+    vendor_id: string
+    evidence_status: string
+    evidence_requirements: { required: boolean } | null
   }
 
-  // Get open remediation (issues) counts
+  const evidenceByVendor = new Map<string, { status: string; required: boolean }[]>()
+  for (const e of (evidence ?? []) as unknown as EvidenceRow[]) {
+    if (!evidenceByVendor.has(e.vendor_id)) evidenceByVendor.set(e.vendor_id, [])
+    evidenceByVendor.get(e.vendor_id)!.push({
+      status: e.evidence_status,
+      required: e.evidence_requirements?.required ?? false,
+    })
+  }
+
+  // Open remediation counts (any open status) + critical-severity counts (for risk score)
   const { data: openIssues } = await supabase
     .from('issues')
-    .select('vendor_id, status')
+    .select('vendor_id, status, severity')
     .in('vendor_id', vendorIds)
     .is('deleted_at', null)
     .in('status', ['open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred'])
 
-  const remediationByVendor = new Map<string, number>()
-  for (const i of (openIssues ?? []) as { vendor_id: string }[]) {
-    remediationByVendor.set(i.vendor_id, (remediationByVendor.get(i.vendor_id) ?? 0) + 1)
+  const remediationByVendor = new Map<string, { total: number; critical: number }>()
+  for (const i of (openIssues ?? []) as { vendor_id: string; severity: string }[]) {
+    const cur = remediationByVendor.get(i.vendor_id) ?? { total: 0, critical: 0 }
+    cur.total += 1
+    if (i.severity === 'critical') cur.critical += 1
+    remediationByVendor.set(i.vendor_id, cur)
   }
 
   // Compute final metrics per vendor
   for (const vendorId of vendorIds) {
     const decisions = itemsByVendor.get(vendorId) ?? []
-    const reviewApplicable = decisions.filter((d) => d.decision !== 'na').length
-    const reviewCompleted = decisions.filter((d) => d.decision === 'pass' || d.decision === 'exception_approved').length
-
     const evidenceItems = evidenceByVendor.get(vendorId) ?? []
-    const evidenceApplicable = evidenceItems.length
+    const remStats = remediationByVendor.get(vendorId) ?? { total: 0, critical: 0 }
+
+    // Readiness: applicable = total - na
+    const reviewApplicable = decisions.filter((d) => d.decision !== 'na').length
+    const reviewCompleted = decisions.filter(
+      (d) => d.decision === 'pass' || d.decision === 'exception_approved',
+    ).length
+    const evidenceApplicable = evidenceItems.filter((e) => e.status !== 'waived').length
     const evidenceCompleted = evidenceItems.filter((e) => e.status === 'approved').length
-    const missingEvidenceCount = evidenceItems.filter((e) => e.status === 'missing' || e.status === 'rejected').length
+    const missingEvidenceCount = evidenceItems.filter(
+      (e) => e.status === 'missing' || e.status === 'rejected' || e.status === 'expired',
+    ).length
 
     const totalApplicable = reviewApplicable + evidenceApplicable
     const totalCompleted = reviewCompleted + evidenceCompleted
     const pct = totalApplicable > 0 ? Math.round((totalCompleted / totalApplicable) * 100) : 0
+
+    // Risk score
+    const requiredReviewTotal = decisions.filter((d) => d.required && d.decision !== 'na').length
+    const requiredReviewCompleted = decisions.filter(
+      (d) => d.required && (d.decision === 'pass' || d.decision === 'exception_approved'),
+    ).length
+    const optionalReviewTotal = decisions.filter((d) => !d.required && d.decision !== 'na').length
+    const optionalReviewCompleted = decisions.filter(
+      (d) => !d.required && (d.decision === 'pass' || d.decision === 'exception_approved'),
+    ).length
+
+    const requiredEvidenceTotal = evidenceItems.filter((e) => e.required && e.status !== 'waived').length
+    const requiredEvidenceApproved = evidenceItems.filter((e) => e.required && e.status === 'approved').length
+    const optionalEvidenceTotal = evidenceItems.filter((e) => !e.required && e.status !== 'waived').length
+    const optionalEvidenceApproved = evidenceItems.filter((e) => !e.required && e.status === 'approved').length
+
+    const risk = computeRiskScore({
+      requiredReviewTotal,
+      requiredReviewCompleted,
+      optionalReviewTotal,
+      optionalReviewCompleted,
+      requiredEvidenceTotal,
+      requiredEvidenceApproved,
+      optionalEvidenceTotal,
+      optionalEvidenceApproved,
+      openCriticalRemediations: remStats.critical,
+      approvalStatus: approvalByVendor.get(vendorId)!,
+    })
 
     result.set(vendorId, {
       readinessPct: pct,
       applicable: totalApplicable,
       completed: totalCompleted,
       missingEvidenceCount,
-      openRemediationCount: remediationByVendor.get(vendorId) ?? 0,
+      openRemediationCount: remStats.total,
+      risk,
     })
   }
 

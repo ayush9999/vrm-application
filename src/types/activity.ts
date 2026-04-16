@@ -3,6 +3,7 @@ export interface ActivityLogEntry {
   org_id: string
   vendor_id: string | null
   actor_user_id: string | null
+  actor_name?: string | null
   title: string | null
   description: string | null
   entity_type: string

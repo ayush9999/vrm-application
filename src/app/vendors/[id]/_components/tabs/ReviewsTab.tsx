@@ -164,6 +164,13 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
                 <Mini label="Open"   count={counts.not_started} color="#a99fd8" />
                 {counts.na > 0 && <Mini label="N/A" count={counts.na} color="#94a3b8" />}
               </div>
+
+              {/* Matched rule */}
+              {pack.matched_rule && (
+                <div className="text-[10px] mt-2 italic" style={{ color: '#a99fd8' }}>
+                  Assigned: {pack.matched_rule}
+                </div>
+              )}
             </Link>
           )
         })}
