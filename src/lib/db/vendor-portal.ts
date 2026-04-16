@@ -146,10 +146,16 @@ export async function getPortalContextByToken(token: string) {
       .not('evidence_requirement_id', 'is', null),
   ])
 
-  // Filter evidence to only those belonging to this pack
-  const packId = (packRes.data as { review_packs: { id: string } } | null)?.review_packs?.id
+  // Normalize pack — Supabase joins return arrays for related rows
+  type RawPack = { id: string; status: string; review_packs: { id: string; name: string; code: string | null; description: string | null } | { id: string; name: string; code: string | null; description: string | null }[] | null }
+  const rawPack = packRes.data as unknown as RawPack | null
+  const packReview = rawPack ? (Array.isArray(rawPack.review_packs) ? rawPack.review_packs[0] : rawPack.review_packs) : null
+  const normalizedPack = rawPack && packReview ? { id: rawPack.id, status: rawPack.status, review_packs: packReview } : null
+  const packId = packReview?.id
+
   const filteredEvidence = (evidenceRes.data ?? []).filter((e) => {
-    const req = (e as { evidence_requirements: { review_pack_id: string } | null }).evidence_requirements
+    const raw = (e as unknown as { evidence_requirements: { review_pack_id: string } | { review_pack_id: string }[] | null }).evidence_requirements
+    const req = Array.isArray(raw) ? raw[0] : raw
     return req?.review_pack_id === packId
   })
 
@@ -157,7 +163,7 @@ export async function getPortalContextByToken(token: string) {
     link: link as VendorPortalLink,
     status,
     vendor: vendorRes.data as { id: string; name: string; vendor_code: string | null } | null,
-    pack: packRes.data as { id: string; status: string; review_packs: { id: string; name: string; code: string | null; description: string | null } } | null,
+    pack: normalizedPack,
     items: itemsRes.data ?? [],
     evidence: filteredEvidence,
   }
@@ -252,10 +258,14 @@ export async function submitPortalEvidenceUpload(params: {
     `)
     .eq('id', params.evidenceId)
     .maybeSingle()
-  type EvRow = { vendor_id: string; evidence_requirements: { review_pack_id: string } | null }
-  const evRow = ev as EvRow | null
+  type EvRow = {
+    vendor_id: string
+    evidence_requirements: { review_pack_id: string } | { review_pack_id: string }[] | null
+  }
+  const evRow = ev as unknown as EvRow | null
   if (!evRow || evRow.vendor_id !== linkRow.vendor_id) return { success: false, message: 'Invalid evidence' }
-  if (evRow.evidence_requirements?.review_pack_id !== linkRow.vendor_review_pack_id) {
+  const evReq = Array.isArray(evRow.evidence_requirements) ? evRow.evidence_requirements[0] : evRow.evidence_requirements
+  if (evReq?.review_pack_id !== linkRow.vendor_review_pack_id) {
     return { success: false, message: 'Evidence does not belong to this pack' }
   }
 
