@@ -1,7 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
-import { getCategoryFrameworkSuggestions } from '@/lib/db/vendor-frameworks'
-import { createAssessment, addAssessmentFrameworkSelection, instantiateFrameworkItems } from '@/lib/db/assessments'
 import type {
   Vendor,
   VendorRow,
@@ -77,14 +75,12 @@ async function generateVendorCode(
   return `VND-${String(maxNum + 1).padStart(4, '0')}`
 }
 
-/** Create a vendor, then auto-create an onboarding assessment with the given frameworks.
- *  frameworks = explicitly selected + category suggestions (merged, deduplicated).
- */
+/** Create a vendor and log activity. */
 export async function createVendor(
   orgId: string,
   input: CreateVendorInput,
   actorUserId?: string | null,
-  explicitFrameworkIds: string[] = [],
+  _explicitFrameworkIds: string[] = [],
 ): Promise<VendorRow> {
   const supabase = await createServerClient()
   const vendorCode = await generateVendorCode(orgId, supabase)
@@ -108,48 +104,7 @@ export async function createVendor(
     metadata: { vendor_code: vendor.vendor_code, status: vendor.status },
   })
 
-  // Auto-create the onboarding assessment and attach frameworks
-  await createOnboardingAssessment(orgId, vendor.id, vendor.name, vendor.category_id ?? null, explicitFrameworkIds, actorUserId ?? null)
-
   return vendor
-}
-
-/** Auto-create the onboarding assessment for a new vendor.
- *  Merges explicitly selected frameworks with category suggestions (deduplicated).
- *  Creates the assessment as is_onboarding=true and instantiates all framework items.
- */
-export async function createOnboardingAssessment(
-  orgId: string,
-  vendorId: string,
-  vendorName: string,
-  categoryId: string | null,
-  explicitFrameworkIds: string[],
-  actorUserId: string | null,
-): Promise<void> {
-  // Merge explicit + category suggestions, preserving order, deduplicating
-  const suggested = await getCategoryFrameworkSuggestions(orgId, categoryId)
-  const suggestedIds = suggested.map(f => f.id)
-  const explicitSet = new Set(explicitFrameworkIds)
-  const allFrameworkIds = [
-    ...explicitFrameworkIds,
-    ...suggestedIds.filter(id => !explicitSet.has(id)),
-  ]
-
-  if (allFrameworkIds.length === 0) return  // No frameworks — skip creating empty assessment
-
-  const assessment = await createAssessment({
-    orgId,
-    vendorId,
-    title: `${vendorName} — Onboarding Assessment`,
-    isOnboarding: true,
-    createdByUserId: actorUserId,
-  })
-
-  for (const fwId of allFrameworkIds) {
-    const source = explicitSet.has(fwId) ? 'manual' : 'onboarding'
-    await addAssessmentFrameworkSelection(assessment.id, fwId, source as 'manual' | 'onboarding', actorUserId)
-    await instantiateFrameworkItems(orgId, assessment.id, fwId, actorUserId)
-  }
 }
 
 /** Update a vendor and write an activity_log entry */

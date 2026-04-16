@@ -2,7 +2,6 @@ import Link from 'next/link'
 
 const SETTINGS_SECTIONS = [
   { href: '/settings/members', label: 'Members & Invites' },
-  { href: '/settings/frameworks', label: 'Compliance Frameworks' },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

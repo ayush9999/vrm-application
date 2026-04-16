@@ -1,11 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
-import type { Vendor, VendorStatus, ComplianceData } from '@/types/vendor'
+import type { Vendor, VendorStatus } from '@/types/vendor'
 import type { VendorDocumentsData, AssessmentDocRequest } from '@/types/document'
-import type { FrameworkReadiness } from '@/lib/db/compliance'
-import type { AssessmentFramework } from '@/types/assessment'
 import type { VendorDispute } from '@/types/dispute'
 import type { ActivityLogEntry } from '@/types/activity'
 import type { VendorIncident } from '@/types/incident'
@@ -15,17 +13,15 @@ import type { VendorIssueCounts } from '@/lib/db/issues'
 import { getCountryName } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 import { DocumentsTab } from './tabs/DocumentsTab'
-import { ComplianceTab } from './tabs/ComplianceTab'
 import { DisputesTab } from './tabs/DisputesTab'
 import { ActivityTab } from './tabs/ActivityTab'
 import { IncidentsTab } from './tabs/IncidentsTab'
 
-type Tab = 'overview' | 'documents' | 'compliance' | 'incidents' | 'activity' | 'disputes'
+type Tab = 'overview' | 'documents' | 'incidents' | 'activity' | 'disputes'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'documents', label: 'Documents' },
-  { id: 'compliance', label: 'Compliance' },
   { id: 'incidents', label: 'Incidents' },
   { id: 'activity', label: 'Activity' },
   { id: 'disputes', label: 'Disputes' },
@@ -34,22 +30,11 @@ const TABS: { id: Tab; label: string }[] = [
 export interface VendorTabsProps {
   vendor: Vendor
   currentRole: OrgRole
-  compliance: ComplianceData
-  frameworkReadiness: FrameworkReadiness[]
-  orgStandardIds: Set<string>
-  /** Frameworks currently assigned to this vendor (via its assessments) */
-  vendorFrameworks: AssessmentFramework[]
-  /** All available frameworks in the org (for the add picker) */
-  allFrameworks: AssessmentFramework[]
   documents: VendorDocumentsData
   assessmentDocRequests: AssessmentDocRequest[]
   disputes: VendorDispute[]
   incidents: VendorIncident[]
   activityLog: ActivityLogEntry[]
-  onboardingAssessmentId: string | null
-  /** Null when no onboarding assessment exists yet */
-  addFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
-  removeFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
   defaultTab?: Tab
   uploadDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   addCustomDocAction: (prevState: FormState, formData: FormData) => Promise<FormState>
@@ -68,19 +53,11 @@ export interface VendorTabsProps {
 export function VendorTabs({
   vendor,
   currentRole,
-  compliance,
-  frameworkReadiness,
-  orgStandardIds,
-  vendorFrameworks,
-  allFrameworks,
   documents,
   assessmentDocRequests,
   disputes,
   incidents,
   activityLog,
-  onboardingAssessmentId,
-  addFrameworkAction,
-  removeFrameworkAction,
   defaultTab = 'overview',
   uploadDocAction,
   addCustomDocAction,
@@ -140,12 +117,7 @@ export function VendorTabs({
       {active === 'overview' && (
         <OverviewTab
           vendor={vendor}
-          compliance={compliance}
           currentRole={currentRole}
-          vendorFrameworks={vendorFrameworks}
-          allFrameworks={allFrameworks}
-          addFrameworkAction={addFrameworkAction}
-          removeFrameworkAction={removeFrameworkAction}
           deleteVendorAction={deleteVendorAction}
           documents={documents}
           issueCounts={issueCounts}
@@ -162,9 +134,6 @@ export function VendorTabs({
           deleteDocAction={deleteDocAction}
           deleteCustomDocAction={deleteCustomDocAction}
         />
-      )}
-      {active === 'compliance' && (
-        <ComplianceTab compliance={compliance} frameworkReadiness={frameworkReadiness} orgStandardIds={orgStandardIds} onboardingAssessmentId={onboardingAssessmentId} />
       )}
       {active === 'incidents' && (
         <IncidentsTab
@@ -191,12 +160,7 @@ export function VendorTabs({
 
 function OverviewTab({
   vendor,
-  compliance,
   currentRole,
-  vendorFrameworks,
-  allFrameworks,
-  addFrameworkAction,
-  removeFrameworkAction,
   deleteVendorAction,
   documents,
   issueCounts,
@@ -204,20 +168,13 @@ function OverviewTab({
   onSwitchTab,
 }: {
   vendor: Vendor
-  compliance: ComplianceData
   currentRole: OrgRole
-  vendorFrameworks: AssessmentFramework[]
-  allFrameworks: AssessmentFramework[]
-  addFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
-  removeFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
   deleteVendorAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   documents: VendorDocumentsData
   issueCounts: VendorIssueCounts
   vendorId: string
   onSwitchTab: (tab: Tab) => void
 }) {
-  const score = compliance.score
-
   const fields: { label: string; value: React.ReactNode }[] = [
     { label: 'Name', value: vendor.name },
     { label: 'Legal Name', value: vendor.legal_name ?? '—' },
@@ -246,20 +203,6 @@ function OverviewTab({
         5: '5 — Very Critical',
       } as Record<number, string>)[vendor.criticality_tier] ?? vendor.criticality_tier : '—',
     },
-    {
-      label: 'Compliance Score',
-      value: score !== null ? (
-        <span
-          className={`font-semibold ${
-            score >= 80 ? 'text-emerald-600' : score >= 40 ? 'text-amber-600' : 'text-rose-600'
-          }`}
-        >
-          {score}%
-        </span>
-      ) : (
-        <span style={{ color: '#a99fd8' }}>— (no category)</span>
-      ),
-    },
     { label: 'Website', value: vendor.website_url ?? '—' },
     { label: 'Primary Email', value: vendor.primary_email ?? '—' },
     { label: 'Phone', value: vendor.phone ?? '—' },
@@ -287,14 +230,6 @@ function OverviewTab({
     { label: 'Category', value: vendor.vendor_categories?.name ?? '—' },
     { label: 'Owner', value: vendor.internal_owner?.name ?? vendor.internal_owner?.email ?? '—' },
     { label: 'Criticality', value: vendor.criticality_tier != null ? `Tier ${vendor.criticality_tier}` : '—' },
-    {
-      label: 'Compliance',
-      value: score !== null ? (
-        <span className={`font-semibold ${score >= 80 ? 'text-emerald-600' : score >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
-          {score}%
-        </span>
-      ) : '—',
-    },
     { label: 'Next Review', value: vendor.next_review_due_at ? new Date(vendor.next_review_due_at).toLocaleDateString() : '—' },
   ]
 
@@ -363,14 +298,6 @@ function OverviewTab({
 
       {/* Document Expiry Alerts */}
       <ExpiryAlertCard documents={documents} onSwitchTab={onSwitchTab} />
-
-      {/* Risk Frameworks */}
-      <RiskFrameworksSection
-        vendorFrameworks={vendorFrameworks}
-        allFrameworks={allFrameworks}
-        addFrameworkAction={addFrameworkAction}
-        removeFrameworkAction={removeFrameworkAction}
-      />
 
       {/* Issues Summary */}
       <IssuesSummaryCard issueCounts={issueCounts} vendorId={vendorId} />
@@ -451,8 +378,6 @@ function ExpiryAlertCard({ documents, onSwitchTab }: { documents: VendorDocument
   )
 }
 
-// ─── Risk Frameworks section ───────────────────────────────────────────────────
-
 // ─── Issues summary card ──────────────────────────────────────────────────────
 
 function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssueCounts; vendorId: string }) {
@@ -509,255 +434,6 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
           >
             + New Issue
           </Link>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RiskFrameworksSection({
-  vendorFrameworks,
-  allFrameworks,
-  addFrameworkAction,
-  removeFrameworkAction,
-}: {
-  vendorFrameworks: AssessmentFramework[]
-  allFrameworks: AssessmentFramework[]
-  addFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
-  removeFrameworkAction: ((frameworkId: string) => Promise<{ message?: string }>) | null
-}) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [draftIds, setDraftIds] = useState<Set<string>>(new Set(vendorFrameworks.map(f => f.id)))
-
-  const canEdit = !!addFrameworkAction
-
-  // Merged + sorted list for the modal
-  const allSorted = [
-    ...vendorFrameworks,
-    ...allFrameworks.filter(f => !vendorFrameworks.find(a => a.id === f.id)),
-  ].sort((a, b) => a.name.localeCompare(b.name))
-
-  function openModal() {
-    setDraftIds(new Set(vendorFrameworks.map(f => f.id)))
-    setSearch('')
-    setError(null)
-    setOpen(true)
-  }
-
-  function toggle(id: string) {
-    setDraftIds(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
-  const hasChanges = (() => {
-    const currentIds = new Set(vendorFrameworks.map(f => f.id))
-    if (draftIds.size !== currentIds.size) return true
-    for (const id of draftIds) if (!currentIds.has(id)) return true
-    return false
-  })()
-
-  function handleApply() {
-    if (!addFrameworkAction || !removeFrameworkAction) return
-    setError(null)
-    const currentIds = new Set(vendorFrameworks.map(f => f.id))
-    const toAdd    = [...draftIds].filter(id => !currentIds.has(id))
-    const toRemove = [...currentIds].filter(id => !draftIds.has(id))
-
-    startTransition(async () => {
-      const results = await Promise.all([
-        ...toAdd.map(id => addFrameworkAction(id)),
-        ...toRemove.map(id => removeFrameworkAction(id)),
-      ])
-      const err = results.find(r => r.message)
-      if (err?.message) setError(err.message)
-      else setOpen(false)
-    })
-  }
-
-  return (
-    <div className="pt-4" style={{ borderTop: '1px solid rgba(109,93,211,0.1)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#a99fd8' }}>
-          Risk Frameworks
-        </h3>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={openModal}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', color: '#fff', boxShadow: '0 2px 8px rgba(109,93,211,0.25)' }}
-          >
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9.5 1.5a1.414 1.414 0 012 2L4 11H1.5v-2.5L9.5 1.5z"/>
-            </svg>
-            Manage
-          </button>
-        )}
-      </div>
-
-      {/* Assigned pills */}
-      {vendorFrameworks.length === 0 ? (
-        <p className="text-sm" style={{ color: '#a99fd8' }}>
-          No frameworks assigned.{canEdit ? ' Click "Manage" to add one.' : ''}
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {vendorFrameworks.map((fw) => (
-            <span
-              key={fw.id}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(109,93,211,0.08)', color: '#1e1550', border: '1px solid rgba(109,93,211,0.15)' }}
-            >
-              {fw.name}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {!canEdit && (
-        <p className="text-[11px] mt-2" style={{ color: '#c4bae8' }}>
-          Create an onboarding assessment first to manage frameworks here.
-        </p>
-      )}
-
-      {/* Modal */}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(30,21,80,0.35)', backdropFilter: 'blur(2px)' }}
-            onClick={() => !isPending && setOpen(false)}
-          />
-
-          {/* Panel */}
-          <div
-            className="relative w-full max-w-md rounded-2xl overflow-hidden"
-            style={{ background: '#fff', boxShadow: '0 16px 48px rgba(109,93,211,0.2)' }}
-          >
-            {/* Header */}
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(109,93,211,0.1)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold" style={{ color: '#1e1550' }}>Manage Risk Frameworks</h3>
-                  <p className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
-                    Select frameworks to evaluate for this vendor.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  disabled={isPending}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#a99fd8] transition-colors hover:bg-[rgba(109,93,211,0.06)]"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(109,93,211,0.08)' }}>
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 shrink-0" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="6.5" cy="6.5" r="5" />
-                  <path d="M10.5 10.5l3.5 3.5" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search frameworks…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoFocus
-                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg outline-none"
-                  style={{ background: 'rgba(109,93,211,0.04)', border: '1px solid rgba(109,93,211,0.12)', color: '#1e1550' }}
-                />
-              </div>
-            </div>
-
-            {/* Framework list */}
-            <div className="px-6 py-4 space-y-2 max-h-72 overflow-y-auto">
-              {(() => {
-                const filtered = search.trim()
-                  ? allSorted.filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
-                  : allSorted
-                if (filtered.length === 0) return (
-                  <p className="text-sm text-center py-6" style={{ color: '#a99fd8' }}>
-                    {search ? 'No frameworks match your search.' : 'No frameworks available.'}
-                  </p>
-                )
-                return filtered.map(fw => {
-                  const checked = draftIds.has(fw.id)
-                  return (
-                    <label
-                      key={fw.id}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors"
-                      style={{
-                        border: `1px solid ${checked ? 'rgba(109,93,211,0.3)' : 'rgba(109,93,211,0.1)'}`,
-                        background: checked ? 'rgba(109,93,211,0.04)' : '#fff',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggle(fw.id)}
-                        className="h-4 w-4 rounded shrink-0"
-                        style={{ accentColor: '#6c5dd3' }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium" style={{ color: '#1e1550' }}>{fw.name}</p>
-                        {fw.description && (
-                          <p className="text-xs mt-0.5 line-clamp-1" style={{ color: '#a99fd8' }}>{fw.description}</p>
-                        )}
-                      </div>
-                    </label>
-                  )
-                })
-              })()}
-            </div>
-
-            {/* Footer */}
-            <div
-              className="px-6 py-4 flex items-center justify-between"
-              style={{ borderTop: '1px solid rgba(109,93,211,0.1)', background: 'rgba(109,93,211,0.02)' }}
-            >
-              <div>
-                {error && <p className="text-xs text-rose-600">{error}</p>}
-                {!error && (
-                  <p className="text-xs" style={{ color: '#a99fd8' }}>
-                    {draftIds.size} framework{draftIds.size !== 1 ? 's' : ''} selected
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  disabled={isPending}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-violet-50 disabled:opacity-50"
-                  style={{ color: '#a99fd8' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApply}
-                  disabled={isPending || !hasChanges}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
-                >
-                  {isPending && <Spinner />}
-                  {isPending ? 'Applying…' : 'Apply Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -21,7 +21,6 @@ export async function createIssueAction(
   const severity = (formData.get('severity') as IssueSeverity) || 'medium'
   const source = (formData.get('source') as IssueSource) || 'manual'
   const type = (formData.get('type') as IssueType) || 'general'
-  const assessmentId = (formData.get('assessment_id') as string)?.trim() || null
   const ownerUserId = (formData.get('owner_user_id') as string)?.trim() || null
   const dueDate = (formData.get('due_date') as string)?.trim() || null
   const remediationPlan = (formData.get('remediation_plan') as string)?.trim() || null
@@ -46,7 +45,6 @@ export async function createIssueAction(
       severity,
       source,
       type,
-      assessmentId,
       ownerUserId,
       dueDate,
       remediationPlan,

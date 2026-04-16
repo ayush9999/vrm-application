@@ -7,43 +7,9 @@ import { createPlaceholderDocumentVersion, createDocumentType, updateVendorDocum
 import { createDispute, updateDisputeStatus } from '@/lib/db/disputes'
 import { createIncident, updateIncident, deleteIncident } from '@/lib/db/incidents'
 import { logActivity } from '@/lib/db/activity-log'
-import { addAssessmentFrameworkSelection, instantiateFrameworkItems, removeFrameworkFromAssessment } from '@/lib/db/assessments'
 import type { FormState } from '@/types/common'
 import type { DisputeStatus } from '@/types/dispute'
 import type { IncidentSeverity, IncidentStatus } from '@/types/incident'
-
-// ─── Vendor framework management (operates on the onboarding assessment) ───────
-
-export async function addVendorFrameworkAction(
-  vendorId: string,
-  assessmentId: string,
-  frameworkId: string,
-): Promise<{ message?: string }> {
-  const user = await requireCurrentUser()
-  try {
-    await addAssessmentFrameworkSelection(assessmentId, frameworkId, 'manual', user.userId)
-    await instantiateFrameworkItems(user.orgId, assessmentId, frameworkId, user.userId)
-    revalidatePath(`/vendors/${vendorId}`)
-    return {}
-  } catch (e: unknown) {
-    return { message: (e as Error).message }
-  }
-}
-
-export async function removeVendorFrameworkAction(
-  vendorId: string,
-  assessmentId: string,
-  frameworkId: string,
-): Promise<{ message?: string }> {
-  const user = await requireCurrentUser()
-  try {
-    await removeFrameworkFromAssessment(user.orgId, assessmentId, frameworkId)
-    revalidatePath(`/vendors/${vendorId}`)
-    return {}
-  } catch (e: unknown) {
-    return { message: (e as Error).message }
-  }
-}
 
 // ─── Upload document (placeholder) ────────────────────────────────────────────
 

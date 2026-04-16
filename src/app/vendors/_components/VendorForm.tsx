@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React from 'react'
 import { useActionState } from 'react'
 import Link from 'next/link'
 import type { VendorCategory, VendorRow, VendorFormState } from '@/types/vendor'
 import type { OrgUser } from '@/lib/db/organizations'
-import type { AssessmentFramework } from '@/types/assessment'
 import { COUNTRIES } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 
@@ -16,9 +15,6 @@ interface VendorFormProps {
   defaultValues?: Partial<VendorRow>
   submitLabel?: string
   cancelHref: string
-  /** If provided (create only), shows a Risk Frameworks selection section */
-  allVrfs?: AssessmentFramework[]
-  categoryVrfMap?: Record<string, string[]>
 }
 
 const INITIAL_STATE: VendorFormState = {}
@@ -36,33 +32,8 @@ export function VendorForm({
   defaultValues = {},
   submitLabel = 'Save Vendor',
   cancelHref,
-  allVrfs,
-  categoryVrfMap,
 }: VendorFormProps) {
   const [state, formAction, isPending] = useActionState(action, INITIAL_STATE)
-
-  // Framework selection state (create-only — only present when allVrfs is provided)
-  const [selectedCategoryId, setSelectedCategoryId] = useState(defaultValues.category_id ?? '')
-  const prevAutoRef = useRef<string[]>([])
-  const [checkedFrameworkIds, setCheckedFrameworkIds] = useState<Set<string>>(() => {
-    if (!categoryVrfMap || !defaultValues.category_id) return new Set()
-    const initial = categoryVrfMap[defaultValues.category_id] ?? []
-    prevAutoRef.current = initial
-    return new Set(initial)
-  })
-
-  useEffect(() => {
-    if (!categoryVrfMap) return
-    const newSuggested = categoryVrfMap[selectedCategoryId] ?? []
-    const prevSuggested = prevAutoRef.current
-    prevAutoRef.current = newSuggested
-    setCheckedFrameworkIds((prev) => {
-      const next = new Set(prev)
-      for (const id of prevSuggested) next.delete(id)
-      for (const id of newSuggested) next.add(id)
-      return next
-    })
-  }, [selectedCategoryId, categoryVrfMap])
 
   const err = state.errors ?? {}
 
@@ -130,7 +101,6 @@ export function VendorForm({
             <select
               name="category_id"
               defaultValue={defaultValues.category_id ?? ''}
-              onChange={(e) => setSelectedCategoryId(e.target.value)}
               className={inputCls}
               style={inputStyle}
             >
@@ -336,93 +306,6 @@ export function VendorForm({
           style={inputStyle}
         />
       </div>
-
-      {/* ── Risk Frameworks (create only) ── */}
-      {allVrfs && allVrfs.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-1 pt-2" style={sectionStyle}>Risk Frameworks</p>
-          <p className="text-xs mb-4" style={{ color: '#a99fd8' }}>
-            Select which vendor risk frameworks apply to this vendor. Suggested ones are pre-selected based on category.
-          </p>
-          {/* Hidden inputs for checked IDs */}
-          {[...checkedFrameworkIds].map((id) => (
-            <input key={id} type="hidden" name="framework_ids" value={id} />
-          ))}
-          <div className="space-y-1">
-            {(() => {
-              const suggestedIds = new Set(categoryVrfMap?.[selectedCategoryId] ?? [])
-              const suggested = allVrfs.filter((f) => suggestedIds.has(f.id))
-              const others = allVrfs.filter((f) => !suggestedIds.has(f.id))
-              return (
-                <>
-                  {suggested.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-[11px] font-medium mb-2" style={{ color: '#a99fd8' }}>Suggested for this category</p>
-                      {suggested.map((f) => (
-                        <label
-                          key={f.id}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-violet-50 transition-colors"
-                          style={{ border: '1px solid rgba(109,93,211,0.15)', marginBottom: '4px', background: checkedFrameworkIds.has(f.id) ? 'rgba(109,93,211,0.06)' : 'white' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checkedFrameworkIds.has(f.id)}
-                            onChange={(e) => {
-                              setCheckedFrameworkIds((prev) => {
-                                const next = new Set(prev)
-                                e.target.checked ? next.add(f.id) : next.delete(f.id)
-                                return next
-                              })
-                            }}
-                            className="h-4 w-4 rounded"
-                            style={{ accentColor: '#6c5dd3' }}
-                          />
-                          <span className="flex-1 text-sm font-medium" style={{ color: '#1e1550' }}>{f.name}</span>
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3' }}>
-                            Recommended
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  {others.length > 0 && (
-                    <div>
-                      {suggested.length > 0 && (
-                        <p className="text-[11px] font-medium mb-2 mt-3" style={{ color: '#a99fd8' }}>Other frameworks</p>
-                      )}
-                      {others.map((f) => (
-                        <label
-                          key={f.id}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-[rgba(109,93,211,0.05)] transition-colors"
-                          style={{ border: '1px solid rgba(109,93,211,0.1)', marginBottom: '4px', background: checkedFrameworkIds.has(f.id) ? 'rgba(109,93,211,0.04)' : 'white' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checkedFrameworkIds.has(f.id)}
-                            onChange={(e) => {
-                              setCheckedFrameworkIds((prev) => {
-                                const next = new Set(prev)
-                                e.target.checked ? next.add(f.id) : next.delete(f.id)
-                                return next
-                              })
-                            }}
-                            className="h-4 w-4 rounded"
-                            style={{ accentColor: '#6c5dd3' }}
-                          />
-                          <span className="text-sm" style={{ color: '#1e1550' }}>{f.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  {suggested.length === 0 && others.length === 0 && (
-                    <p className="text-sm" style={{ color: '#a99fd8' }}>No risk frameworks available.</p>
-                  )}
-                </>
-              )
-            })()}
-          </div>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-4" style={{ borderTop: '1px solid rgba(109,93,211,0.1)' }}>

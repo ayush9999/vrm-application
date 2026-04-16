@@ -23,16 +23,6 @@ function IconVendors({ className }: { className?: string }) {
   )
 }
 
-function IconAssessments({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 1.5h10a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1v-11a1 1 0 011-1z" />
-      <path d="M4.5 5h7M4.5 7.5h7M4.5 10h4.5" />
-      <path d="M10.5 10l1 1 2-2" />
-    </svg>
-  )
-}
-
 function IconIssues({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -55,8 +45,7 @@ function IconSettings({ className }: { className?: string }) {
 const NAV_ITEMS = [
   { href: '/',             match: '/',             label: 'Dashboard',       Icon: IconDashboard,   exact: true  },
   { href: '/vendors',      match: '/vendors',      label: 'Vendors',         Icon: IconVendors,     exact: false },
-  { href: '/assessments',  match: '/assessments',  label: 'Risk Assessment', Icon: IconAssessments, exact: false },
-  { href: '/issues',       match: '/issues',       label: 'Issues',          Icon: IconIssues,      exact: false },
+  { href: '/issues',       match: '/issues',       label: 'Remediation',     Icon: IconIssues,      exact: false },
   { href: '/settings',     match: '/settings',     label: 'Settings',        Icon: IconSettings,    exact: false },
 ]
 

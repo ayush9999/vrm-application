@@ -139,31 +139,10 @@ export async function getVendorDocumentsData(
   // Without this second exclusion, framework-requested docs appear in both the checklist and custom section.
   const categoryDocTypeIds = new Set(requiredDocs.map((r) => r.doc_type_id))
 
-  // Fetch all expected_document_type_ids from active assessment items for this vendor
-  const { data: assessmentRows } = await supabase
-    .from('vendor_assessments')
-    .select('id')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .not('status', 'eq', 'archived')
-    .is('deleted_at', null)
-
-  const assessmentIds = ((assessmentRows ?? []) as { id: string }[]).map(a => a.id)
+  // vendor_assessments table removed — framework doc type exclusion is no longer needed
   const frameworkDocTypeIds = new Set<string>()
 
-  if (assessmentIds.length > 0) {
-    const { data: itemRows } = await supabase
-      .from('assessment_items')
-      .select('expected_document_type_id')
-      .in('assessment_id', assessmentIds)
-      .not('expected_document_type_id', 'is', null)
-      .is('deleted_at', null)
-    for (const row of (itemRows ?? []) as { expected_document_type_id: string }[]) {
-      frameworkDocTypeIds.add(row.expected_document_type_id)
-    }
-  }
-
-  // A doc is "custom" only if it's not covered by either source
+  // A doc is "custom" only if it's not covered by category templates
   const checkedDocTypeIds = new Set([...categoryDocTypeIds, ...frameworkDocTypeIds])
   const customVendorDocs = vendorDocList.filter(
     (d) => !checkedDocTypeIds.has(d.doc_type_id),
@@ -366,169 +345,11 @@ export async function getVendorDocStatusMap(
  * Used in the vendor Documents tab to surface assessment-requested docs.
  */
 export async function getAssessmentDocRequestsForVendor(
-  orgId: string,
-  vendorId: string,
+  _orgId: string,
+  _vendorId: string,
 ): Promise<AssessmentDocRequest[]> {
-  const supabase = await createServerClient()
-
-  // 1. Fetch active (non-archived) assessments for this vendor
-  const { data: assessments } = await supabase
-    .from('vendor_assessments')
-    .select('id, title')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .not('status', 'eq', 'archived')
-    .is('deleted_at', null)
-
-  const assessmentList = (assessments ?? []) as { id: string; title: string }[]
-  if (assessmentList.length === 0) return []
-
-  const assessmentIds = assessmentList.map(a => a.id)
-
-  // 2. Fetch VRF framework names from assessment_framework_selections for these assessments
-  const { data: fwSelections } = await supabase
-    .from('assessment_framework_selections')
-    .select('assessment_id, framework_id')
-    .in('assessment_id', assessmentIds)
-
-  const selectionRows = (fwSelections ?? []) as { assessment_id: string; framework_id: string }[]
-  const allFrameworkIds = [...new Set(selectionRows.map(s => s.framework_id))]
-
-  // Map assessment_id → first framework name (for display in doc requests)
-  const frameworkNameById = new Map<string, string>()
-  // Map assessment_id → framework_id[] (to know which assessments have VRF frameworks)
-  const assessmentFrameworkIds = new Map<string, string[]>()
-  for (const row of selectionRows) {
-    if (!assessmentFrameworkIds.has(row.assessment_id)) assessmentFrameworkIds.set(row.assessment_id, [])
-    assessmentFrameworkIds.get(row.assessment_id)!.push(row.framework_id)
-  }
-
-  if (allFrameworkIds.length > 0) {
-    const { data: frameworks } = await supabase
-      .from('assessment_frameworks')
-      .select('id, name, kind')
-      .in('id', allFrameworkIds)
-    for (const f of (frameworks ?? []) as { id: string; name: string; kind: string }[]) {
-      if (f.kind === 'vendor_risk_framework') {
-        frameworkNameById.set(f.id, f.name)
-      }
-    }
-  }
-
-  // Only keep assessments that have at least one VRF framework
-  const vrfAssessmentList = assessmentList.filter(a => {
-    const fwIds = assessmentFrameworkIds.get(a.id) ?? []
-    return fwIds.some(id => frameworkNameById.has(id))
-  })
-  if (vrfAssessmentList.length === 0) return []
-
-  const assessmentById = new Map(vrfAssessmentList.map(a => [a.id, a]))
-  const vrfAssessmentIds = vrfAssessmentList.map(a => a.id)
-
-  // 3. Fetch assessment items with a document type requested
-  const { data: items } = await supabase
-    .from('assessment_items')
-    .select('id, assessment_id, expected_document_type_id, title, required')
-    .in('assessment_id', vrfAssessmentIds)
-    .not('expected_document_type_id', 'is', null)
-    .is('deleted_at', null)
-    .order('sort_order')
-
-  const itemList = (items ?? []) as {
-    id: string
-    assessment_id: string
-    expected_document_type_id: string
-    title: string
-    required: boolean
-  }[]
-  if (itemList.length === 0) return []
-
-  // 4. Fetch document type names (now step 4 — frameworks already fetched above)
-  const docTypeIds = [...new Set(itemList.map(i => i.expected_document_type_id))]
-  const docTypeNameById = new Map<string, string>()
-  if (docTypeIds.length > 0) {
-    const { data: dtRows } = await supabase
-      .from('document_types')
-      .select('id, name')
-      .in('id', docTypeIds)
-    for (const dt of (dtRows ?? []) as { id: string; name: string }[]) {
-      docTypeNameById.set(dt.id, dt.name)
-    }
-  }
-
-  // 5. Fetch vendor_documents for these doc types
-  const { data: vendorDocs } = await supabase
-    .from('vendor_documents')
-    .select('id, doc_type_id, expiry_date, current_version_id')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .in('doc_type_id', docTypeIds)
-    .is('deleted_at', null)
-
-  const vendorDocByDocTypeId = new Map(
-    ((vendorDocs ?? []) as { id: string; doc_type_id: string; expiry_date: string | null; current_version_id: string | null }[])
-      .map(d => [d.doc_type_id, d]),
-  )
-
-  // 6. Fetch current versions
-  const versionIds = [...vendorDocByDocTypeId.values()]
-    .map(d => d.current_version_id)
-    .filter((id): id is string => id !== null)
-
-  const versionMap = new Map<string, { file_key: string; file_name: string | null }>()
-  if (versionIds.length > 0) {
-    const { data: versions } = await supabase
-      .from('vendor_document_versions')
-      .select('id, file_key, file_name')
-      .in('id', versionIds)
-      .is('deleted_at', null)
-    for (const v of (versions ?? []) as { id: string; file_key: string; file_name: string | null }[]) {
-      versionMap.set(v.id, v)
-    }
-  }
-
-  // 7. Build result (deduplicate by doc_type_id — if any item is required, doc is required)
-  const requiredDocTypeIds = new Set(itemList.filter(i => i.required).map(i => i.expected_document_type_id))
-  const seenDocTypeIds = new Set<string>()
-  const result: AssessmentDocRequest[] = []
-
-  for (const item of itemList) {
-    const docTypeId = item.expected_document_type_id
-    if (seenDocTypeIds.has(docTypeId)) continue
-    seenDocTypeIds.add(docTypeId)
-
-    const assessment = assessmentById.get(item.assessment_id)!
-    const vendorDoc = vendorDocByDocTypeId.get(docTypeId) ?? null
-    const version = vendorDoc?.current_version_id ? versionMap.get(vendorDoc.current_version_id) ?? null : null
-
-    let status: DocStatus = 'missing'
-    if (version) {
-      if (version.file_key.startsWith('placeholder:') && !version.file_name) {
-        status = 'pending'
-      } else if (vendorDoc?.expiry_date && new Date(vendorDoc.expiry_date) < new Date()) {
-        status = 'expired'
-      } else {
-        status = 'uploaded'
-      }
-    }
-
-    result.push({
-      doc_type_id: docTypeId,
-      doc_type_name: docTypeNameById.get(docTypeId) ?? 'Unknown',
-      required: requiredDocTypeIds.has(docTypeId),
-      assessment_id: assessment.id,
-      assessment_title: assessment.title,
-      framework_name: (assessmentFrameworkIds.get(assessment.id) ?? []).map(id => frameworkNameById.get(id)).filter(Boolean).join(', '),
-      item_title: item.title,
-      vendor_doc_id: vendorDoc?.id ?? null,
-      current_file_name: version?.file_name ?? null,
-      current_file_key: version?.file_key ?? null,
-      expiry_date: vendorDoc?.expiry_date ?? null,
-      status,
-    })
-  }
-
-  return result
+  // vendor_assessments table removed — return empty until Reviews replaces this
+  return []
 }
 
 /** Fetch document types for the org (for custom doc creation) */

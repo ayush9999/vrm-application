@@ -93,7 +93,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
   const todayStr = today.toISOString().split('T')[0]
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-  const [vendorRes, docRes, disputeRes, activityRes, assessmentRes, incidentRes, reviewDueRes, pendingHumanRes, issueRes, recentIssueRes, highRiskVendorRes] = await Promise.all([
+  const [vendorRes, docRes, disputeRes, activityRes, incidentRes, reviewDueRes, issueRes, recentIssueRes, highRiskVendorRes] = await Promise.all([
     // Vendors
     supabase
       .from('vendors')
@@ -126,14 +126,6 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       .order('created_at', { ascending: false })
       .limit(8),
 
-    // Assessment pipeline
-    supabase
-      .from('vendor_assessments')
-      .select('status')
-      .eq('org_id', orgId)
-      .is('deleted_at', null)
-      .not('status', 'in', '("archived")'),
-
     // Open incidents
     supabase
       .from('vendor_incidents')
@@ -152,16 +144,6 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       .not('next_review_due_at', 'is', null)
       .lte('next_review_due_at', in30Days)
       .order('next_review_due_at', { ascending: true })
-      .limit(5),
-
-    // Assessments pending human review
-    supabase
-      .from('vendor_assessments')
-      .select('id, title, status, vendors(id, name)')
-      .eq('org_id', orgId)
-      .is('deleted_at', null)
-      .in('status', ['pending_human_review', 'submitted'])
-      .order('updated_at', { ascending: false })
       .limit(5),
 
     // All active issues (not resolved/closed/deleted)
@@ -219,15 +201,10 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     else if (d.status === 'under_review') disputes.under_review++
   }
 
-  // Assessment pipeline
-  const assessmentRows = (assessmentRes.data ?? []) as { status: string }[]
+  // Assessment pipeline (stub — vendor_assessments table removed)
   const pipeline: AssessmentPipelineStats = {
     draft: 0, in_review: 0, pending_ai_review: 0,
     pending_human_review: 0, submitted: 0, completed: 0,
-  }
-  for (const a of assessmentRows) {
-    const k = a.status as keyof AssessmentPipelineStats
-    if (k in pipeline) pipeline[k]++
   }
 
   // Incident stats
@@ -247,18 +224,8 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     return { id: v.id, name: v.name, next_review_due_at: v.next_review_due_at, daysOverdue }
   })
 
-  // Pending human reviews
-  const pendingRows = (pendingHumanRes.data ?? []) as unknown as {
-    id: string; title: string | null; status: string
-    vendors: { id: string; name: string } | null
-  }[]
-  const pendingHumanReviews: PendingAssessment[] = pendingRows.map(a => ({
-    id: a.id,
-    title: a.title,
-    vendor_name: a.vendors?.name ?? 'Unknown vendor',
-    vendor_id: a.vendors?.id ?? '',
-    status: a.status,
-  }))
+  // Pending human reviews (stub — vendor_assessments table removed)
+  const pendingHumanReviews: PendingAssessment[] = []
 
   // Issue stats
   const issueRows = (issueRes.data ?? []) as { severity: string; status: string; due_date: string | null }[]

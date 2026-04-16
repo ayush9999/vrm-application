@@ -1,24 +1,26 @@
-// ─── Issues & Remediation types (mirror 012_issues_and_remediation.sql) ──────
+// ─── Issues & Remediation types (migration 012 + 018 extensions) ────────────
 
 export type IssueSeverity = 'critical' | 'high' | 'medium' | 'low'
 
-export type IssueStatus = 'open' | 'in_progress' | 'blocked' | 'deferred' | 'resolved' | 'closed'
+export type IssueStatus =
+  | 'open' | 'in_progress' | 'blocked' | 'deferred'
+  | 'waiting_on_vendor' | 'waiting_internal_review'
+  | 'resolved' | 'verified' | 'closed'
 
 export type IssueDisposition = 'remediate' | 'accepted_risk'
 
-export type IssueSource = 'assessment' | 'manual' | 'monitoring'
+export type IssueSource = 'review' | 'manual' | 'monitoring'
 
 export type IssueType = 'control_level' | 'grouped' | 'general'
 
 export type EvidenceReviewStatus = 'pending' | 'accepted' | 'rejected'
 
-// ─── Core Issue ─────────────────────────────────────────────────────────────
+// ─── Core Issue (Remediation) ───────────────────────────────────────────────
 
 export interface Issue {
   id: string
   org_id: string
   vendor_id: string
-  assessment_id: string | null
   title: string
   description: string | null
   severity: IssueSeverity
@@ -39,35 +41,21 @@ export interface Issue {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  // Remediation extensions (migration 018)
+  root_cause: string | null
+  source_review_requirement_id: string | null
+  source_vendor_review_pack_id: string | null
+  closure_evidence_url: string | null
+  verified_by_user_id: string | null
+  verified_at: string | null
   // joined
   vendor_name?: string
   owner_name?: string
-  assessment_title?: string
-  assessment_code?: string
-  controls?: IssueControl[]
   evidence?: IssueEvidence[]
-  findings?: IssueFinding[]
   activity?: IssueActivity[]
   _counts?: {
-    controls: number
     evidence: number
-    findings: number
   }
-}
-
-// ─── Issue Controls (many-to-many) ──────────────────────────────────────────
-
-export interface IssueControl {
-  id: string
-  issue_id: string
-  assessment_item_id: string | null
-  assessment_finding_id: string | null
-  framework_item_id: string | null
-  created_at: string
-  // joined
-  control_title?: string
-  control_status?: string
-  framework_name?: string
 }
 
 // ─── Issue Evidence ─────────────────────────────────────────────────────────
@@ -101,18 +89,6 @@ export interface IssueActivity {
   created_at: string
   // joined
   user_name?: string
-}
-
-// ─── Issue Findings (finding → issue mapping) ───────────────────────────────
-
-export interface IssueFinding {
-  id: string
-  issue_id: string
-  assessment_finding_id: string
-  created_at: string
-  // joined
-  finding_title?: string
-  finding_severity?: string
 }
 
 // ─── Form state ─────────────────────────────────────────────────────────────

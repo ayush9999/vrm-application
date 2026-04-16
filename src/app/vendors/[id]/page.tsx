@@ -5,10 +5,7 @@ import { getVendorById } from '@/lib/db/vendors'
 import { getVendorDocumentsData, getAssessmentDocRequestsForVendor } from '@/lib/db/documents'
 import { getVendorDisputes } from '@/lib/db/disputes'
 import { getVendorActivityLog } from '@/lib/db/activity-log'
-import { computeComplianceScore, getVendorComplianceReadiness } from '@/lib/db/compliance'
 import { getVendorIncidents } from '@/lib/db/incidents'
-import { getVendorAssessmentFrameworks, getVendorOnboardingAssessmentId, getFrameworks } from '@/lib/db/assessments'
-import { getOrgFrameworkSelections } from '@/lib/db/organizations'
 import { getVendorIssueCounts } from '@/lib/db/issues'
 import { VendorTabs } from './_components/VendorTabs'
 import {
@@ -21,8 +18,6 @@ import {
   createIncidentAction,
   updateIncidentAction,
   deleteIncidentAction,
-  addVendorFrameworkAction,
-  removeVendorFrameworkAction,
 } from './actions'
 import { deleteVendorAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
@@ -46,25 +41,17 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, disputes, activityLog, compliance, incidents, assessmentDocRequests, frameworkReadiness, vendorFrameworks, orgStandardSelections, onboardingAssessmentId, allFrameworks, issueCounts] = await Promise.all([
+  const [documents, disputes, activityLog, incidents, assessmentDocRequests, issueCounts] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
     getVendorDisputes(user.orgId, id),
     getVendorActivityLog(user.orgId, id),
-    computeComplianceScore(user.orgId, id, vendor.category_id),
     getVendorIncidents(user.orgId, id),
     getAssessmentDocRequestsForVendor(user.orgId, id),
-    getVendorComplianceReadiness(user.orgId, id),
-    getVendorAssessmentFrameworks(user.orgId, id),
-    getOrgFrameworkSelections(user.orgId),
-    getVendorOnboardingAssessmentId(user.orgId, id),
-    getFrameworks(user.orgId),
     getVendorIssueCounts(user.orgId, id),
   ])
 
-  const orgStandardIds = new Set(orgStandardSelections.map(s => s.framework_id))
-
   const tabParam = sp.tab as
-    | 'overview' | 'documents' | 'compliance' | 'incidents' | 'activity' | 'disputes'
+    | 'overview' | 'documents' | 'incidents' | 'activity' | 'disputes'
     | undefined
   const defaultTab = tabParam ?? 'overview'
 
@@ -77,22 +64,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const boundCreateIncident   = createIncidentAction.bind(null, id)
   const boundUpdateIncident   = updateIncidentAction.bind(null, id)
   const boundDeleteIncident   = deleteIncidentAction.bind(null, id)
-  const boundAddFramework     = onboardingAssessmentId
-    ? addVendorFrameworkAction.bind(null, id, onboardingAssessmentId)
-    : null
-  const boundRemoveFramework  = onboardingAssessmentId
-    ? removeVendorFrameworkAction.bind(null, id, onboardingAssessmentId)
-    : null
   const statusBadge = STATUS_BADGE[vendor.status]
-
-  // Overall compliance score from framework readiness (same logic as ComplianceTab)
-  const _totalSatisfied = frameworkReadiness.reduce((s, fw) => s + fw.satisfied, 0)
-  const _totalControls  = frameworkReadiness.reduce((s, fw) => s + fw.total, 0)
-  const _totalAssess    = frameworkReadiness.reduce((s, fw) => s + fw.needs_assessment, 0)
-  const _evaluable      = _totalControls - _totalAssess
-  const overallComplianceScore = frameworkReadiness.length > 0 && _evaluable > 0
-    ? Math.floor((_totalSatisfied / _evaluable) * 100)
-    : null
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -132,18 +104,6 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
                 {vendor.vendor_code}
               </span>
             )}
-            {overallComplianceScore !== null && (
-              <span className="text-xs" style={{ color: '#a99fd8' }}>
-                Compliance:{' '}
-                <span className={`font-semibold ${
-                  overallComplianceScore >= 80 ? 'text-emerald-600'
-                    : overallComplianceScore >= 40 ? 'text-amber-600'
-                    : 'text-rose-600'
-                }`}>
-                  {overallComplianceScore}%
-                </span>
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -156,14 +116,6 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         <VendorTabs
           vendor={vendor}
           currentRole={user.role}
-          compliance={compliance}
-          frameworkReadiness={frameworkReadiness}
-          orgStandardIds={orgStandardIds}
-          vendorFrameworks={vendorFrameworks}
-          allFrameworks={allFrameworks}
-          onboardingAssessmentId={onboardingAssessmentId}
-          addFrameworkAction={boundAddFramework}
-          removeFrameworkAction={boundRemoveFramework}
           documents={documents}
           assessmentDocRequests={assessmentDocRequests}
           disputes={disputes}

@@ -15,7 +15,6 @@ import type {
 
 export interface GetIssuesOptions {
   vendorId?: string
-  assessmentId?: string
   status?: IssueStatus | IssueStatus[]
   severity?: IssueSeverity
   source?: IssueSource
@@ -34,15 +33,13 @@ export async function getIssues(
     .select(`
       *,
       vendors!inner(name),
-      users!issues_owner_user_id_fkey(name),
-      vendor_assessments(title, assessment_code)
+      users!issues_owner_user_id_fkey(name)
     `)
     .eq('org_id', orgId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   if (opts.vendorId) q = q.eq('vendor_id', opts.vendorId)
-  if (opts.assessmentId) q = q.eq('assessment_id', opts.assessmentId)
   if (opts.severity) q = q.eq('severity', opts.severity)
   if (opts.source) q = q.eq('source', opts.source)
   if (opts.ownerUserId) q = q.eq('owner_user_id', opts.ownerUserId)
@@ -68,11 +65,8 @@ export async function getIssues(
     ...row,
     vendor_name: row.vendors?.name ?? null,
     owner_name: row.users?.name ?? null,
-    assessment_title: row.vendor_assessments?.title ?? null,
-    assessment_code: row.vendor_assessments?.assessment_code ?? null,
     vendors: undefined,
     users: undefined,
-    vendor_assessments: undefined,
   }))
 }
 
@@ -89,8 +83,7 @@ export async function getIssueById(
     .select(`
       *,
       vendors!inner(name),
-      users!issues_owner_user_id_fkey(name),
-      vendor_assessments(title, assessment_code)
+      users!issues_owner_user_id_fkey(name)
     `)
     .eq('id', issueId)
     .eq('org_id', orgId)
@@ -132,11 +125,8 @@ export async function getIssueById(
     ...issue,
     vendor_name: issue.vendors?.name ?? null,
     owner_name: issue.users?.name ?? null,
-    assessment_title: issue.vendor_assessments?.title ?? null,
-    assessment_code: issue.vendor_assessments?.assessment_code ?? null,
     vendors: undefined,
     users: undefined,
-    vendor_assessments: undefined,
     controls: (controlsRes.data ?? []).map((c: any) => ({
       ...c,
       control_title: c.assessment_items?.title ?? c.assessment_framework_items?.title ?? null,
@@ -170,7 +160,6 @@ export interface CreateIssueInput {
   severity?: IssueSeverity
   source?: IssueSource
   type?: IssueType
-  assessmentId?: string | null
   ownerUserId?: string | null
   dueDate?: string | null
   remediationPlan?: string | null
@@ -194,7 +183,6 @@ export async function createIssue(input: CreateIssueInput): Promise<Issue> {
       severity: input.severity ?? 'medium',
       source: input.source ?? 'manual',
       type: input.type ?? 'general',
-      assessment_id: input.assessmentId ?? null,
       owner_user_id: input.ownerUserId ?? null,
       due_date: input.dueDate ?? null,
       remediation_plan: input.remediationPlan ?? null,

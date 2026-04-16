@@ -2,18 +2,14 @@ import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorCategories } from '@/lib/db/vendor-categories'
 import { getOrgUsers } from '@/lib/db/organizations'
-import { getFrameworks } from '@/lib/db/assessments'
-import { getAllCategoryFrameworkSuggestions } from '@/lib/db/vendor-frameworks'
 import { VendorForm } from '../_components/VendorForm'
 import { createVendorAction } from '../actions'
 
 export default async function NewVendorPage() {
   const user = await requireCurrentUser()
-  const [categories, users, allVrfs, categoryVrfMap] = await Promise.all([
+  const [categories, users] = await Promise.all([
     getVendorCategories(user.orgId),
     getOrgUsers(user.orgId),
-    getFrameworks(user.orgId, 'vendor_risk_framework'),
-    getAllCategoryFrameworkSuggestions(user.orgId),
   ])
 
   return (
@@ -40,8 +36,6 @@ export default async function NewVendorPage() {
           action={createVendorAction}
           categories={categories}
           users={users}
-          allVrfs={allVrfs}
-          categoryVrfMap={categoryVrfMap}
           submitLabel="Create Vendor & Continue"
           cancelHref="/vendors"
         />

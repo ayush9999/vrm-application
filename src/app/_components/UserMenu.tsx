@@ -81,7 +81,7 @@ export function UserMenu({ email, name, orgName }: UserMenuProps) {
               Members
             </Link>
             <Link
-              href="/settings/frameworks"
+              href="/settings/members"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/5 transition-colors"
             >

@@ -2,6 +2,7 @@
 
 export type VendorStatus = 'active' | 'under_review' | 'suspended'
 export type CriticalityTier = 1 | 2 | 3 | 4 | 5
+export type { VendorDataAccessLevel, VendorServiceType, VendorApprovalStatus } from './review-pack'
 
 // ─── Core row shapes ──────────────────────────────────────────────────────────
 
@@ -43,6 +44,15 @@ export interface VendorRow {
   updated_at: string
   archived_at: string | null
   deleted_at: string | null
+  // New classification + approval columns (migration 018)
+  data_access_level: import('./review-pack').VendorDataAccessLevel
+  annual_spend: number | null
+  service_type: import('./review-pack').VendorServiceType
+  processes_personal_data: boolean
+  approval_status: import('./review-pack').VendorApprovalStatus
+  approved_by_user_id: string | null
+  approved_at: string | null
+  exception_reason: string | null
 }
 
 /** vendors row with joined relations used in the list and detail views */
@@ -68,17 +78,13 @@ export interface CreateVendorInput {
   next_review_due_at?: string | null
   last_reviewed_at?: string | null
   notes?: string | null
+  data_access_level?: import('./review-pack').VendorDataAccessLevel
+  annual_spend?: number | null
+  service_type?: import('./review-pack').VendorServiceType
+  processes_personal_data?: boolean
 }
 
 export type UpdateVendorInput = Partial<CreateVendorInput>
-
-// ─── Compliance ───────────────────────────────────────────────────────────────
-
-export interface ComplianceData {
-  score: number | null // 0–100, null when vendor has no category
-  required_total: number
-  required_complete: number
-}
 
 // ─── Form state (re-exported from common for convenience) ─────────────────────
 

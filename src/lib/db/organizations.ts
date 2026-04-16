@@ -1,6 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { AssessmentFramework } from '@/types/assessment'
 
 // ─── Seed data ─────────────────────────────────────────────────────────────────
 
@@ -147,74 +146,3 @@ export async function initOrgDefaults(orgId: string): Promise<void> {
   }
 }
 
-// ─── Framework selections ──────────────────────────────────────────────────────
-
-export interface OrgFrameworkSelection {
-  framework_id: string
-  framework: AssessmentFramework
-}
-
-/**
- * Returns all compliance standard selections for an org, with framework details joined.
- */
-export async function getOrgFrameworkSelections(
-  orgId: string,
-): Promise<OrgFrameworkSelection[]> {
-  const supabase = await createServerClient()
-
-  const { data, error } = await supabase
-    .from('org_framework_selections')
-    .select('framework_id')
-    .eq('org_id', orgId)
-
-  if (error) throw new Error(error.message)
-
-  const selections = (data ?? []) as { framework_id: string }[]
-  if (selections.length === 0) return []
-
-  const frameworkIds = selections.map((s) => s.framework_id)
-  const { data: frameworks, error: fwErr } = await supabase
-    .from('assessment_frameworks')
-    .select('*')
-    .in('id', frameworkIds)
-    .is('deleted_at', null)
-  if (fwErr) throw new Error(fwErr.message)
-
-  const frameworkById = new Map(
-    ((frameworks ?? []) as AssessmentFramework[]).map((f) => [f.id, f]),
-  )
-
-  return selections
-    .filter((s) => frameworkById.has(s.framework_id))
-    .map((s) => ({
-      framework_id: s.framework_id,
-      framework: frameworkById.get(s.framework_id)!,
-    }))
-}
-
-/**
- * Replaces the org's compliance standard selections atomically.
- */
-export async function saveOrgFrameworkSelections(
-  orgId: string,
-  frameworkIds: string[],
-): Promise<void> {
-  const supabase = await createServerClient()
-
-  const { error: delErr } = await supabase
-    .from('org_framework_selections')
-    .delete()
-    .eq('org_id', orgId)
-  if (delErr) throw new Error(delErr.message)
-
-  if (frameworkIds.length === 0) return
-
-  const rows = frameworkIds.map((frameworkId) => ({
-    org_id: orgId,
-    framework_id: frameworkId,
-    is_primary: false,
-  }))
-
-  const { error: insErr } = await supabase.from('org_framework_selections').insert(rows)
-  if (insErr) throw new Error(insErr.message)
-}
