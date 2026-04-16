@@ -93,25 +93,12 @@ export async function getIssueById(
   if (error) throw error
   if (!issue) return null
 
-  // Fetch relations in parallel
-  const [controlsRes, evidenceRes, findingsRes, activityRes] = await Promise.all([
-    sb.from('issue_controls')
-      .select(`
-        *,
-        assessment_items(title, status),
-        assessment_framework_items(title, framework_id, assessment_frameworks(name))
-      `)
-      .eq('issue_id', issueId),
+  // Fetch evidence and activity in parallel (controls/findings tables were dropped)
+  const [evidenceRes, activityRes] = await Promise.all([
     sb.from('issue_evidence')
       .select('*')
       .eq('issue_id', issueId)
       .order('uploaded_at', { ascending: false }),
-    sb.from('issue_findings')
-      .select(`
-        *,
-        assessment_findings(title, severity)
-      `)
-      .eq('issue_id', issueId),
     sb.from('issue_activity')
       .select(`
         *,
@@ -127,21 +114,7 @@ export async function getIssueById(
     owner_name: issue.users?.name ?? null,
     vendors: undefined,
     users: undefined,
-    controls: (controlsRes.data ?? []).map((c: any) => ({
-      ...c,
-      control_title: c.assessment_items?.title ?? c.assessment_framework_items?.title ?? null,
-      control_status: c.assessment_items?.status ?? null,
-      framework_name: c.assessment_framework_items?.assessment_frameworks?.name ?? null,
-      assessment_items: undefined,
-      assessment_framework_items: undefined,
-    })),
     evidence: evidenceRes.data ?? [],
-    findings: (findingsRes.data ?? []).map((f: any) => ({
-      ...f,
-      finding_title: f.assessment_findings?.title ?? null,
-      finding_severity: f.assessment_findings?.severity ?? null,
-      assessment_findings: undefined,
-    })),
     activity: (activityRes.data ?? []).map((a: any) => ({
       ...a,
       user_name: a.users?.name ?? null,
@@ -164,10 +137,6 @@ export interface CreateIssueInput {
   dueDate?: string | null
   remediationPlan?: string | null
   createdByUserId?: string | null
-  // optional linked items
-  controlIds?: string[]  // assessment_item ids
-  findingIds?: string[]  // assessment_finding ids
-  frameworkItemIds?: string[] // framework_item ids
 }
 
 export async function createIssue(input: CreateIssueInput): Promise<Issue> {
@@ -192,25 +161,6 @@ export async function createIssue(input: CreateIssueInput): Promise<Issue> {
     .single()
 
   if (error) throw error
-
-  // Link controls (with corresponding framework_item_id when available)
-  if (input.controlIds?.length) {
-    const rows = input.controlIds.map((controlId, idx) => ({
-      issue_id: data.id,
-      assessment_item_id: controlId,
-      framework_item_id: input.frameworkItemIds?.[idx] ?? null,
-    }))
-    await sb.from('issue_controls').insert(rows)
-  }
-
-  // Link findings if provided
-  if (input.findingIds?.length) {
-    const rows = input.findingIds.map(findingId => ({
-      issue_id: data.id,
-      assessment_finding_id: findingId,
-    }))
-    await sb.from('issue_findings').insert(rows)
-  }
 
   // Log creation
   await logIssueActivity(data.id, input.createdByUserId ?? null, 'created', null, null, null)
@@ -299,10 +249,9 @@ export async function updateIssue(
     await logIssueActivity(issueId, userId, 'owner_changed', current.owner_user_id, input.ownerUserId, null)
   }
 
-  // Propagate resolution to linked assessment controls + log vendor activity
+  // Log resolution activity at the vendor level
   if (input.status && current && input.status !== current.status) {
     if (input.status === 'resolved' || input.status === 'closed') {
-      await propagateResolutionToControls(issueId)
       if (current.vendor_id) {
         await logActivity({
           orgId,
@@ -312,60 +261,21 @@ export async function updateIssue(
           entityId: issueId,
           action: input.status === 'resolved' ? 'issue_resolved' : 'issue_closed',
           title: `Issue ${input.status}`,
-          description: `Linked assessment controls updated to mitigated`,
         })
       }
     }
   }
 }
 
-// ─── Propagate issue resolution to assessment controls ──────────────────────
-
-async function propagateResolutionToControls(issueId: string): Promise<void> {
-  const sb = await createServerClient()
-
-  const { data: controls } = await sb
-    .from('issue_controls')
-    .select('assessment_item_id')
-    .eq('issue_id', issueId)
-    .not('assessment_item_id', 'is', null)
-
-  if (!controls?.length) return
-
-  const itemIds = controls.map(c => c.assessment_item_id).filter(Boolean)
-  if (itemIds.length === 0) return
-
-  // Only update flagged items — don't overwrite already-satisfactory controls
-  await sb
-    .from('assessment_items')
-    .update({ status: 'mitigated', updated_at: new Date().toISOString() })
-    .in('id', itemIds)
-    .in('status', ['needs_attention', 'high_risk'])
-}
-
 // ─── Check duplicate open issues ────────────────────────────────────────────
 
 export async function findDuplicateIssues(
-  orgId: string,
-  vendorId: string,
-  controlId: string,
+  _orgId: string,
+  _vendorId: string,
+  _controlId: string,
 ): Promise<Issue[]> {
-  const sb = await createServerClient()
-  const { data } = await sb
-    .from('issue_controls')
-    .select(`
-      issues!inner(
-        id, title, status, severity, created_at,
-        vendors!inner(name)
-      )
-    `)
-    .eq('assessment_item_id', controlId)
-    .in('issues.status', ['open', 'in_progress', 'blocked', 'deferred'])
-    .eq('issues.org_id', orgId)
-    .eq('issues.vendor_id', vendorId)
-    .is('issues.deleted_at', null)
-
-  return (data ?? []).map((row: any) => row.issues)
+  // assessment-based duplicate detection removed; will reimplement against review items if needed
+  return []
 }
 
 // ─── Vendor issue counts (for overview) ─────────────────────────────────────
@@ -427,41 +337,6 @@ export async function getOrgIssueCounts(orgId: string) {
     open: issues.length,
     overdue: issues.filter(i => i.due_date && i.due_date < today).length,
   }
-}
-
-// ─── Get linked issues for assessment findings ────────────────────────────
-
-export interface FindingIssueLink {
-  finding_id: string
-  issue_id: string
-  issue_title: string
-  issue_status: string
-}
-
-export async function getAssessmentFindingIssueLinks(
-  findingIds: string[],
-): Promise<FindingIssueLink[]> {
-  if (findingIds.length === 0) return []
-  const sb = await createServerClient()
-
-  const { data, error } = await sb
-    .from('issue_findings')
-    .select(`
-      assessment_finding_id,
-      issue_id,
-      issues!inner(id, title, status, deleted_at)
-    `)
-    .in('assessment_finding_id', findingIds)
-    .is('issues.deleted_at', null)
-
-  if (error) throw error
-
-  return (data ?? []).map((row: any) => ({
-    finding_id: row.assessment_finding_id,
-    issue_id: row.issues.id,
-    issue_title: row.issues.title,
-    issue_status: row.issues.status,
-  }))
 }
 
 // ─── Evidence helpers ──────────────────────────────────────────────────────

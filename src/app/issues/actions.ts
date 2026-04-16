@@ -25,14 +25,6 @@ export async function createIssueAction(
   const dueDate = (formData.get('due_date') as string)?.trim() || null
   const remediationPlan = (formData.get('remediation_plan') as string)?.trim() || null
 
-  // Control/finding links (from assessment flow)
-  const controlIds = formData.getAll('control_ids').map(v => String(v).trim()).filter(Boolean)
-  const frameworkItemIds = formData.getAll('framework_item_ids').map(v => String(v).trim()).filter(Boolean)
-  const findingIds = formData.getAll('finding_ids').map(v => String(v).trim()).filter(Boolean)
-  // Also accept singular finding_id (from "Create Issue" link on finding cards)
-  const singleFindingId = (formData.get('finding_id') as string)?.trim()
-  if (singleFindingId && !findingIds.includes(singleFindingId)) findingIds.push(singleFindingId)
-
   if (!title) return { message: 'Title is required.' }
   if (!vendorId) return { message: 'Vendor is required.' }
 
@@ -49,9 +41,6 @@ export async function createIssueAction(
       dueDate,
       remediationPlan,
       createdByUserId: user.userId,
-      controlIds: controlIds.length > 0 ? controlIds : undefined,
-      frameworkItemIds: frameworkItemIds.length > 0 ? frameworkItemIds : undefined,
-      findingIds: findingIds.length > 0 ? findingIds : undefined,
     })
 
     revalidatePath('/issues')

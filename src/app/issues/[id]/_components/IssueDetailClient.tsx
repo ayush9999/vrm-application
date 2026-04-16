@@ -150,28 +150,6 @@ export function IssueDetailClient({
               {new Date(issue.created_at).toLocaleDateString()}
             </p>
           </div>
-          {issue.assessment_id && (
-            <div className="col-span-2 sm:col-span-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Assessment</span>
-              <p className="font-medium mt-0.5 flex items-center gap-2">
-                {issue.assessment_code && (
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded font-mono"
-                    style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3' }}
-                  >
-                    {issue.assessment_code}
-                  </span>
-                )}
-                <Link
-                  href={`/assessments/${issue.assessment_id}`}
-                  className="hover:underline"
-                  style={{ color: '#1e1550' }}
-                >
-                  {issue.assessment_title ?? 'View Assessment'}
-                </Link>
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Description */}
@@ -303,61 +281,6 @@ export function IssueDetailClient({
         deleteAction={deleteEvidenceAction}
         promoteAction={promoteEvidenceAction}
       />
-
-      {/* Linked Controls */}
-      {issue.controls && issue.controls.length > 0 && (
-        <div
-          className="rounded-2xl p-5 space-y-3"
-          style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 12px rgba(109,93,211,0.08)' }}
-        >
-          <h2 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Linked Controls</h2>
-          <div className="space-y-1.5">
-            {issue.controls.map(c => (
-              <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', border: '1px solid rgba(109,93,211,0.08)' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{
-                  background: c.control_status === 'satisfactory' ? '#059669' : c.control_status === 'high_risk' ? '#e11d48' : '#a99fd8'
-                }} />
-                <span className="text-xs font-medium" style={{ color: '#1e1550' }}>{c.control_title ?? 'Unknown control'}</span>
-                {c.framework_name && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0" style={{ color: '#6c5dd3', background: 'rgba(109,93,211,0.08)' }}>
-                    {c.framework_name}
-                  </span>
-                )}
-                {c.control_status && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-auto" style={{ color: '#8b7fd4', background: 'rgba(109,93,211,0.06)' }}>
-                    {c.control_status.replace(/_/g, ' ')}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Linked Findings */}
-      {issue.findings && issue.findings.length > 0 && (
-        <div
-          className="rounded-2xl p-5 space-y-3"
-          style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 12px rgba(109,93,211,0.08)' }}
-        >
-          <h2 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Linked Findings</h2>
-          <div className="space-y-1.5">
-            {issue.findings.map(f => {
-              const fsev = SEVERITY_STYLE[f.finding_severity ?? 'medium'] ?? SEVERITY_STYLE.medium
-              return (
-                <div key={f.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', border: '1px solid rgba(109,93,211,0.08)' }}>
-                  <span className="text-xs font-medium" style={{ color: '#1e1550' }}>{f.finding_title ?? 'Finding'}</span>
-                  {f.finding_severity && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ml-auto" style={{ background: fsev.bg, color: fsev.color }}>
-                      {f.finding_severity}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Activity + Add Note */}
       <div

@@ -15,14 +15,6 @@ export default async function NewIssuePage({
     searchParams,
   ])
 
-  // finding_ids can be repeated: ?finding_ids=a&finding_ids=b
-  const findingIdsRaw = sp.finding_ids
-  const findingIds = Array.isArray(findingIdsRaw)
-    ? findingIdsRaw
-    : findingIdsRaw
-    ? [findingIdsRaw]
-    : []
-
   const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
   const prefill = {
@@ -30,9 +22,6 @@ export default async function NewIssuePage({
     title: str(sp.title),
     severity: str(sp.severity),
     source: str(sp.source),
-    assessment_id: str(sp.assessment_id),
-    finding_id: str(sp.finding_id),
-    finding_ids: findingIds,
     description: str(sp.description),
     type: str(sp.type),
   }
