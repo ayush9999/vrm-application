@@ -53,7 +53,7 @@ export default async function DashboardPage() {
 
       {/* ── Operational metrics ── */}
       <section>
-        <h2 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#a99fd8' }}>Operational Metrics</h2>
+        <h2 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#6c5dd3' }}>Operational Metrics</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           <SmallStat label="Awaiting Documents"    value={operational.awaitingDocuments}    color="#d97706" />
           <SmallStat label="Under Review"           value={operational.underReview}           color="#0284c7" />
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="High-Risk Vendors" linkLabel="View all" href="/vendors">
           {highRiskVendors.length === 0 ? (
-            <EmptyState message="No high-risk vendors" sub="All vendors are within tolerance" emerald />
+            <EmptyState message="None at this risk level" sub="No vendors currently rated High or Critical" emerald />
           ) : (
             <div className="space-y-1">
               {highRiskVendors.map((v) => {
@@ -185,7 +185,7 @@ function SmallStat({ label, value, color }: { label: string; value: number; colo
       className="rounded-xl p-3"
       style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 1px 4px rgba(109,93,211,0.04)' }}
     >
-      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>{label}</div>
+      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>{label}</div>
       <div className="text-xl font-bold tabular-nums mt-1" style={{ color: value > 0 ? color : '#c4bae8' }}>{value}</div>
     </div>
   )

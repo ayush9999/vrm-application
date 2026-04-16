@@ -33,6 +33,16 @@ function IconIssues({ className }: { className?: string }) {
   )
 }
 
+function IconReviews({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 1.5h7l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1v-12a1 1 0 011-1z" />
+      <path d="M9.5 1.5V4.5h3" />
+      <path d="M5 8h6M5 10.5h6M5 13h4" />
+    </svg>
+  )
+}
+
 function IconSettings({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -45,6 +55,7 @@ function IconSettings({ className }: { className?: string }) {
 const NAV_ITEMS = [
   { href: '/',             match: '/',             label: 'Dashboard',       Icon: IconDashboard,   exact: true  },
   { href: '/vendors',      match: '/vendors',      label: 'Vendors',         Icon: IconVendors,     exact: false },
+  { href: '/reviews',      match: '/reviews',      label: 'Reviews',         Icon: IconReviews,     exact: false },
   { href: '/issues',       match: '/issues',       label: 'Remediation',     Icon: IconIssues,      exact: false },
   { href: '/settings',     match: '/settings',     label: 'Settings',        Icon: IconSettings,    exact: false },
 ]

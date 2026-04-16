@@ -165,26 +165,32 @@ ALTER TABLE vendor_custom_field_values ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendor_portal_links       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendor_portal_submissions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS org_settings_tenant ON org_settings;
 CREATE POLICY org_settings_tenant ON org_settings FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
 
+DROP POLICY IF EXISTS org_default_approvers_tenant ON org_default_approvers;
 CREATE POLICY org_default_approvers_tenant ON org_default_approvers FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
 
+DROP POLICY IF EXISTS org_custom_fields_tenant ON org_custom_fields;
 CREATE POLICY org_custom_fields_tenant ON org_custom_fields FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
 
+DROP POLICY IF EXISTS vendor_custom_field_values_tenant ON vendor_custom_field_values;
 CREATE POLICY vendor_custom_field_values_tenant ON vendor_custom_field_values FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
 
+DROP POLICY IF EXISTS vendor_portal_links_tenant ON vendor_portal_links;
 CREATE POLICY vendor_portal_links_tenant ON vendor_portal_links FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
 
+DROP POLICY IF EXISTS vendor_portal_submissions_tenant ON vendor_portal_submissions;
 CREATE POLICY vendor_portal_submissions_tenant ON vendor_portal_submissions FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));

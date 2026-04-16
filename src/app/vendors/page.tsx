@@ -121,19 +121,42 @@ export default async function VendorsPage({ searchParams }: PageProps) {
 
       {/* Table */}
       {vendors.length === 0 ? (
-        <div
-          className="text-center py-20 rounded-2xl bg-white"
-          style={{ border: '1.5px dashed rgba(109,93,211,0.2)' }}
-        >
-          <p className="text-sm font-medium" style={{ color: '#6b5fa8' }}>No vendors found.</p>
-          <p className="text-xs mt-1.5" style={{ color: '#a99fd8' }}>
-            Try adjusting your filters or{' '}
-            <Link href="/vendors/new" className="underline underline-offset-2 hover:opacity-80" style={{ color: '#6c5dd3' }}>
-              add a vendor
-            </Link>
-            .
-          </p>
-        </div>
+        (() => {
+          const hasFilters = !!params.search || !!params.status || params.critical === 'true'
+          return (
+            <div
+              className="text-center py-20 rounded-2xl bg-white"
+              style={{ border: '1.5px dashed rgba(109,93,211,0.2)' }}
+            >
+              {hasFilters ? (
+                <>
+                  <p className="text-sm font-medium" style={{ color: '#1e1550' }}>No vendors match your filters.</p>
+                  <p className="text-xs mt-1.5" style={{ color: '#8b7fd4' }}>
+                    <Link href="/vendors" className="underline underline-offset-2 hover:opacity-80" style={{ color: '#6c5dd3' }}>
+                      Clear filters
+                    </Link>
+                    {' '}to see all vendors.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium" style={{ color: '#1e1550' }}>No vendors yet.</p>
+                  <p className="text-xs mt-1.5" style={{ color: '#8b7fd4' }}>
+                    Get started with the{' '}
+                    <Link href="/vendors/new/wizard" className="underline underline-offset-2 hover:opacity-80" style={{ color: '#6c5dd3' }}>
+                      guided setup
+                    </Link>
+                    {' '}or{' '}
+                    <Link href="/vendors/new" className="underline underline-offset-2 hover:opacity-80" style={{ color: '#6c5dd3' }}>
+                      add manually
+                    </Link>
+                    .
+                  </p>
+                </>
+              )}
+            </div>
+          )
+        })()
       ) : (
         <div
           className="overflow-x-auto rounded-2xl bg-white"

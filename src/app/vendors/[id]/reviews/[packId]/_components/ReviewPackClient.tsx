@@ -189,8 +189,8 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
         <div
-          className="flex items-center gap-3 px-4 py-2 rounded-xl sticky top-2 z-10"
-          style={{ background: '#1c1c2e', color: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
+          className="flex items-center gap-3 px-4 py-2 rounded-xl sticky top-2 z-10 backdrop-blur"
+          style={{ background: 'rgba(28,28,46,0.95)', color: 'white', boxShadow: '0 6px 24px rgba(28,28,46,0.25)' }}
         >
           <span className="text-xs font-semibold">
             {selectedIds.size} selected

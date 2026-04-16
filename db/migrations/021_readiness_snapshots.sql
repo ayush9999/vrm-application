@@ -34,6 +34,7 @@ CREATE INDEX IF NOT EXISTS ix_vendor_readiness_snapshots_org
 
 ALTER TABLE vendor_readiness_snapshots ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS vrs_tenant ON vendor_readiness_snapshots;
 CREATE POLICY vrs_tenant ON vendor_readiness_snapshots FOR ALL
   USING (org_id IN (SELECT user_org_ids()))
   WITH CHECK (org_id IN (SELECT user_org_ids()));
