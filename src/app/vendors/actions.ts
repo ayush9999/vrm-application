@@ -8,7 +8,50 @@ import { createVendor, updateVendor, softDeleteVendor, getVendorById } from '@/l
 import { autoAssignReviewPacks } from '@/lib/db/review-packs'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
+import { captureReadinessSnapshot } from '@/lib/db/readiness-snapshots'
+import { listCustomFields, setVendorCustomFieldValues } from '@/lib/db/custom-fields'
+import type { CustomField } from '@/lib/db/custom-fields'
 import type { FormState } from '@/types/common'
+
+/**
+ * Extract custom field values from FormData (entries prefixed with cf_<id>).
+ * Coerces to the field's declared type.
+ */
+function extractCustomFieldValues(
+  fields: CustomField[],
+  formData: FormData,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const f of fields) {
+    const key = `cf_${f.id}`
+    if (f.field_type === 'multi_select') {
+      const values = formData.getAll(key).map(String).filter(Boolean)
+      out[f.id] = values.length > 0 ? values : null
+      continue
+    }
+    const raw = formData.get(key)
+    if (raw === null) {
+      out[f.id] = null
+      continue
+    }
+    const str = String(raw).trim()
+    if (str === '') {
+      out[f.id] = null
+      continue
+    }
+    switch (f.field_type) {
+      case 'number':
+        out[f.id] = Number.isFinite(Number(str)) ? Number(str) : null
+        break
+      case 'boolean':
+        out[f.id] = str === 'true'
+        break
+      default:
+        out[f.id] = str
+    }
+  }
+  return out
+}
 
 // ─── Shared Zod schema ─────────────────────────────────────────────────────────
 
@@ -106,6 +149,13 @@ export async function createVendorAction(
       data_access_level: parsed.data.data_access_level,
       processes_personal_data: parsed.data.processes_personal_data,
     })
+
+    // Persist any custom field values from the form
+    const customFields = await listCustomFields(user.orgId, 'vendor')
+    if (customFields.length > 0) {
+      const values = extractCustomFieldValues(customFields, formData)
+      await setVendorCustomFieldValues(user.orgId, vendor.id, values)
+    }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to create vendor' }
   }
@@ -232,11 +282,136 @@ export async function updateApprovalStatusAction(
       metadata: { from: oldStatus ?? null, to: newStatus, exception_reason: exceptionReason ?? null },
     })
 
+    // Snapshot readiness at this moment for the trend chart.
+    // Best-effort — never block the status change on snapshot failure.
+    try {
+      await captureReadinessSnapshot({
+        orgId: user.orgId,
+        vendorId,
+        approvalStatus: newStatus,
+        trigger: 'approval_change',
+        triggerUserId: user.userId,
+        notes: oldStatus ? `${oldStatus} → ${newStatus}` : `set to ${newStatus}`,
+      })
+    } catch {
+      // ignore — snapshot is non-critical
+    }
+
     revalidatePath(`/vendors/${vendorId}`)
     revalidatePath('/vendors')
     return { success: true }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to update approval status' }
+  }
+}
+
+// ─── Wizard create — non-redirecting variant for client-driven flow ──────────
+
+export async function createVendorFromWizardAction(input: {
+  name: string
+  legal_name?: string | null
+  category_id?: string | null
+  is_critical: boolean
+  criticality_tier?: number | null
+  status: 'active' | 'under_review' | 'suspended'
+  internal_owner_user_id?: string | null
+  website_url?: string | null
+  primary_email?: string | null
+  phone?: string | null
+  country_code?: string | null
+  next_review_due_at?: string | null
+  last_reviewed_at?: string | null
+  notes?: string | null
+  service_type: import('@/types/vendor').VendorServiceType
+  data_access_level: import('@/types/vendor').VendorDataAccessLevel
+  processes_personal_data: boolean
+  annual_spend?: number | null
+}): Promise<{ vendorId?: string; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const vendor = await createVendor(user.orgId, input, user.userId)
+    await autoAssignReviewPacks({
+      id: vendor.id,
+      org_id: user.orgId,
+      category_id: input.category_id ?? null,
+      criticality_tier: input.criticality_tier ?? null,
+      service_type: input.service_type,
+      data_access_level: input.data_access_level,
+      processes_personal_data: input.processes_personal_data,
+    })
+    return { vendorId: vendor.id }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to create vendor' }
+  }
+}
+
+// ─── Generate portal links for all packs assigned to a vendor ────────────────
+// Used by the onboarding wizard's "send portal link" step after vendor creation.
+
+export async function generatePortalLinksForVendorAction(
+  vendorId: string,
+  recipientEmail: string | null,
+  expiryDays: number,
+): Promise<{ urls?: string[]; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+
+    const { data: vrps, error } = await supabase
+      .from('vendor_review_packs')
+      .select('id')
+      .eq('vendor_id', vendorId)
+      .eq('org_id', user.orgId)
+      .is('deleted_at', null)
+    if (error) throw new Error(error.message)
+    if (!vrps || vrps.length === 0) return { urls: [] }
+
+    const { createPortalLink } = await import('@/lib/db/vendor-portal')
+    const { headers } = await import('next/headers')
+    const h = await headers()
+    const proto = h.get('x-forwarded-proto') ?? 'http'
+    const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+
+    const urls: string[] = []
+    for (const v of vrps as { id: string }[]) {
+      const link = await createPortalLink({
+        orgId: user.orgId,
+        vendorId,
+        vendorReviewPackId: v.id,
+        createdByUserId: user.userId,
+        recipientEmail,
+        expiryDays,
+      })
+      urls.push(`${proto}://${host}/portal/${link.token}`)
+    }
+    return { urls }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to generate portal links' }
+  }
+}
+
+// ─── Manual snapshot ─────────────────────────────────────────────────────────
+
+export async function captureReadinessSnapshotAction(
+  vendorId: string,
+  notes?: string,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const vendor = await getVendorById(user.orgId, vendorId)
+    if (!vendor) return { message: 'Vendor not found' }
+    await captureReadinessSnapshot({
+      orgId: user.orgId,
+      vendorId,
+      approvalStatus: vendor.approval_status,
+      trigger: 'manual',
+      triggerUserId: user.userId,
+      notes: notes ?? null,
+    })
+    revalidatePath(`/vendors/${vendorId}`)
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to capture snapshot' }
   }
 }
 
@@ -281,6 +456,13 @@ export async function updateVendorAction(
   try {
     const user = await requireCurrentUser()
     await updateVendor(user.orgId, id, parsed.data, user.userId)
+
+    // Persist custom field values
+    const customFields = await listCustomFields(user.orgId, 'vendor')
+    if (customFields.length > 0) {
+      const values = extractCustomFieldValues(customFields, formData)
+      await setVendorCustomFieldValues(user.orgId, id, values)
+    }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to update vendor' }
   }

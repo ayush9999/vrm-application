@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getReviewPackWithRequirements } from '@/lib/db/review-packs'
 import { PackLifecycleControls } from './_components/PackLifecycleControls'
+import { EditableRequirements } from './_components/EditableRequirements'
 
 interface PageProps {
   params: Promise<{ packId: string }>
@@ -88,98 +89,13 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         </p>
       </Section>
 
-      {/* Evidence requirements */}
-      <Section title={`Evidence Requirements (${evidenceRequirements.length})`}>
-        {evidenceRequirements.length === 0 ? (
-          <p className="text-sm" style={{ color: '#a99fd8' }}>No evidence requirements defined.</p>
-        ) : (
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
-          >
-            {evidenceRequirements.map((er, idx) => (
-              <div
-                key={er.id}
-                className="px-4 py-3 flex items-start gap-3"
-                style={{ borderBottom: idx === evidenceRequirements.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}
-              >
-                <span className="text-xs font-mono pt-0.5 shrink-0" style={{ color: '#a99fd8' }}>{idx + 1}.</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{er.name}</span>
-                    {er.required && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
-                        Required
-                      </span>
-                    )}
-                    {er.expiry_applies && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(245,158,11,0.08)', color: '#d97706' }}>
-                        Has Expiry
-                      </span>
-                    )}
-                  </div>
-                  {er.description && (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{er.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* Review requirements */}
-      <Section title={`Review Items (${reviewRequirements.length})`}>
-        {reviewRequirements.length === 0 ? (
-          <p className="text-sm" style={{ color: '#a99fd8' }}>No review items defined.</p>
-        ) : (
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
-          >
-            {reviewRequirements.map((rr, idx) => (
-              <div
-                key={rr.id}
-                className="px-4 py-3 flex items-start gap-3"
-                style={{ borderBottom: idx === reviewRequirements.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}
-              >
-                <span className="text-xs font-mono pt-0.5 shrink-0" style={{ color: '#a99fd8' }}>{idx + 1}.</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{rr.name}</span>
-                    {rr.required && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
-                        Required
-                      </span>
-                    )}
-                    {rr.creates_remediation_on_fail && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(108,93,211,0.08)', color: '#6c5dd3' }}>
-                        Auto-Remediation
-                      </span>
-                    )}
-                  </div>
-                  {rr.description && (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{rr.description}</p>
-                  )}
-                  {rr.compliance_references && rr.compliance_references.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                      {rr.compliance_references.map((ref, i) => (
-                        <span
-                          key={i}
-                          className="text-[10px] px-1.5 py-0.5 rounded font-mono"
-                          style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}
-                        >
-                          {ref.standard} {ref.reference}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
+      <EditableRequirements
+        packId={pack.id}
+        evidence={evidenceRequirements}
+        reviews={reviewRequirements}
+        isCustom={pack.source_type === 'custom'}
+        canEdit={user.role === 'site_admin'}
+      />
     </div>
   )
 }

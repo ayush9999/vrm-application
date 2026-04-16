@@ -6,7 +6,7 @@ import type { VendorCategory } from '@/types/vendor'
 import type { VendorServiceType, VendorDataAccessLevel } from '@/types/review-pack'
 import type { OrgUser } from '@/lib/db/organizations'
 
-const STEPS = ['Basics', 'Classification', 'Review Packs', 'Evidence', 'Confirm'] as const
+const STEPS = ['Basics', 'Classification', 'Review Packs', 'Evidence', 'Collect', 'Confirm'] as const
 
 interface MatchedPack {
   id: string
@@ -20,7 +20,23 @@ interface Props {
   categories: VendorCategory[]
   users: OrgUser[]
   countries: { code: string; name: string }[]
-  createAction: (prevState: unknown, formData: FormData) => Promise<{ message?: string; errors?: Record<string, string[] | undefined> }>
+  createAction: (input: {
+    name: string
+    legal_name?: string | null
+    category_id?: string | null
+    is_critical: boolean
+    criticality_tier?: number | null
+    status: 'active' | 'under_review' | 'suspended'
+    internal_owner_user_id?: string | null
+    website_url?: string | null
+    primary_email?: string | null
+    phone?: string | null
+    country_code?: string | null
+    service_type: VendorServiceType
+    data_access_level: VendorDataAccessLevel
+    processes_personal_data: boolean
+    annual_spend?: number | null
+  }) => Promise<{ vendorId?: string; message?: string }>
   previewAction: (input: {
     category_id?: string | null
     criticality_tier?: number | null
@@ -28,6 +44,11 @@ interface Props {
     data_access_level: VendorDataAccessLevel
     processes_personal_data: boolean
   }) => Promise<{ packs?: MatchedPack[]; message?: string }>
+  generatePortalLinksAction: (
+    vendorId: string,
+    recipientEmail: string | null,
+    expiryDays: number,
+  ) => Promise<{ urls?: string[]; message?: string }>
 }
 
 interface FormData {
@@ -49,6 +70,10 @@ interface FormData {
   annual_spend: string
   // Step 3
   excluded_pack_ids: Set<string>
+  // Step 5 (Collect)
+  send_portal_link: boolean
+  portal_recipient_email: string
+  portal_expiry_days: string
 }
 
 const INITIAL: FormData = {
@@ -67,15 +92,20 @@ const INITIAL: FormData = {
   is_critical: false,
   annual_spend: '',
   excluded_pack_ids: new Set(),
+  send_portal_link: false,
+  portal_recipient_email: '',
+  portal_expiry_days: '14',
 }
 
-export function OnboardingWizard({ categories, users, countries, createAction, previewAction }: Props) {
+export function OnboardingWizard({ categories, users, countries, createAction, previewAction, generatePortalLinksAction }: Props) {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [data, setData] = useState<FormData>(INITIAL)
   const [matchedPacks, setMatchedPacks] = useState<MatchedPack[]>([])
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [createdVendorId, setCreatedVendorId] = useState<string | null>(null)
+  const [portalUrls, setPortalUrls] = useState<string[]>([])
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setData((d) => ({ ...d, [key]: value }))
@@ -118,28 +148,115 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
   const handleSubmit = () => {
     setError(null)
     startTransition(async () => {
-      const fd = new FormData()
-      fd.set('name', data.name.trim())
-      if (data.legal_name) fd.set('legal_name', data.legal_name)
-      if (data.website_url) fd.set('website_url', data.website_url)
-      if (data.primary_email) fd.set('primary_email', data.primary_email)
-      if (data.phone) fd.set('phone', data.phone)
-      if (data.country_code) fd.set('country_code', data.country_code)
-      if (data.internal_owner_user_id) fd.set('internal_owner_user_id', data.internal_owner_user_id)
-      if (data.category_id) fd.set('category_id', data.category_id)
-      fd.set('status', 'active')
-      if (data.criticality_tier) fd.set('criticality_tier', data.criticality_tier)
-      fd.set('service_type', data.service_type)
-      fd.set('data_access_level', data.data_access_level)
-      fd.set('processes_personal_data', data.processes_personal_data ? 'true' : 'false')
-      fd.set('is_critical', data.is_critical ? 'true' : 'false')
-      if (data.annual_spend) fd.set('annual_spend', data.annual_spend)
+      const result = await createAction({
+        name: data.name.trim(),
+        legal_name: data.legal_name || null,
+        category_id: data.category_id || null,
+        is_critical: data.is_critical,
+        criticality_tier: data.criticality_tier ? parseInt(data.criticality_tier, 10) : null,
+        status: 'active',
+        internal_owner_user_id: data.internal_owner_user_id || null,
+        website_url: data.website_url || null,
+        primary_email: data.primary_email || null,
+        phone: data.phone || null,
+        country_code: data.country_code || null,
+        service_type: data.service_type,
+        data_access_level: data.data_access_level,
+        processes_personal_data: data.processes_personal_data,
+        annual_spend: data.annual_spend ? Number(data.annual_spend) : null,
+      })
+      if (result.message || !result.vendorId) {
+        setError(result.message ?? 'Failed to create vendor')
+        return
+      }
+      setCreatedVendorId(result.vendorId)
 
-      const result = await createAction({}, fd)
-      if (result.message) setError(result.message)
-      else if (result.errors) setError(Object.values(result.errors)[0]?.[0] ?? 'Validation error')
-      else router.push('/vendors')
+      // Optionally generate portal links for the freshly-created vendor's packs
+      if (data.send_portal_link) {
+        const r = await generatePortalLinksAction(
+          result.vendorId,
+          data.portal_recipient_email.trim() || null,
+          parseInt(data.portal_expiry_days, 10) || 14,
+        )
+        if (r.urls) setPortalUrls(r.urls)
+        else if (r.message) setError(`Vendor created, but portal-link generation failed: ${r.message}`)
+      }
     })
+  }
+
+  // Success state
+  if (createdVendorId) {
+    return (
+      <div
+        className="bg-white rounded-2xl p-8 space-y-5 text-center"
+        style={{ boxShadow: '0 2px 12px rgba(109,93,211,0.08)', border: '1px solid rgba(109,93,211,0.1)' }}
+      >
+        <div
+          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mx-auto"
+          style={{ background: 'rgba(5,150,105,0.08)' }}
+        >
+          <svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 8.5l3.5 3.5 6.5-8" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold" style={{ color: '#1e1550' }}>
+            Vendor created — {data.name}
+          </h2>
+          <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+            Review Packs were auto-applied. You can now start the review or send the questionnaire to the vendor.
+          </p>
+        </div>
+
+        {portalUrls.length > 0 && (
+          <div
+            className="text-left rounded-xl p-4 space-y-2"
+            style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.15)' }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+              Portal Links Generated ({portalUrls.length})
+            </p>
+            <p className="text-xs" style={{ color: '#4a4270' }}>
+              Send these URLs to the vendor. They&apos;ll be able to upload evidence and answer review questions without logging in.
+            </p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {portalUrls.map((url, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded bg-white text-[11px]">
+                  <code className="flex-1 truncate font-mono" style={{ color: '#1e1550' }}>{url}</code>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(url)}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded"
+                    style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => router.push(`/vendors/${createdVendorId}?tab=reviews`)}
+            className="text-sm font-medium px-5 py-2 rounded-full text-white"
+            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
+          >
+            Open Vendor Profile →
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/vendors')}
+            className="text-sm font-medium px-4 py-2 rounded-full"
+            style={{ color: '#a99fd8' }}
+          >
+            Back to Vendors list
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -184,7 +301,8 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
         {step === 1 && <Step2Classification data={data} update={update} categories={categories} />}
         {step === 2 && <Step3Packs matched={matchedPacks} excluded={data.excluded_pack_ids} setExcluded={(s) => update('excluded_pack_ids', s)} />}
         {step === 3 && <Step4Evidence packs={includedPacks} />}
-        {step === 4 && <Step5Confirm data={data} categories={categories} packs={includedPacks} />}
+        {step === 4 && <Step5Collect data={data} update={update} />}
+        {step === 5 && <Step6Confirm data={data} categories={categories} packs={includedPacks} />}
       </div>
 
       {error && (
@@ -435,7 +553,76 @@ function Step4Evidence({ packs }: { packs: MatchedPack[] }) {
   )
 }
 
-function Step5Confirm({
+function Step5Collect({
+  data,
+  update,
+}: {
+  data: FormData
+  update: <K extends keyof FormData>(key: K, value: FormData[K]) => void
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm" style={{ color: '#4a4270' }}>
+        Decide how to collect evidence from this vendor. You can always send portal links later from the Reviews tab.
+      </p>
+
+      <div
+        className="rounded-xl p-4"
+        style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.15)' }}
+      >
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data.send_portal_link}
+            onChange={(e) => update('send_portal_link', e.target.checked)}
+            className="mt-1 h-4 w-4 rounded shrink-0"
+            style={{ accentColor: '#6c5dd3' }}
+          />
+          <div className="flex-1">
+            <div className="text-sm font-semibold" style={{ color: '#1e1550' }}>
+              Generate portal links for the vendor on creation
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: '#4a4270' }}>
+              We&apos;ll create a unique URL per assigned Review Pack. Vendor opens the link to upload evidence and answer review questions — no login required.
+            </div>
+          </div>
+        </label>
+
+        {data.send_portal_link && (
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 pl-7">
+            <input
+              type="email"
+              value={data.portal_recipient_email}
+              onChange={(e) => update('portal_recipient_email', e.target.value)}
+              placeholder="Vendor contact email (optional)"
+              className="rounded-lg px-3 py-2 text-xs sm:col-span-2"
+              style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+            />
+            <select
+              value={data.portal_expiry_days}
+              onChange={(e) => update('portal_expiry_days', e.target.value)}
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+            >
+              <option value="7">Expires in 7 days</option>
+              <option value="14">Expires in 14 days</option>
+              <option value="30">Expires in 30 days</option>
+              <option value="90">Expires in 90 days</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {!data.send_portal_link && (
+        <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(108,93,211,0.04)', color: '#6c5dd3' }}>
+          You can upload evidence yourself from the vendor&apos;s Evidence tab after creation.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function Step6Confirm({
   data,
   categories,
   packs,
@@ -466,6 +653,7 @@ function Step5Confirm({
         <Row label="Annual Spend" value={data.annual_spend ? `$${data.annual_spend}` : '—'} />
         <Row label="Country" value={data.country_code} />
         <Row label="Review Packs" value={`${packs.length} packs will be applied`} />
+        <Row label="Send Portal Link" value={data.send_portal_link ? `Yes (${data.portal_expiry_days}d expiry${data.portal_recipient_email ? ` → ${data.portal_recipient_email}` : ''})` : 'No'} />
       </div>
     </div>
   )

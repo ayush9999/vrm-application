@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { archiveReviewPackAction, restoreReviewPackAction, deleteReviewPackAction } from '../../actions'
+import { archiveReviewPackAction, restoreReviewPackAction, deleteReviewPackAction, duplicatePackAction } from '../../actions'
 
 interface Props {
   packId: string
@@ -15,13 +15,34 @@ export function PackLifecycleControls({ packId, isActive, isStandard, isSiteAdmi
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
+  const handleDuplicate = () => {
+    startTransition(async () => {
+      const r = await duplicatePackAction(packId)
+      if (r.message) alert(r.message)
+      // Otherwise the action redirects.
+    })
+  }
+
   if (isStandard) {
     return (
-      <div
-        className="rounded-lg px-3 py-2 text-xs"
-        style={{ background: 'rgba(108,93,211,0.05)', color: '#6c5dd3', border: '1px solid rgba(108,93,211,0.15)' }}
-      >
-        Standard packs are read-only. Custom-pack creation UI will let you duplicate this as a starting point.
+      <div className="flex items-center gap-2 flex-wrap">
+        <span
+          className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+          style={{ background: 'rgba(108,93,211,0.05)', color: '#6c5dd3' }}
+        >
+          Read-only
+        </span>
+        {isSiteAdmin && (
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            disabled={isPending}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(108,93,211,0.15)' }}
+          >
+            {isPending ? 'Working…' : 'Duplicate as Custom'}
+          </button>
+        )}
       </div>
     )
   }
@@ -73,15 +94,26 @@ export function PackLifecycleControls({ packId, isActive, isStandard, isSiteAdmi
         </button>
       )}
       {isSiteAdmin && (
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={isPending}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-          style={{ background: 'rgba(225,29,72,0.06)', color: '#e11d48', border: '1px solid rgba(225,29,72,0.2)' }}
-        >
-          Delete
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            disabled={isPending}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(108,93,211,0.15)' }}
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            style={{ background: 'rgba(225,29,72,0.06)', color: '#e11d48', border: '1px solid rgba(225,29,72,0.2)' }}
+          >
+            Delete
+          </button>
+        </>
       )}
     </div>
   )

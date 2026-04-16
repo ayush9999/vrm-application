@@ -4,6 +4,7 @@ import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorById } from '@/lib/db/vendors'
 import { getVendorCategories } from '@/lib/db/vendor-categories'
 import { getOrgUsers } from '@/lib/db/organizations'
+import { listCustomFields, getVendorCustomFieldValues } from '@/lib/db/custom-fields'
 import { VendorForm } from '../../_components/VendorForm'
 import { updateVendorAction } from '../../actions'
 
@@ -15,10 +16,12 @@ export default async function EditVendorPage({ params }: PageProps) {
   const { id } = await params
   const user = await requireCurrentUser()
 
-  const [vendor, categories, users] = await Promise.all([
+  const [vendor, categories, users, customFields, customFieldValues] = await Promise.all([
     getVendorById(user.orgId, id),
     getVendorCategories(user.orgId),
     getOrgUsers(user.orgId),
+    listCustomFields(user.orgId, 'vendor'),
+    getVendorCustomFieldValues(id),
   ])
 
   if (!vendor) notFound()
@@ -47,6 +50,8 @@ export default async function EditVendorPage({ params }: PageProps) {
           categories={categories}
           users={users}
           defaultValues={vendor}
+          customFields={customFields}
+          customFieldValues={customFieldValues}
           submitLabel="Update Vendor"
           cancelHref={`/vendors/${id}`}
         />

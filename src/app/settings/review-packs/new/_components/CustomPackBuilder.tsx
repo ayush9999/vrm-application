@@ -14,12 +14,18 @@ interface EvidenceInput {
   expiry_applies: boolean
 }
 
+interface ComplianceRef {
+  standard: string
+  reference: string
+}
+
 interface ReviewInput {
   name: string
   description: string
   required: boolean
   creates_remediation_on_fail: boolean
   linked_evidence_index: number | null
+  compliance_references: ComplianceRef[]
 }
 
 interface Props {
@@ -29,7 +35,14 @@ interface Props {
     applicability_rules: ApplicabilityRules
     review_cadence: 'annual' | 'biannual' | 'on_incident' | 'on_renewal'
     evidence_requirements: { name: string; description?: string | null; required: boolean; expiry_applies: boolean }[]
-    review_requirements: { name: string; description?: string | null; required: boolean; creates_remediation_on_fail: boolean; linked_evidence_index?: number | null }[]
+    review_requirements: {
+      name: string
+      description?: string | null
+      required: boolean
+      creates_remediation_on_fail: boolean
+      linked_evidence_index?: number | null
+      compliance_references?: { standard: string; reference: string }[]
+    }[]
   }) => Promise<{ message?: string; packId?: string }>
 }
 
@@ -76,7 +89,7 @@ export function CustomPackBuilder({ createAction }: Props) {
     setEvidence((e) => e.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
   }
 
-  const addReview = () => setReviews((r) => [...r, { name: '', description: '', required: true, creates_remediation_on_fail: false, linked_evidence_index: null }])
+  const addReview = () => setReviews((r) => [...r, { name: '', description: '', required: true, creates_remediation_on_fail: false, linked_evidence_index: null, compliance_references: [] }])
   const removeReview = (i: number) => setReviews((r) => r.filter((_, idx) => idx !== i))
   const updateReview = (i: number, patch: Partial<ReviewInput>) => {
     setReviews((r) => r.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
@@ -114,6 +127,7 @@ export function CustomPackBuilder({ createAction }: Props) {
           required: r.required,
           creates_remediation_on_fail: r.creates_remediation_on_fail,
           linked_evidence_index: r.linked_evidence_index,
+          compliance_references: r.compliance_references.filter((c) => c.standard.trim() && c.reference.trim()),
         })),
       })
       if (r.message) setError(r.message)
@@ -249,6 +263,56 @@ export function CustomPackBuilder({ createAction }: Props) {
                   </select>
                 </label>
                 <button type="button" onClick={() => removeReview(i)} className="ml-auto text-xs px-2 py-1 rounded" style={{ color: '#e11d48' }}>Remove</button>
+              </div>
+
+              {/* Compliance references */}
+              <div className="pt-2 border-t" style={{ borderColor: 'rgba(108,93,211,0.1)' }}>
+                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#a99fd8' }}>
+                  Compliance References (optional)
+                </label>
+                {r.compliance_references.length === 0 && (
+                  <p className="text-[10px] mb-1" style={{ color: '#a99fd8' }}>e.g. GDPR Art 28, SOC 2 CC6.1 — shown to reviewers as context</p>
+                )}
+                {r.compliance_references.map((cr, ci) => (
+                  <div key={ci} className="flex items-center gap-2 mb-1">
+                    <input
+                      className="rounded px-2 py-1 text-xs flex-1"
+                      style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+                      placeholder="Standard (e.g. GDPR)"
+                      value={cr.standard}
+                      onChange={(ev) => {
+                        const next = [...r.compliance_references]
+                        next[ci] = { ...next[ci], standard: ev.target.value }
+                        updateReview(i, { compliance_references: next })
+                      }}
+                    />
+                    <input
+                      className="rounded px-2 py-1 text-xs flex-1"
+                      style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+                      placeholder="Reference (e.g. Art 28)"
+                      value={cr.reference}
+                      onChange={(ev) => {
+                        const next = [...r.compliance_references]
+                        next[ci] = { ...next[ci], reference: ev.target.value }
+                        updateReview(i, { compliance_references: next })
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateReview(i, { compliance_references: r.compliance_references.filter((_, x) => x !== ci) })}
+                      className="text-xs px-1.5 py-0.5"
+                      style={{ color: '#e11d48' }}
+                    >×</button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateReview(i, { compliance_references: [...r.compliance_references, { standard: '', reference: '' }] })}
+                  className="text-[11px] font-medium"
+                  style={{ color: '#6c5dd3' }}
+                >
+                  + Add reference
+                </button>
               </div>
             </div>
           </div>

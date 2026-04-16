@@ -283,6 +283,85 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
   return packs
 }
 
+/**
+ * Clone an existing pack (standard or custom) into a new custom pack for the given org.
+ * Copies all evidence_requirements + review_requirements, preserving the
+ * linked_evidence_requirement_id mapping by index.
+ */
+export async function duplicatePackAsCustom(
+  sourcePackId: string,
+  orgId: string,
+  newName: string,
+  createdByUserId: string,
+): Promise<string> {
+  const supabase = await createServerClient()
+
+  // 1. Fetch source pack
+  const { data: src, error: srcErr } = await supabase
+    .from('review_packs')
+    .select('*')
+    .eq('id', sourcePackId)
+    .maybeSingle()
+  if (srcErr) throw new Error(srcErr.message)
+  if (!src) throw new Error('Source pack not found')
+
+  // 2. Fetch source evidence + review requirements (in order)
+  const [evRes, rrRes] = await Promise.all([
+    supabase
+      .from('evidence_requirements')
+      .select('*')
+      .eq('review_pack_id', sourcePackId)
+      .is('deleted_at', null)
+      .order('sort_order'),
+    supabase
+      .from('review_requirements')
+      .select('*')
+      .eq('review_pack_id', sourcePackId)
+      .is('deleted_at', null)
+      .order('sort_order'),
+  ])
+  if (evRes.error) throw new Error(evRes.error.message)
+  if (rrRes.error) throw new Error(rrRes.error.message)
+
+  type EvSrc = { id: string; name: string; description: string | null; required: boolean; expiry_applies: boolean; sort_order: number }
+  type RrSrc = { id: string; name: string; description: string | null; required: boolean; linked_evidence_requirement_id: string | null; compliance_references: { standard: string; reference: string }[] | null; creates_remediation_on_fail: boolean; sort_order: number }
+  const srcEvidence = (evRes.data ?? []) as EvSrc[]
+  const srcReviews = (rrRes.data ?? []) as RrSrc[]
+
+  // 3. Build evidenceRequirements + reviewRequirements input for createCustomReviewPack
+  const oldEvidenceIdToIdx = new Map<string, number>()
+  srcEvidence.forEach((e, i) => oldEvidenceIdToIdx.set(e.id, i))
+
+  const srcRow = src as { name: string; description: string | null; applicability_rules: ApplicabilityRules; review_cadence: 'annual' | 'biannual' | 'on_incident' | 'on_renewal' }
+
+  const { packId } = await createCustomReviewPack({
+    orgId,
+    name: newName,
+    description: srcRow.description,
+    applicabilityRules: srcRow.applicability_rules ?? {},
+    reviewCadence: srcRow.review_cadence ?? 'annual',
+    evidenceRequirements: srcEvidence.map((e) => ({
+      name: e.name,
+      description: e.description,
+      required: e.required,
+      expiry_applies: e.expiry_applies,
+    })),
+    reviewRequirements: srcReviews.map((r) => ({
+      name: r.name,
+      description: r.description,
+      required: r.required,
+      creates_remediation_on_fail: r.creates_remediation_on_fail,
+      linked_evidence_index: r.linked_evidence_requirement_id != null
+        ? oldEvidenceIdToIdx.get(r.linked_evidence_requirement_id) ?? null
+        : null,
+      compliance_references: r.compliance_references ?? [],
+    })),
+    createdByUserId,
+  })
+
+  return packId
+}
+
 // ─── Custom Pack creation ───────────────────────────────────────────────────
 
 export interface CustomEvidenceReqInput {

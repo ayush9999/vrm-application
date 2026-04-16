@@ -5,6 +5,7 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import type { VendorCategory, VendorRow, VendorFormState } from '@/types/vendor'
 import type { OrgUser } from '@/lib/db/organizations'
+import type { CustomField } from '@/lib/db/custom-fields'
 import { COUNTRIES } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 
@@ -15,6 +16,8 @@ interface VendorFormProps {
   defaultValues?: Partial<VendorRow>
   submitLabel?: string
   cancelHref: string
+  customFields?: CustomField[]
+  customFieldValues?: Record<string, unknown>
 }
 
 const INITIAL_STATE: VendorFormState = {}
@@ -32,6 +35,8 @@ export function VendorForm({
   defaultValues = {},
   submitLabel = 'Save Vendor',
   cancelHref,
+  customFields = [],
+  customFieldValues = {},
 }: VendorFormProps) {
   const [state, formAction, isPending] = useActionState(action, INITIAL_STATE)
 
@@ -372,6 +377,28 @@ export function VendorForm({
         </div>
       </div>
 
+      {/* ── Custom Fields ── */}
+      {customFields.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Custom Fields</p>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {customFields.map((cf) => {
+              const inputName = `cf_${cf.id}`
+              const value = customFieldValues[cf.id]
+              return (
+                <div key={cf.id} className={cf.field_type === 'multi_select' ? 'sm:col-span-2' : ''}>
+                  <label className="block text-sm font-medium mb-1.5" style={labelStyle}>
+                    {cf.name} {cf.required && <span className="text-rose-500">*</span>}
+                  </label>
+                  {renderCustomFieldInput(cf, inputName, value)}
+                  {cf.description && <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>{cf.description}</p>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Notes ── */}
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Notes</p>
@@ -409,4 +436,96 @@ export function VendorForm({
       </div>
     </form>
   )
+}
+
+// ─── Custom field input renderer ──────────────────────────────────────────
+
+function renderCustomFieldInput(cf: CustomField, name: string, value: unknown): React.ReactNode {
+  const baseInput = inputCls
+  const baseStyle = inputStyle
+  switch (cf.field_type) {
+    case 'text':
+      return (
+        <input
+          name={name}
+          type="text"
+          required={cf.required}
+          defaultValue={(value as string) ?? ''}
+          className={baseInput}
+          style={baseStyle}
+        />
+      )
+    case 'number':
+      return (
+        <input
+          name={name}
+          type="number"
+          step="0.01"
+          required={cf.required}
+          defaultValue={(value as number | string) ?? ''}
+          className={baseInput}
+          style={baseStyle}
+        />
+      )
+    case 'date':
+      return (
+        <input
+          name={name}
+          type="date"
+          required={cf.required}
+          defaultValue={(value as string) ?? ''}
+          className={baseInput}
+          style={baseStyle}
+        />
+      )
+    case 'boolean':
+      return (
+        <div className="flex items-center gap-3 pt-1">
+          <input id={`${name}_hidden`} name={name} type="hidden" value="false" />
+          <input
+            id={name}
+            name={name}
+            type="checkbox"
+            value="true"
+            defaultChecked={value === true}
+            className="h-4 w-4 rounded"
+            style={{ accentColor: '#6c5dd3' }}
+            onChange={(e) => {
+              const hidden = e.currentTarget.form?.elements.namedItem(name) as HTMLInputElement | null
+              if (hidden) hidden.value = e.currentTarget.checked ? 'true' : 'false'
+            }}
+          />
+          <label htmlFor={name} className="text-sm" style={{ color: '#1e1550' }}>Yes</label>
+        </div>
+      )
+    case 'select':
+      return (
+        <select name={name} required={cf.required} defaultValue={(value as string) ?? ''} className={baseInput} style={baseStyle}>
+          <option value="">— Select —</option>
+          {(cf.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      )
+    case 'multi_select': {
+      const selected = Array.isArray(value) ? (value as string[]) : []
+      return (
+        <div className="flex items-center gap-2 flex-wrap p-2 rounded-xl" style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}>
+          {(cf.options ?? []).map((o) => (
+            <label key={o} className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                name={name}
+                value={o}
+                defaultChecked={selected.includes(o)}
+                className="h-3.5 w-3.5 rounded"
+                style={{ accentColor: '#6c5dd3' }}
+              />
+              <span style={{ color: '#4a4270' }}>{o}</span>
+            </label>
+          ))}
+        </div>
+      )
+    }
+    default:
+      return null
+  }
 }

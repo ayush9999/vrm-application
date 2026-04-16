@@ -4,7 +4,7 @@ import { getVendorCategories } from '@/lib/db/vendor-categories'
 import { getOrgUsers } from '@/lib/db/organizations'
 import { COUNTRIES } from '@/lib/countries'
 import { OnboardingWizard } from './_components/OnboardingWizard'
-import { createVendorAction, previewMatchedReviewPacksAction } from '@/app/vendors/actions'
+import { createVendorFromWizardAction, previewMatchedReviewPacksAction, generatePortalLinksForVendorAction } from '@/app/vendors/actions'
 
 export default async function NewVendorWizardPage() {
   const user = await requireCurrentUser()
@@ -46,8 +46,9 @@ export default async function NewVendorWizardPage() {
         categories={categories}
         users={users}
         countries={COUNTRIES}
-        createAction={createVendorAction}
+        createAction={createVendorFromWizardAction}
         previewAction={previewMatchedReviewPacksAction}
+        generatePortalLinksAction={generatePortalLinksForVendorAction}
       />
     </div>
   )

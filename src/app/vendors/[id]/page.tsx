@@ -8,7 +8,9 @@ import { getVendorIncidents } from '@/lib/db/incidents'
 import { getVendorIssueCounts } from '@/lib/db/issues'
 import { getVendorReviewPacks, getVendorListMetrics } from '@/lib/db/review-packs'
 import { getVendorEvidenceGrouped } from '@/lib/db/evidence'
+import { getVendorSnapshots } from '@/lib/db/readiness-snapshots'
 import { VendorHeaderStats } from './_components/VendorHeaderStats'
+import { ReadinessTrendChart } from './_components/ReadinessTrendChart'
 import { VendorTabs } from './_components/VendorTabs'
 import {
   createIncidentAction,
@@ -22,7 +24,7 @@ import {
   getEvidenceVersionsAction,
   getEvidenceVersionDownloadAction,
 } from './evidence-actions'
-import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction } from '@/app/vendors/actions'
+import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction, captureReadinessSnapshotAction } from '@/app/vendors/actions'
 import type { VendorStatus } from '@/types/vendor'
 
 const STATUS_BADGE: Record<VendorStatus, { label: string; className: string }> = {
@@ -44,7 +46,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
@@ -53,6 +55,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
     getVendorReviewPacks(id),
     getVendorEvidenceGrouped(id),
     getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
+    getVendorSnapshots(id),
   ])
   const metrics = metricsMap.get(id)!
 
@@ -108,6 +111,16 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
             )}
           </div>
         </div>
+      </div>
+
+      {/* Readiness trend chart */}
+      <div className="mb-5">
+        <ReadinessTrendChart
+          vendorId={id}
+          snapshots={snapshots}
+          currentReadinessPct={metrics.readinessPct}
+          captureSnapshotAction={captureReadinessSnapshotAction}
+        />
       </div>
 
       {/* Three-concept header */}
