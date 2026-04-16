@@ -222,7 +222,7 @@ function EmptyState({ message, sub, emerald = false }: { message: string; sub?: 
         </svg>
       </div>
       <p className="text-sm font-medium" style={{ color: emerald ? '#059669' : '#1e1550' }}>{message}</p>
-      {sub && <p className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>{sub}</p>}
+      {sub && <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>{sub}</p>}
     </div>
   )
 }

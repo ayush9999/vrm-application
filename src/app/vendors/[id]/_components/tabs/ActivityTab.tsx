@@ -104,7 +104,8 @@ export function ActivityTab({ activityLog }: ActivityTabProps) {
                   <div className="relative pb-6">
                     {!isLast && (
                       <span
-                        className="absolute left-4 top-8 -ml-px h-full w-0.5 bg-[rgba(109,93,211,0.06)]"
+                        className="absolute left-4 top-8 -ml-px h-full w-px"
+                        style={{ background: 'rgba(108,93,211,0.18)' }}
                         aria-hidden
                       />
                     )}
