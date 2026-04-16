@@ -49,7 +49,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   ])
 
   const tabParam = sp.tab as
-    | 'overview' | 'reviews' | 'evidence' | 'remediation' | 'incidents' | 'activity'
+    | 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
     | undefined
   const defaultTab = tabParam ?? 'overview'
 
