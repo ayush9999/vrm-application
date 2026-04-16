@@ -450,9 +450,6 @@ export async function reviewIssueEvidence(
 
           await logIssueActivity(ev.issue_id, reviewedByUserId, 'status_changed', issueRow.status, 'resolved', 'Auto: all evidence accepted')
 
-          // Propagate to linked assessment controls
-          await propagateResolutionToControls(ev.issue_id)
-
           // Log on vendor timeline
           if (issueRow.vendor_id) {
             await logActivity({
@@ -463,7 +460,7 @@ export async function reviewIssueEvidence(
               entityId: ev.issue_id,
               action: 'issue_auto_resolved',
               title: 'Issue auto-resolved',
-              description: 'All evidence accepted — issue and linked controls updated',
+              description: 'All evidence accepted — issue auto-resolved',
             })
           }
         }
