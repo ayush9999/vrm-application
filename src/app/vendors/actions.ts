@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
 import { createVendor, updateVendor, softDeleteVendor, getVendorById } from '@/lib/db/vendors'
 import { autoAssignReviewPacks } from '@/lib/db/review-packs'
+import { createServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/db/activity-log'
 import type { FormState } from '@/types/common'
 
 // ─── Shared Zod schema ─────────────────────────────────────────────────────────
@@ -121,8 +123,6 @@ export async function updateApprovalStatusAction(
 ): Promise<{ message?: string; success?: boolean }> {
   try {
     const user = await requireCurrentUser()
-    const { createServerClient } = await import('@/lib/supabase/server')
-    const { logActivity } = await import('@/lib/db/activity-log')
     const supabase = await createServerClient()
 
     // Read previous status for audit trail
