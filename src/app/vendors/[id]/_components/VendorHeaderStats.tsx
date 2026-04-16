@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import type { RiskBand } from '@/lib/risk-score'
 import type { VendorApprovalStatus } from '@/types/vendor'
@@ -17,6 +17,7 @@ const APPROVAL_BADGE: Record<VendorApprovalStatus, { label: string; bg: string; 
 }
 
 interface Props {
+  vendorId: string
   readinessPct: number
   applicable: number
   completed: number
@@ -24,9 +25,17 @@ interface Props {
   riskScore: number
   riskFormula: string
   approvalStatus: VendorApprovalStatus
+  approvedAt: string | null
+  exceptionReason: string | null
+  updateApprovalStatusAction: (
+    vendorId: string,
+    newStatus: VendorApprovalStatus,
+    exceptionReason?: string,
+  ) => Promise<{ message?: string; success?: boolean }>
 }
 
 export function VendorHeaderStats({
+  vendorId,
   readinessPct,
   applicable,
   completed,
@@ -34,9 +43,29 @@ export function VendorHeaderStats({
   riskScore,
   riskFormula,
   approvalStatus,
+  approvedAt,
+  exceptionReason,
+  updateApprovalStatusAction,
 }: Props) {
   const risk = RISK_BAND_STYLE[riskBand]
   const approval = APPROVAL_BADGE[approvalStatus]
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  const handleSet = (status: VendorApprovalStatus) => {
+    setPickerOpen(false)
+    if (status === 'approved_with_exception') {
+      const reason = prompt('Exception reason (required):')
+      if (!reason?.trim()) return
+      startTransition(async () => {
+        await updateApprovalStatusAction(vendorId, status, reason.trim())
+      })
+      return
+    }
+    startTransition(async () => {
+      await updateApprovalStatusAction(vendorId, status)
+    })
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
@@ -95,12 +124,56 @@ export function VendorHeaderStats({
 
       {/* Approval Status */}
       <StatCard label="Approval Status">
-        <span
-          className="inline-flex items-center text-sm px-2.5 py-1 rounded-full font-semibold"
-          style={{ background: approval.bg, color: approval.color }}
-        >
-          {approval.label}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="inline-flex items-center text-sm px-2.5 py-1 rounded-full font-semibold"
+            style={{ background: approval.bg, color: approval.color }}
+          >
+            {approval.label}
+          </span>
+          <div className="relative ml-auto">
+            <button
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              disabled={isPending}
+              className="text-[10px] font-medium px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+            >
+              {isPending ? '…' : 'Change'}
+            </button>
+            {pickerOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 z-20 rounded-xl overflow-hidden min-w-[220px]"
+                style={{ background: 'white', border: '1px solid rgba(109,93,211,0.15)', boxShadow: '0 4px 16px rgba(109,93,211,0.15)' }}
+              >
+                {Object.entries(APPROVAL_BADGE)
+                  .filter(([k]) => k !== approvalStatus)
+                  .map(([k, b]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => handleSet(k as VendorApprovalStatus)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[rgba(109,93,211,0.04)] transition-colors"
+                      style={{ color: '#1e1550' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: b.color }} />
+                      {b.label}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {approvedAt && approvalStatus === 'approved' && (
+          <p className="text-[11px] mt-1.5" style={{ color: '#a99fd8' }}>
+            Approved {new Date(approvedAt).toLocaleDateString()}
+          </p>
+        )}
+        {approvalStatus === 'approved_with_exception' && exceptionReason && (
+          <p className="text-[11px] mt-1.5 italic" style={{ color: '#7c3aed' }}>
+            Exception: {exceptionReason}
+          </p>
+        )}
       </StatCard>
     </div>
   )

@@ -110,6 +110,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
 
       {/* Three-concept header */}
       <VendorHeaderStats
+        vendorId={id}
         readinessPct={metrics.readinessPct}
         applicable={metrics.applicable}
         completed={metrics.completed}
@@ -117,6 +118,9 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         riskScore={metrics.risk.score}
         riskFormula={metrics.risk.formula}
         approvalStatus={vendor.approval_status}
+        approvedAt={vendor.approved_at}
+        exceptionReason={vendor.exception_reason}
+        updateApprovalStatusAction={updateApprovalStatusAction}
       />
 
       {/* Tabs */}
@@ -139,7 +143,6 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           deleteIncidentAction={boundDeleteIncident}
           deleteVendorAction={boundDeleteVendor}
           reapplyReviewPacksAction={boundReapplyPacks}
-          updateApprovalStatusAction={updateApprovalStatusAction}
           uploadEvidenceAction={uploadEvidenceFileAction}
           setEvidenceStatusAction={setEvidenceStatusAction}
           requestEvidenceAction={requestEvidenceFromVendorAction}

@@ -16,8 +16,6 @@ import { EvidenceTab } from './tabs/EvidenceTab'
 import { ActivityTab } from './tabs/ActivityTab'
 import { IncidentsTab } from './tabs/IncidentsTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
-import { ApprovalWorkflow } from './ApprovalWorkflow'
-import type { VendorApprovalStatus } from '@/types/vendor'
 import type { EvidenceByPack } from '@/lib/evidence-ui'
 import type { EvidenceStatus } from '@/types/review-pack'
 
@@ -46,11 +44,6 @@ export interface VendorTabsProps {
   deleteIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteVendorAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   reapplyReviewPacksAction: () => Promise<{ message?: string; success?: boolean }>
-  updateApprovalStatusAction: (
-    vendorId: string,
-    newStatus: VendorApprovalStatus,
-    exceptionReason?: string,
-  ) => Promise<{ message?: string; success?: boolean }>
   uploadEvidenceAction: (
     vendorId: string,
     evidenceId: string,
@@ -84,7 +77,6 @@ export function VendorTabs({
   deleteIncidentAction,
   deleteVendorAction,
   reapplyReviewPacksAction,
-  updateApprovalStatusAction,
   uploadEvidenceAction,
   setEvidenceStatusAction,
   requestEvidenceAction,
@@ -145,7 +137,6 @@ export function VendorTabs({
           issueCounts={issueCounts}
           vendorId={vendorId}
           onSwitchTab={setActive}
-          updateApprovalStatusAction={updateApprovalStatusAction}
         />
       )}
       {active === 'reviews' && (
@@ -187,7 +178,6 @@ function OverviewTab({
   issueCounts,
   vendorId,
   onSwitchTab,
-  updateApprovalStatusAction,
 }: {
   vendor: Vendor
   currentRole: OrgRole
@@ -196,11 +186,6 @@ function OverviewTab({
   issueCounts: VendorIssueCounts
   vendorId: string
   onSwitchTab: (tab: Tab) => void
-  updateApprovalStatusAction: (
-    vendorId: string,
-    newStatus: VendorApprovalStatus,
-    exceptionReason?: string,
-  ) => Promise<{ message?: string; success?: boolean }>
 }) {
   const fields: { label: string; value: React.ReactNode }[] = [
     { label: 'Name', value: vendor.name },
@@ -272,8 +257,8 @@ function OverviewTab({
         <div className="flex items-center gap-6 px-5 py-3">
           {summaryFields.map(f => (
             <div key={f.label} className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#a99fd8' }}>{f.label}</div>
-              <div className="text-sm mt-0.5" style={{ color: '#1e1550' }}>{f.value}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6c5dd3' }}>{f.label}</div>
+              <div className="text-sm font-medium mt-1" style={{ color: '#1e1550' }}>{f.value}</div>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-2 shrink-0">
@@ -310,27 +295,18 @@ function OverviewTab({
         </div>
 
         {showDetails && (
-          <div className="px-5 pb-4 pt-1" style={{ borderTop: '1px solid rgba(109,93,211,0.04)' }}>
-            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-2.5">
+          <div className="px-5 pb-5 pt-3" style={{ borderTop: '1px solid rgba(109,93,211,0.04)' }}>
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-10 gap-y-4">
               {fields.map(({ label, value }) => (
                 <div key={label}>
-                  <dt className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#a99fd8' }}>{label}</dt>
-                  <dd className="text-sm mt-0.5" style={{ color: '#1e1550' }}>{value}</dd>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6c5dd3' }}>{label}</dt>
+                  <dd className="text-sm font-medium mt-1" style={{ color: '#1e1550' }}>{value}</dd>
                 </div>
               ))}
             </dl>
           </div>
         )}
       </div>
-
-      {/* Approval Workflow */}
-      <ApprovalWorkflow
-        vendorId={vendorId}
-        currentStatus={vendor.approval_status}
-        approvedAt={vendor.approved_at}
-        exceptionReason={vendor.exception_reason}
-        updateAction={updateApprovalStatusAction}
-      />
 
       {/* Document Expiry Alerts */}
       <ExpiryAlertCard documents={documents} onSwitchTab={onSwitchTab} />
