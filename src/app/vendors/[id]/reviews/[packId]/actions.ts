@@ -258,6 +258,68 @@ export async function getReviewCommentsAction(
   }
 }
 
+// ─── Export review as CSV ───────────────────────────────────────────────────
+
+export async function exportReviewCsvAction(
+  vendorId: string,
+  packId: string,
+): Promise<{ csv?: string; fileName?: string; message?: string }> {
+  try {
+    await requireCurrentUser()
+    const supabase = await createServerClient()
+
+    const { data: vrp } = await supabase
+      .from('vendor_review_packs')
+      .select(`
+        id, status, completed_at,
+        review_packs!inner ( name, code ),
+        vendors!inner ( name, vendor_code )
+      `)
+      .eq('id', packId)
+      .eq('vendor_id', vendorId)
+      .maybeSingle()
+
+    if (!vrp) return { message: 'Not found' }
+
+    const { getVendorReviewItems } = await import('@/lib/db/review-packs')
+    const items = await getVendorReviewItems(packId)
+
+    const raw = vrp as unknown as {
+      status: string; completed_at: string | null
+      review_packs: { name: string; code: string | null } | { name: string; code: string | null }[]
+      vendors: { name: string; vendor_code: string | null } | { name: string; vendor_code: string | null }[]
+    }
+    const rp = Array.isArray(raw.review_packs) ? raw.review_packs[0] : raw.review_packs
+    const v = Array.isArray(raw.vendors) ? raw.vendors[0] : raw.vendors
+
+    const esc = (s: unknown) => {
+      if (s === null || s === undefined) return ''
+      const str = String(s)
+      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+    }
+
+    const lines = [
+      `# Vendor: ${v?.name} (${v?.vendor_code ?? ''})`,
+      `# Pack: ${rp?.name} (${rp?.code ?? ''})`,
+      `# Status: ${raw.status}`,
+      `# Completed: ${raw.completed_at ?? 'N/A'}`,
+      `# Exported: ${new Date().toISOString()}`,
+      '',
+      'Requirement,Decision,Reviewer Comment,Compliance References,Created Remediation',
+    ]
+
+    for (const item of items) {
+      const refs = item.compliance_references?.map((r) => `${r.standard} ${r.reference}`).join('; ') ?? ''
+      lines.push([esc(item.requirement_name), esc(item.decision), esc(item.reviewer_comment), esc(refs), esc(item.created_remediation_id ? 'Yes' : '')].join(','))
+    }
+
+    const packName = (rp?.code ?? 'review').replace(/[^a-zA-Z0-9]/g, '-')
+    return { csv: lines.join('\n'), fileName: `${v?.vendor_code ?? 'vendor'}-${packName}-${new Date().toISOString().split('T')[0]}.csv` }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to export' }
+  }
+}
+
 /**
  * AI Assist placeholder — returns a fake suggestion.
  * Real implementation will read uploaded evidence files and call an LLM.

@@ -17,7 +17,10 @@ import {
   createExceptionAction,
   addReviewCommentAction,
   getReviewCommentsAction,
+  exportReviewCsvAction,
 } from './actions'
+import { ExportButton } from './_components/ExportButton'
+import { ComplianceControlsSection } from './_components/ComplianceControlsSection'
 import {
   assignReviewUsersAction,
   submitReviewForApprovalAction,
@@ -104,15 +107,16 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-        <Link href="/vendors" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Vendors</Link>
-        <span>/</span>
-        <Link href={`/vendors/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>{vendor.name}</Link>
-        <span>/</span>
-        <Link href={`/vendors/${vendorId}?tab=reviews`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Reviews</Link>
-        <span>/</span>
-        <span className="font-medium" style={{ color: '#1e1550' }}>{pack.name}</span>
+      {/* Breadcrumb + Export */}
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
+          <Link href="/reviews" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Reviews</Link>
+          <span>/</span>
+          <Link href={`/reviews/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>{vendor.name}</Link>
+          <span>/</span>
+          <span className="font-medium" style={{ color: '#1e1550' }}>{pack.name}</span>
+        </div>
+        <ExportButton vendorId={vendorId} packId={packId} exportAction={exportReviewCsvAction} />
       </div>
 
       {/* Header */}
@@ -193,6 +197,11 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         getCommentsAction={getReviewCommentsAction}
         orgUsers={orgUsers}
       />
+
+      {/* Compliance controls (expandable) */}
+      <div className="mt-4">
+        <ComplianceControlsSection items={items} />
+      </div>
 
       {/* Approval chain */}
       <div className="mt-4">
