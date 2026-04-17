@@ -195,8 +195,9 @@ export function VendorHeaderStats(props: Props) {
                     style={{ background: expandedChart === 'radar' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'radar' ? 'white' : '#6c5dd3' }}
                   >
                     Radar
-                </button>
-              )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </Tile>
