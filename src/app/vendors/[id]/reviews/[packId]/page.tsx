@@ -7,14 +7,23 @@ import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import { createServerClient } from '@/lib/supabase/server'
 import { ReviewPackClient } from './_components/ReviewPackClient'
 import { PortalPanel } from './_components/PortalPanel'
+import { ApprovalChain } from './_components/ApprovalChain'
+import { ReviewAssignment } from '../_components/ReviewAssignment'
 import {
   setReviewItemDecisionAction,
   aiAssistReviewItemAction,
   createPortalLinkAction,
   revokePortalLinkAction,
 } from './actions'
+import {
+  assignReviewUsersAction,
+  submitReviewForApprovalAction,
+  approveReviewAction,
+  reopenReviewAction,
+} from '../actions'
 import { uploadEvidenceFileAction } from '../../evidence-actions'
 import { listPortalLinks } from '@/lib/db/vendor-portal'
+import { getOrgUsers } from '@/lib/db/organizations'
 
 interface PageProps {
   params: Promise<{ id: string; packId: string }>
@@ -50,8 +59,37 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
   const m = metricsMap.get(vendorId)
   const riskStyle = m ? RISK_BAND_STYLE[m.risk.band] : null
 
-  // Portal links for this pack
-  const portalLinks = await listPortalLinks(packId)
+  // Portal links + org users + approval records
+  const [portalLinks, orgUsers, approvalsRes] = await Promise.all([
+    listPortalLinks(packId),
+    getOrgUsers(user.orgId),
+    supabase
+      .from('review_approvals')
+      .select(`
+        id, level, user_id, decision, comment, decided_at,
+        users!inner ( name, email )
+      `)
+      .eq('vendor_review_pack_id', packId)
+      .order('decided_at'),
+  ])
+  const approvals = ((approvalsRes.data ?? []) as unknown as Array<{
+    id: string; level: number; user_id: string; decision: string; comment: string | null; decided_at: string
+    users: { name: string | null; email: string | null } | { name: string | null; email: string | null }[] | null
+  }>).map((a) => {
+    const u = Array.isArray(a.users) ? a.users[0] : a.users
+    return { ...a, user_name: u?.name ?? u?.email ?? null, users: undefined }
+  })
+  const vrpRow = vrp as unknown as {
+    status: import('@/types/review-pack').VendorReviewPackStatus
+    reviewer_user_id: string | null
+    approver_user_id: string | null
+    locked_at: string | null
+    locked_by_user_id: string | null
+    reopen_reason: string | null
+  }
+  const lockedByName = vrpRow.locked_by_user_id
+    ? orgUsers.find((u) => u.id === vrpRow.locked_by_user_id)?.name ?? null
+    : null
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -105,7 +143,23 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mb-4">
+      {/* Assignment + Portal */}
+      <div className="mb-4 space-y-3">
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: '#6c5dd3' }}>Assignment</div>
+          <ReviewAssignment
+            vendorId={vendorId}
+            vendorReviewPackId={packId}
+            currentReviewerId={vrpRow.reviewer_user_id}
+            currentApproverId={vrpRow.approver_user_id}
+            users={orgUsers}
+            assignAction={assignReviewUsersAction}
+          />
+        </div>
+
         <PortalPanel
           vendorId={vendorId}
           vendorReviewPackId={packId}
@@ -123,6 +177,23 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         aiAssistAction={aiAssistReviewItemAction}
         uploadEvidenceAction={uploadEvidenceFileAction}
       />
+
+      {/* Approval chain */}
+      <div className="mt-4">
+        <ApprovalChain
+          vendorId={vendorId}
+          vendorReviewPackId={packId}
+          status={vrpRow.status}
+          lockedAt={vrpRow.locked_at}
+          lockedByName={lockedByName}
+          reopenReason={vrpRow.reopen_reason}
+          approvals={approvals}
+          isSiteAdmin={user.role === 'site_admin'}
+          submitForApprovalAction={submitReviewForApprovalAction}
+          approveReviewAction={approveReviewAction}
+          reopenReviewAction={reopenReviewAction}
+        />
+      </div>
     </div>
   )
 }
