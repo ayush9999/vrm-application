@@ -21,6 +21,7 @@ import {
 } from './actions'
 import { ExportButton } from './_components/ExportButton'
 import { ComplianceControlsSection } from './_components/ComplianceControlsSection'
+import { ReviewStatusBar } from './_components/ReviewStatusBar'
 import {
   assignReviewUsersAction,
   submitReviewForApprovalAction,
@@ -157,6 +158,19 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
           )}
         </div>
       </div>
+
+      {/* Status bar with primary action */}
+      <ReviewStatusBar
+        vendorId={vendorId}
+        packId={packId}
+        status={vrpRow.status}
+        lockedAt={vrpRow.locked_at}
+        lockedByName={lockedByName}
+        reviewerName={orgUsers.find((u) => u.id === vrpRow.reviewer_user_id)?.name ?? null}
+        approverName={orgUsers.find((u) => u.id === vrpRow.approver_user_id)?.name ?? null}
+        submitForApprovalAction={submitReviewForApprovalAction}
+        approveReviewAction={approveReviewAction}
+      />
 
       {/* Assignment + Portal */}
       <div className="mb-4 space-y-3">

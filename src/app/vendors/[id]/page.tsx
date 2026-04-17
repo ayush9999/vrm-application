@@ -116,24 +116,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         </div>
       </div>
 
-      {/* Readiness trend chart */}
-      <div className="mb-5">
-        <ReadinessTrendChart
-          vendorId={id}
-          snapshots={snapshots}
-          currentReadinessPct={metrics.readinessPct}
-          captureSnapshotAction={captureReadinessSnapshotAction}
-        />
-      </div>
-
-      {/* Radar chart — readiness per pack */}
-      {reviewPacks.filter((p) => p.item_counts && p.item_counts.total > 0).length >= 3 && (
-        <div className="mb-5">
-          <ReadinessRadarChart packs={reviewPacks} />
-        </div>
-      )}
-
-      {/* Three-concept header */}
+      {/* Compact stats row — Readiness, Risk, Approval, Trend in one line */}
       <VendorHeaderStats
         vendorId={id}
         readinessPct={metrics.readinessPct}
@@ -146,25 +129,12 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         approvedAt={vendor.approved_at}
         exceptionReason={vendor.exception_reason}
         updateApprovalStatusAction={updateApprovalStatusAction}
+        snapshots={snapshots}
+        currentReadinessPct={metrics.readinessPct}
+        captureSnapshotAction={captureReadinessSnapshotAction}
+        reviewPacks={reviewPacks}
+        benchmark={benchmark}
       />
-
-      {/* Peer benchmark */}
-      {benchmark && (
-        <div
-          className="mb-5 flex items-center gap-3 px-4 py-2.5 rounded-xl"
-          style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}
-        >
-          <span className="text-xs font-medium" style={{ color: '#4a4270' }}>
-            <span style={{ color: '#6c5dd3' }}>Category avg</span> ({benchmark.categoryName}, {benchmark.vendorCount} peers):
-            {' '}<span className="font-bold tabular-nums">{benchmark.categoryAvgReadiness}%</span>
-            {' '}—{' '}
-            <span style={{ color: metrics.readinessPct >= benchmark.categoryAvgReadiness ? '#059669' : '#e11d48', fontWeight: 600 }}>
-              This vendor: {metrics.readinessPct}%
-              {metrics.readinessPct >= benchmark.categoryAvgReadiness ? ' ↑ above avg' : ' ↓ below avg'}
-            </span>
-          </span>
-        </div>
-      )}
 
       {/* Tabs */}
       <div
