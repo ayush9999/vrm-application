@@ -5,6 +5,8 @@ import { getVendorById } from '@/lib/db/vendors'
 import { getVendorReviewPacks, getVendorListMetrics } from '@/lib/db/review-packs'
 import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import type { VendorReviewPack, VendorReviewPackStatus } from '@/types/review-pack'
+import { JourneyCardActions } from './_components/JourneyCardActions'
+import { submitReviewForApprovalAction, approveReviewAction } from '../../vendors/[id]/reviews/actions'
 
 const STATUS_ORDER: Record<VendorReviewPackStatus, number> = {
   in_progress: 0,
@@ -208,7 +210,7 @@ function PackCard({ pack, vendorId, todayStr }: { pack: VendorReviewPack; vendor
             <span className="text-[10px] font-mono" style={{ color: '#a99fd8' }}>{pack.review_pack_code}</span>
           )}
         </div>
-        <div className="flex items-center gap-3 shrink-0 text-xs">
+        <div className="flex items-center gap-2 shrink-0 text-xs">
           {pack.due_at && (
             <span style={{ color: isOverdue ? '#e11d48' : '#4a4270', fontWeight: isOverdue ? 600 : 400 }}>
               {isOverdue ? 'Overdue · ' : 'Due '}
@@ -220,6 +222,13 @@ function PackCard({ pack, vendorId, todayStr }: { pack: VendorReviewPack; vendor
               Completed {new Date(pack.completed_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           )}
+          <JourneyCardActions
+            vendorId={vendorId}
+            packId={pack.id}
+            status={pack.status}
+            submitAction={submitReviewForApprovalAction}
+            approveAction={approveReviewAction}
+          />
         </div>
       </div>
 

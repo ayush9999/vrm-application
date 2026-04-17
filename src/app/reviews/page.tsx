@@ -1,14 +1,26 @@
 import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getReviewsByVendor } from '@/lib/db/reviews-by-vendor'
+import { getReviewPacks } from '@/lib/db/review-packs'
+import { getVendors } from '@/lib/db/vendors'
+import { getOrgUsers } from '@/lib/db/organizations'
 import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import type { ReviewVendorRow } from '@/lib/db/reviews-by-vendor'
+import { CreateReviewButton } from './_components/CreateReviewButton'
+import { createReviewAction } from './create-actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ReviewsPage() {
   const user = await requireCurrentUser()
-  const vendors = await getReviewsByVendor(user.orgId)
+  const [vendors, vendorsPage, packs, orgUsers] = await Promise.all([
+    getReviewsByVendor(user.orgId),
+    getVendors(user.orgId, { pageSize: 500 }),
+    getReviewPacks(user.orgId),
+    getOrgUsers(user.orgId),
+  ])
+  const allVendors = vendorsPage.rows.map((v) => ({ id: v.id, name: v.name, vendor_code: v.vendor_code }))
+  const allPacks = packs.map((p) => ({ id: p.id, name: p.name, code: p.code }))
 
   const todayStr = new Date().toISOString().split('T')[0]
   const totalActive = vendors.reduce((s, v) => s + v.active_packs, 0)
@@ -25,6 +37,12 @@ export default async function ReviewsPage() {
             Vendor review status across your organisation. Click a vendor to see their full review journey.
           </p>
         </div>
+        <CreateReviewButton
+          vendors={allVendors}
+          packs={allPacks}
+          users={orgUsers}
+          createAction={createReviewAction}
+        />
       </div>
 
       {/* Summary stats */}
