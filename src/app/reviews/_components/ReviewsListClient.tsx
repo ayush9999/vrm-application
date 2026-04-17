@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { ReviewListRow } from '@/lib/db/reviews-list'
 import type { OrgUser } from '@/lib/db/organizations'
 import type { VendorReviewPackStatus } from '@/types/review-pack'
@@ -231,14 +232,24 @@ function ReviewTable({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: stri
 }
 
 function ReviewRow({ r, todayStr }: { r: ReviewListRow; todayStr: string }) {
+  const router = useRouter()
   const sty = STATUS_STYLE[r.status]
   const isOverdue = r.due_at && r.due_at.split('T')[0] < todayStr && r.status !== 'approved' && r.status !== 'approved_with_exception'
   const reviewUrl = `/vendors/${r.vendor_id}/reviews/${r.vendor_review_pack_id}`
 
   return (
-    <tr style={{ borderBottom: '1px solid rgba(109,93,211,0.06)' }} className="hover:bg-[rgba(109,93,211,0.02)] transition-colors">
+    <tr
+      style={{ borderBottom: '1px solid rgba(109,93,211,0.06)', cursor: 'pointer' }}
+      className="hover:bg-[rgba(109,93,211,0.02)] transition-colors"
+      onClick={() => router.push(reviewUrl)}
+    >
       <td className="px-3 py-3">
-        <Link href={`/vendors/${r.vendor_id}`} className="text-sm font-medium hover:underline" style={{ color: '#1e1550' }}>
+        <Link
+          href={`/vendors/${r.vendor_id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-sm font-medium hover:underline"
+          style={{ color: '#1e1550' }}
+        >
           {r.vendor_name}
         </Link>
         <div className="flex items-center gap-1.5 mt-0.5">

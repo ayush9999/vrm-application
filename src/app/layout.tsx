@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { SidebarShell } from './_components/SidebarShell'
+import { NavigationProgress } from './_components/NavigationProgress'
 import { createServerClient } from '@/lib/supabase/server'
 import './globals.css'
 
@@ -56,6 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+        <NavigationProgress />
         <SidebarShell user={user}>{children}</SidebarShell>
       </body>
     </html>
