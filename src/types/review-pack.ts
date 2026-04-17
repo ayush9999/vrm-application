@@ -6,6 +6,7 @@ export type ReviewPackCadence = 'annual' | 'biannual' | 'on_incident' | 'on_rene
 export type ReviewItemDecision = 'not_started' | 'pass' | 'fail' | 'na' | 'needs_follow_up' | 'exception_approved'
 export type VendorReviewPackStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'blocked' | 'upcoming' | 'awaiting_approval' | 'sent_back' | 'locked'
 export type EvidenceStatus = 'missing' | 'uploaded' | 'under_review' | 'approved' | 'rejected' | 'expired' | 'waived'
+export type ReviewType = 'onboarding' | 'scheduled' | 'on_demand'
 
 export type VendorDataAccessLevel = 'none' | 'internal_only' | 'personal_data' | 'sensitive_personal_data' | 'financial_data'
 export type VendorServiceType = 'saas' | 'contractor' | 'supplier' | 'logistics' | 'professional_services' | 'other'
@@ -87,6 +88,7 @@ export interface VendorReviewPack {
   vendor_id: string
   review_pack_id: string
   status: VendorReviewPackStatus
+  review_type: ReviewType
   assigned_at: string
   due_at: string | null
   completed_at: string | null

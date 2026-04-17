@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
-import { updateCompanyProfile } from '@/lib/db/org-settings'
+import { updateCompanyProfile, setComplianceStandards } from '@/lib/db/org-settings'
 
 export async function updateCompanyProfileAction(
   patch: {
@@ -21,5 +21,19 @@ export async function updateCompanyProfileAction(
     return { success: true }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to update profile' }
+  }
+}
+
+export async function updateComplianceStandardsAction(
+  standards: string[],
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    if (user.role !== 'site_admin') return { message: 'Only site admins can update compliance standards.' }
+    await setComplianceStandards(user.orgId, standards)
+    revalidatePath('/settings/company')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to update standards' }
   }
 }

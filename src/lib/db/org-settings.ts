@@ -136,3 +136,45 @@ export async function setReminderRules(orgId: string, rules: ReminderRules): Pro
     )
   if (error) throw new Error(error.message)
 }
+
+// ─── Compliance Standards (KV in org_settings) ─────────────────────────────
+
+/** All known standards that can appear in review requirement compliance_references. */
+export const ALL_COMPLIANCE_STANDARDS = [
+  { code: 'GDPR',           name: 'GDPR (EU General Data Protection Regulation)' },
+  { code: 'SOC 2',          name: 'SOC 2 (Service Organization Control)' },
+  { code: 'ISO 27001',      name: 'ISO 27001 (Information Security)' },
+  { code: 'ISO 9001',       name: 'ISO 9001 (Quality Management)' },
+  { code: 'HIPAA',          name: 'HIPAA (Health Insurance Portability)' },
+  { code: 'CCPA',           name: 'CCPA (California Consumer Privacy Act)' },
+  { code: 'DPDP Act',       name: 'DPDP Act (India Digital Personal Data Protection)' },
+  { code: 'APRA CPS 234',   name: 'APRA CPS 234 (Australia Information Security)' },
+  { code: 'FCA',            name: 'FCA (UK Financial Conduct Authority)' },
+  { code: 'PCI DSS',        name: 'PCI DSS (Payment Card Industry)' },
+  { code: 'NIST CSF',       name: 'NIST Cybersecurity Framework' },
+  { code: 'ISO 22301',      name: 'ISO 22301 (Business Continuity)' },
+  { code: '21 CFR Part 820', name: '21 CFR Part 820 (FDA Quality System)' },
+] as const
+
+export async function getComplianceStandards(orgId: string): Promise<string[]> {
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('org_settings')
+    .select('value')
+    .eq('org_id', orgId)
+    .eq('key', 'compliance_standards')
+    .maybeSingle()
+  if (!data) return []
+  return (data as { value: string[] }).value ?? []
+}
+
+export async function setComplianceStandards(orgId: string, standards: string[]): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('org_settings')
+    .upsert(
+      { org_id: orgId, key: 'compliance_standards', value: standards, updated_at: new Date().toISOString() },
+      { onConflict: 'org_id,key' },
+    )
+  if (error) throw new Error(error.message)
+}

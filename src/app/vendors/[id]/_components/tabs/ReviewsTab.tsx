@@ -39,11 +39,16 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
     })
   }
 
+  // Filter to onboarding only for this tab
+  const onboardingPacks = reviewPacks.filter((p) => !p.review_type || p.review_type === 'onboarding')
+  const scheduledCount = reviewPacks.filter((p) => p.review_type === 'scheduled').length
+  const onDemandCount = reviewPacks.filter((p) => p.review_type === 'on_demand').length
+
   // Due date alerts
   const today = new Date().toISOString().split('T')[0]
   const in7Days = new Date(Date.now() + 7 * 86_400_000).toISOString().split('T')[0]
   const in30Days = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
-  const activePacks = reviewPacks.filter((p) => p.status !== 'approved' && p.status !== 'approved_with_exception' && p.status !== 'locked')
+  const activePacks = onboardingPacks.filter((p) => p.status !== 'approved' && p.status !== 'approved_with_exception' && p.status !== 'locked')
   const overduePacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] < today)
   const dueSoonPacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] >= today && p.due_at.split('T')[0] <= in30Days)
 
@@ -106,26 +111,24 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
         </div>
       )}
 
-      {/* Header with re-apply */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
-            Assigned Review Packs ({reviewPacks.length})
+            Onboarding Review ({onboardingPacks.length} packs)
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
-            Each pack contains the evidence and review items needed to onboard or re-review this vendor.
+          <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+            Initial review packs assigned when this vendor was onboarded.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {reviewPacks.filter((p) => p.status === 'approved' || p.status === 'approved_with_exception' || p.status === 'locked').length >= 2 && (
-            <Link
-              href={`/vendors/${vendorId}/reviews/compare`}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
-            >
-              Compare Reviews
-            </Link>
-          )}
+          <Link
+            href={`/reviews/${vendorId}`}
+            className="text-xs font-semibold px-4 py-1.5 rounded-full text-white"
+            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
+          >
+            View Full Timeline →
+          </Link>
           <button
             type="button"
             onClick={handleReapply}
@@ -147,9 +150,21 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
         </div>
       )}
 
-      {/* Review pack cards */}
+      {/* Other review types summary */}
+      {(scheduledCount > 0 || onDemandCount > 0) && (
+        <div className="flex items-center gap-3 text-xs" style={{ color: '#8b7fd4' }}>
+          {scheduledCount > 0 && <span>{scheduledCount} scheduled review{scheduledCount !== 1 ? 's' : ''}</span>}
+          {onDemandCount > 0 && <span>{onDemandCount} on-demand review{onDemandCount !== 1 ? 's' : ''}</span>}
+          <span>—</span>
+          <Link href={`/reviews/${vendorId}`} className="font-medium hover:underline" style={{ color: '#6c5dd3' }}>
+            See all in timeline →
+          </Link>
+        </div>
+      )}
+
+      {/* Onboarding review pack cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {reviewPacks.map((pack) => {
+        {onboardingPacks.map((pack) => {
           const counts = pack.item_counts ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
           const applicable = counts.total - counts.na
           const completed = counts.passed

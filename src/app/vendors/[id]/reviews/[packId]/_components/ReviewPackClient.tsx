@@ -63,9 +63,10 @@ interface Props {
     itemId: string,
   ) => Promise<{ comments?: ReviewComment[]; message?: string }>
   orgUsers?: OrgUser[]
+  orgStandards?: string[]
 }
 
-export function ReviewPackClient({ vendorId, packId, items: initialItems, prefillData = {}, setDecisionAction, aiAssistAction, uploadEvidenceAction, createExceptionAction, addCommentAction, getCommentsAction, orgUsers = [] }: Props) {
+export function ReviewPackClient({ vendorId, packId, items: initialItems, prefillData = {}, setDecisionAction, aiAssistAction, uploadEvidenceAction, createExceptionAction, addCommentAction, getCommentsAction, orgUsers = [], orgStandards = [] }: Props) {
   const [items, setItems] = useState(initialItems)
   const [filter, setFilter] = useState<Filter>('all')
   const [openItem, setOpenItem] = useState<string | null>(null)

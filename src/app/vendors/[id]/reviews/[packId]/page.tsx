@@ -22,6 +22,7 @@ import {
 import { ExportButton } from './_components/ExportButton'
 import { ComplianceControlsSection } from './_components/ComplianceControlsSection'
 import { ReviewStatusBar } from './_components/ReviewStatusBar'
+import { FrameworkCoverage } from './_components/FrameworkCoverage'
 import {
   assignReviewUsersAction,
   startReviewAction,
@@ -32,6 +33,7 @@ import {
 import { uploadEvidenceFileAction } from '../../evidence-actions'
 import { listPortalLinks } from '@/lib/db/vendor-portal'
 import { getOrgUsers } from '@/lib/db/organizations'
+import { getComplianceStandards } from '@/lib/db/org-settings'
 
 interface PageProps {
   params: Promise<{ id: string; packId: string }>
@@ -75,8 +77,8 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
   const m = metricsMap.get(vendorId)
   const riskStyle = m ? RISK_BAND_STYLE[m.risk.band] : null
 
-  // Portal links + org users + approval records
-  const [portalLinks, orgUsers, approvalsRes] = await Promise.all([
+  // Portal links + org users + approval records + compliance standards
+  const [portalLinks, orgUsers, approvalsRes, orgStandards] = await Promise.all([
     listPortalLinks(packId),
     getOrgUsers(user.orgId),
     supabase
@@ -87,6 +89,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
       `)
       .eq('vendor_review_pack_id', packId)
       .order('decided_at'),
+    getComplianceStandards(user.orgId),
   ])
   const approvals = ((approvalsRes.data ?? []) as unknown as Array<{
     id: string; level: number; user_id: string; decision: string; comment: string | null; decided_at: string
@@ -212,11 +215,21 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         addCommentAction={addReviewCommentAction}
         getCommentsAction={getReviewCommentsAction}
         orgUsers={orgUsers}
+        orgStandards={orgStandards}
       />
+
+      {/* Framework coverage (completed reviews only) */}
+      <div className="mt-4">
+        <FrameworkCoverage
+          items={items}
+          orgStandards={orgStandards}
+          isCompleted={['approved', 'approved_with_exception', 'locked'].includes(vrpRow.status)}
+        />
+      </div>
 
       {/* Compliance controls (expandable) */}
       <div className="mt-4">
-        <ComplianceControlsSection items={items} />
+        <ComplianceControlsSection items={items} orgStandards={orgStandards} />
       </div>
 
       {/* Approval chain */}

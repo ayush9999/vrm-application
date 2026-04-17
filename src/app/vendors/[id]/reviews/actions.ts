@@ -237,6 +237,7 @@ export async function approveReviewAction(
                 vendor_id: raw.vendor_id,
                 review_pack_id: raw.review_pack_id,
                 status: 'upcoming',
+                review_type: 'scheduled',
                 due_at: new Date(nextDueMs).toISOString(),
                 reviewer_user_id: raw.reviewer_user_id,
                 approver_user_id: raw.approver_user_id,

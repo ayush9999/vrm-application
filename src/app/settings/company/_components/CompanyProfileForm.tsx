@@ -18,16 +18,38 @@ interface Props {
     default_review_cadence?: string | null
     esg_enabled?: boolean
   }) => Promise<{ success?: boolean; message?: string }>
+  allStandards: { code: string; name: string }[]
+  selectedStandards: string[]
+  updateStandardsAction: (standards: string[]) => Promise<{ success?: boolean; message?: string }>
 }
 
-export function CompanyProfileForm({ profile, countries, canEdit, updateAction }: Props) {
+export function CompanyProfileForm({ profile, countries, canEdit, updateAction, allStandards, selectedStandards: initialStandards, updateStandardsAction }: Props) {
   const [companyType, setCompanyType] = useState(profile.company_type ?? '')
   const [industry, setIndustry] = useState(profile.industry ?? '')
   const [operatingCountries, setOperatingCountries] = useState<string[]>(profile.operating_countries ?? [])
   const [cadence, setCadence] = useState(profile.default_review_cadence ?? 'annual')
   const [esg, setEsg] = useState(profile.esg_enabled)
+  const [standards, setStandards] = useState<Set<string>>(new Set(initialStandards))
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
+  const [standardsMsg, setStandardsMsg] = useState<string | null>(null)
+
+  const toggleStandard = (code: string) => {
+    setStandards((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
+  }
+
+  const saveStandards = () => {
+    setStandardsMsg(null)
+    startTransition(async () => {
+      const r = await updateStandardsAction(Array.from(standards))
+      setStandardsMsg(r.success ? 'Saved' : r.message ?? 'Failed')
+    })
+  }
 
   const toggleCountry = (code: string) => {
     setOperatingCountries((c) => (c.includes(code) ? c.filter((x) => x !== code) : [...c, code]))
@@ -143,6 +165,62 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction }
           {isPending ? 'Saving…' : 'Save Changes'}
         </button>
         {message && <p className="text-xs" style={{ color: message === 'Saved' ? '#059669' : '#e11d48' }}>{message}</p>}
+      </div>
+
+      {/* ── Compliance Standards ── */}
+      <div className="pt-4 mt-4" style={{ borderTop: '2px solid rgba(109,93,211,0.08)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold" style={{ color: '#1e1550' }}>Compliance Standards</h3>
+            <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+              Select the standards your organisation is accountable to. These drive reporting filters and review item highlighting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={saveStandards}
+              disabled={isPending || !canEdit}
+              className="text-xs font-semibold px-4 py-1.5 rounded-full text-white disabled:opacity-50"
+              style={{ background: '#6c5dd3' }}
+            >
+              {isPending ? 'Saving…' : 'Save Standards'}
+            </button>
+            {standardsMsg && <span className="text-[11px]" style={{ color: standardsMsg === 'Saved' ? '#059669' : '#e11d48' }}>{standardsMsg}</span>}
+          </div>
+        </div>
+
+        <div className="rounded-xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}>
+          {allStandards.map((s, i) => (
+            <label
+              key={s.code}
+              className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[rgba(109,93,211,0.02)] transition-colors"
+              style={{ borderBottom: i === allStandards.length - 1 ? undefined : '1px solid rgba(109,93,211,0.04)' }}
+            >
+              <input
+                type="checkbox"
+                checked={standards.has(s.code)}
+                onChange={() => toggleStandard(s.code)}
+                disabled={!canEdit}
+                className="h-4 w-4 rounded shrink-0"
+                style={{ accentColor: '#6c5dd3' }}
+              />
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{s.code}</span>
+                <span className="text-xs ml-2" style={{ color: '#8b7fd4' }}>{s.name}</span>
+              </div>
+              {standards.has(s.code) && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
+                  Selected
+                </span>
+              )}
+            </label>
+          ))}
+        </div>
+
+        <p className="text-[10px] mt-2" style={{ color: '#a99fd8' }}>
+          {standards.size} standard{standards.size !== 1 ? 's' : ''} selected. Review items matching these standards will be highlighted during reviews.
+        </p>
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import type { VendorReviewItem } from '@/types/review-pack'
 
 interface Props {
   items: VendorReviewItem[]
+  orgStandards?: string[]
 }
 
 const DECISION_LABEL: Record<string, { label: string; color: string }> = {
@@ -20,7 +21,8 @@ const DECISION_LABEL: Record<string, { label: string; color: string }> = {
  * Expandable section showing all review items grouped as "framework controls"
  * with their compliance references + current decision. Read-only summary view.
  */
-export function ComplianceControlsSection({ items }: Props) {
+export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
+  const orgSet = new Set(orgStandards)
   const [isOpen, setIsOpen] = useState(false)
 
   const withRefs = items.filter((i) => i.compliance_references && i.compliance_references.length > 0)
@@ -85,20 +87,33 @@ export function ComplianceControlsSection({ items }: Props) {
                     <p className="text-xs mt-1" style={{ color: '#4a4270' }}>{item.requirement_description}</p>
                   )}
 
-                  {/* Compliance references */}
-                  {item.compliance_references && item.compliance_references.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      {item.compliance_references.map((ref, i) => (
-                        <span
-                          key={i}
-                          className="text-[10px] px-2 py-0.5 rounded font-mono"
-                          style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}
-                        >
-                          {ref.standard} — {ref.reference}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Compliance references — org-selected highlighted */}
+                  {item.compliance_references && item.compliance_references.length > 0 && (() => {
+                    const matched = item.compliance_references.filter((r) => orgSet.has(r.standard))
+                    const other = item.compliance_references.filter((r) => !orgSet.has(r.standard))
+                    return (
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {matched.map((ref, i) => (
+                          <span
+                            key={`m${i}`}
+                            className="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
+                            style={{ background: 'rgba(5,150,105,0.1)', color: '#059669', border: '1px solid rgba(5,150,105,0.2)' }}
+                          >
+                            ✓ {ref.standard} — {ref.reference}
+                          </span>
+                        ))}
+                        {other.map((ref, i) => (
+                          <span
+                            key={`o${i}`}
+                            className="text-[10px] px-2 py-0.5 rounded font-mono"
+                            style={{ background: 'rgba(109,93,211,0.04)', color: '#a99fd8' }}
+                          >
+                            {ref.standard} — {ref.reference}
+                          </span>
+                        ))}
+                      </div>
+                    )
+                  })()}
 
                   {/* Comment */}
                   {item.reviewer_comment && (

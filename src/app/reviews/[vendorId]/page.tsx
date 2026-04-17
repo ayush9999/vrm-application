@@ -166,6 +166,7 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
                         <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>
                           {pack.review_pack_name ?? 'Review Pack'}
                         </span>
+                        <ReviewTypeBadge type={pack.review_type} />
                         <span
                           className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
                           style={{ background: sty.bg, color: sty.color }}
@@ -233,5 +234,19 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
         </div>
       )}
     </div>
+  )
+}
+
+function ReviewTypeBadge({ type }: { type?: string }) {
+  const config: Record<string, { label: string; bg: string; color: string }> = {
+    onboarding: { label: 'Onboarding', bg: 'rgba(14,165,233,0.08)', color: '#0284c7' },
+    scheduled:  { label: 'Scheduled',  bg: 'rgba(124,58,237,0.08)', color: '#7c3aed' },
+    on_demand:  { label: 'On-Demand',  bg: 'rgba(245,158,11,0.08)', color: '#d97706' },
+  }
+  const c = config[type ?? 'onboarding'] ?? config.onboarding
+  return (
+    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: c.bg, color: c.color }}>
+      {c.label}
+    </span>
   )
 }

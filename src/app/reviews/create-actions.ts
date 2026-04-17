@@ -51,6 +51,7 @@ export async function createReviewAction(input: {
         vendor_id: input.vendorId,
         review_pack_id: input.reviewPackId,
         status: 'in_progress',
+        review_type: 'on_demand',
         reviewer_user_id: input.reviewerUserId,
         approver_user_id: input.approverUserId,
         due_at: input.dueAt,
