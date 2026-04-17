@@ -12,10 +12,12 @@ interface Props {
   vendorId: string
 }
 
-const W = 600
-const H = 140
-const PAD_X = 36
-const PAD_Y = 18
+const W = 640
+const H = 200
+const PAD_L = 40
+const PAD_R = 20
+const PAD_T = 16
+const PAD_B = 28
 
 export function ReadinessTrendChart({ snapshots, currentReadinessPct, captureSnapshotAction, vendorId }: Props) {
   const router = useRouter()
@@ -123,44 +125,97 @@ function Chart({ points }: { points: { ts: number; pct: number }[] }) {
   const minTs = points[0].ts
   const maxTs = points[points.length - 1].ts
   const tsRange = Math.max(1, maxTs - minTs)
+  const chartW = W - PAD_L - PAD_R
+  const chartH = H - PAD_T - PAD_B
 
-  const x = (ts: number) => PAD_X + ((ts - minTs) / tsRange) * (W - PAD_X * 2)
-  const y = (pct: number) => H - PAD_Y - (pct / 100) * (H - PAD_Y * 2)
+  const x = (ts: number) => PAD_L + ((ts - minTs) / tsRange) * chartW
+  const y = (pct: number) => PAD_T + (1 - pct / 100) * chartH
+  const baseline = PAD_T + chartH // y(0)
 
-  // Build path
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.ts).toFixed(1)} ${y(p.pct).toFixed(1)}`).join(' ')
+  // Smooth line path using cardinal spline approximation
+  const pts = points.map((p) => ({ x: x(p.ts), y: y(p.pct) }))
+  let path: string
+  if (pts.length === 2) {
+    path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`
+  } else {
+    // Build smooth cubic bezier through all points
+    const segments: string[] = [`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`]
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)]
+      const p1 = pts[i]
+      const p2 = pts[i + 1]
+      const p3 = pts[Math.min(pts.length - 1, i + 2)]
+      const tension = 0.3
+      const cp1x = p1.x + (p2.x - p0.x) * tension
+      const cp1y = p1.y + (p2.y - p0.y) * tension
+      const cp2x = p2.x - (p3.x - p1.x) * tension
+      const cp2y = p2.y - (p3.y - p1.y) * tension
+      segments.push(`C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`)
+    }
+    path = segments.join(' ')
+  }
+
+  // Date labels on X axis
+  const dateLabels = points.length <= 8
+    ? points
+    : [points[0], points[Math.floor(points.length / 2)], points[points.length - 1]]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="none" style={{ height: 140 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ aspectRatio: `${W}/${H}` }}>
       {/* Grid lines */}
       {[0, 25, 50, 75, 100].map((tick) => (
         <g key={tick}>
-          <line x1={PAD_X} y1={y(tick)} x2={W - PAD_X} y2={y(tick)} stroke="rgba(109,93,211,0.08)" strokeDasharray={tick === 0 || tick === 100 ? undefined : '2 2'} />
-          <text x={PAD_X - 6} y={y(tick) + 3} fontSize="9" textAnchor="end" fill="#a99fd8">{tick}</text>
+          <line
+            x1={PAD_L} y1={y(tick)} x2={W - PAD_R} y2={y(tick)}
+            stroke={tick === 0 ? 'rgba(109,93,211,0.15)' : 'rgba(109,93,211,0.06)'}
+            strokeDasharray={tick === 0 || tick === 100 ? undefined : '4 3'}
+          />
+          <text x={PAD_L - 8} y={y(tick) + 4} fontSize="10" textAnchor="end" fill="#8b7fd4" fontFamily="system-ui">{tick}%</text>
         </g>
       ))}
 
-      {/* Gradient fill under line */}
+      {/* Date labels on X axis */}
+      {dateLabels.map((p, i) => (
+        <text key={i} x={x(p.ts)} y={H - 6} fontSize="9" textAnchor="middle" fill="#a99fd8" fontFamily="system-ui">
+          {new Date(p.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        </text>
+      ))}
+
+      {/* Gradient fill under curve */}
       <defs>
-        <linearGradient id="fillgrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6c5dd3" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#6c5dd3" stopOpacity="0" />
+        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6c5dd3" stopOpacity="0.2" />
+          <stop offset="60%" stopColor="#7c6be0" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path
-        d={`${path} L ${x(maxTs).toFixed(1)} ${(H - PAD_Y).toFixed(1)} L ${x(minTs).toFixed(1)} ${(H - PAD_Y).toFixed(1)} Z`}
-        fill="url(#fillgrad)"
+        d={`${path} L ${pts[pts.length - 1].x.toFixed(1)} ${baseline.toFixed(1)} L ${pts[0].x.toFixed(1)} ${baseline.toFixed(1)} Z`}
+        fill="url(#trendFill)"
       />
 
-      {/* Trend line */}
-      <path d={path} fill="none" stroke="#6c5dd3" strokeWidth="2" />
+      {/* Trend line — smooth */}
+      <path d={path} fill="none" stroke="#6c5dd3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-      {/* Points */}
-      {points.map((p, i) => (
-        <circle key={i} cx={x(p.ts)} cy={y(p.pct)} r={i === points.length - 1 ? 4 : 3} fill={i === points.length - 1 ? '#6c5dd3' : 'white'} stroke="#6c5dd3" strokeWidth="2">
-          <title>{`${p.pct}% — ${new Date(p.ts).toLocaleDateString()}`}</title>
-        </circle>
-      ))}
+      {/* Data points */}
+      {points.map((p, i) => {
+        const isLast = i === points.length - 1
+        return (
+          <g key={i}>
+            {/* Glow */}
+            {isLast && <circle cx={x(p.ts)} cy={y(p.pct)} r="8" fill="rgba(108,93,211,0.12)" />}
+            <circle
+              cx={x(p.ts)} cy={y(p.pct)}
+              r={isLast ? 5 : 3.5}
+              fill={isLast ? '#6c5dd3' : 'white'}
+              stroke="#6c5dd3"
+              strokeWidth="2"
+            >
+              <title>{`${p.pct}% — ${new Date(p.ts).toLocaleDateString()}`}</title>
+            </circle>
+          </g>
+        )
+      })}
     </svg>
   )
 }
