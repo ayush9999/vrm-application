@@ -8,9 +8,13 @@ const STATUS_STYLE: Record<VendorReviewPackStatus, { bg: string; color: string; 
   not_started:              { bg: 'rgba(148,163,184,0.15)', color: '#64748b', label: 'Not Started' },
   in_progress:              { bg: 'rgba(14,165,233,0.1)',   color: '#0284c7', label: 'In Progress' },
   submitted:                { bg: 'rgba(99,102,241,0.1)',   color: '#6366f1', label: 'Submitted' },
+  awaiting_approval:        { bg: 'rgba(124,58,237,0.1)',   color: '#7c3aed', label: 'Awaiting Approval' },
+  sent_back:                { bg: 'rgba(245,158,11,0.1)',   color: '#d97706', label: 'Sent Back' },
   approved:                 { bg: 'rgba(5,150,105,0.1)',    color: '#059669', label: 'Approved' },
   approved_with_exception:  { bg: 'rgba(245,158,11,0.1)',   color: '#d97706', label: 'Approved (Exception)' },
   blocked:                  { bg: 'rgba(225,29,72,0.1)',    color: '#e11d48', label: 'Blocked' },
+  upcoming:                 { bg: 'rgba(14,165,233,0.08)',  color: '#0ea5e9', label: 'Upcoming' },
+  locked:                   { bg: 'rgba(5,150,105,0.1)',    color: '#059669', label: 'Locked' },
 }
 
 interface ReviewsTabProps {

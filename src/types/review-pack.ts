@@ -4,7 +4,7 @@
 
 export type ReviewPackCadence = 'annual' | 'biannual' | 'on_incident' | 'on_renewal'
 export type ReviewItemDecision = 'not_started' | 'pass' | 'fail' | 'na' | 'needs_follow_up' | 'exception_approved'
-export type VendorReviewPackStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'blocked'
+export type VendorReviewPackStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'blocked' | 'upcoming' | 'awaiting_approval' | 'sent_back' | 'locked'
 export type EvidenceStatus = 'missing' | 'uploaded' | 'under_review' | 'approved' | 'rejected' | 'expired' | 'waived'
 
 export type VendorDataAccessLevel = 'none' | 'internal_only' | 'personal_data' | 'sensitive_personal_data' | 'financial_data'
