@@ -24,6 +24,7 @@ import { ComplianceControlsSection } from './_components/ComplianceControlsSecti
 import { ReviewStatusBar } from './_components/ReviewStatusBar'
 import {
   assignReviewUsersAction,
+  startReviewAction,
   submitReviewForApprovalAction,
   approveReviewAction,
   reopenReviewAction,
@@ -168,6 +169,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         lockedByName={lockedByName}
         reviewerName={orgUsers.find((u) => u.id === vrpRow.reviewer_user_id)?.name ?? null}
         approverName={orgUsers.find((u) => u.id === vrpRow.approver_user_id)?.name ?? null}
+        startReviewAction={startReviewAction}
         submitForApprovalAction={submitReviewForApprovalAction}
         approveReviewAction={approveReviewAction}
       />

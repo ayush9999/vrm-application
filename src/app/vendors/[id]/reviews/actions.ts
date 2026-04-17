@@ -6,6 +6,43 @@ import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
 
 /**
+ * Start a review — move from not_started/upcoming to in_progress.
+ */
+export async function startReviewAction(
+  vendorId: string,
+  vendorReviewPackId: string,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+    const { error } = await supabase
+      .from('vendor_review_packs')
+      .update({ status: 'in_progress' })
+      .eq('id', vendorReviewPackId)
+      .eq('org_id', user.orgId)
+      .in('status', ['not_started', 'upcoming'])
+    if (error) throw new Error(error.message)
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_review_pack',
+      entityId: vendorReviewPackId,
+      action: 'review_started',
+      title: 'Review started',
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath(`/vendors/${vendorId}/reviews/${vendorReviewPackId}`)
+    revalidatePath('/reviews')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to start review' }
+  }
+}
+
+/**
  * Assign reviewer and/or approver to a vendor review pack.
  */
 export async function assignReviewUsersAction(

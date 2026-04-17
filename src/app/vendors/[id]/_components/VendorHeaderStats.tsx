@@ -155,41 +155,46 @@ export function VendorHeaderStats(props: Props) {
           )}
         </Tile>
 
-        {/* Trend tile — compact with expand */}
+        {/* Trend tile — compact sparkline + expand */}
         <Tile label="Trend">
-          <div className="flex items-center justify-between">
-            <div>
-              {snapshots.length === 0 ? (
-                <span className="text-xs" style={{ color: '#a99fd8' }}>No snapshots</span>
+          <div className="flex items-center gap-3">
+            {/* Mini sparkline */}
+            <div className="flex-1 min-w-0">
+              {snapshots.length >= 2 ? (
+                <MiniSparkline points={[...snapshots.map((s) => s.readiness_pct), currentReadinessPct]} />
+              ) : snapshots.length === 1 ? (
+                <MiniSparkline points={[snapshots[0].readiness_pct, currentReadinessPct]} />
               ) : (
-                <div className="flex items-baseline gap-1.5">
-                  {delta !== 0 && (
-                    <span className="text-sm font-bold" style={{ color: delta > 0 ? '#059669' : '#e11d48' }}>
-                      {delta > 0 ? '↑' : '↓'}{Math.abs(delta)}
-                    </span>
-                  )}
-                  {delta === 0 && <span className="text-sm font-bold" style={{ color: '#94a3b8' }}>→ 0</span>}
-                  <span className="text-[10px]" style={{ color: '#a99fd8' }}>pts since last</span>
+                <div className="h-[28px] flex items-center">
+                  <span className="text-[10px]" style={{ color: '#a99fd8' }}>No history</span>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setExpandedChart(expandedChart === 'trend' ? null : 'trend')}
-                className="text-[10px] font-medium px-2 py-0.5 rounded-md"
-                style={{ background: expandedChart === 'trend' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'trend' ? 'white' : '#6c5dd3' }}
-              >
-                Chart
-              </button>
-              {hasRadar && (
+
+            {/* Delta + expand */}
+            <div className="shrink-0 text-right">
+              {snapshots.length > 0 && (
+                <div className="text-sm font-bold tabular-nums" style={{ color: delta > 0 ? '#059669' : delta < 0 ? '#e11d48' : '#94a3b8' }}>
+                  {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'}{Math.abs(delta)}
+                </div>
+              )}
+              <div className="flex items-center gap-1 mt-0.5">
                 <button
                   type="button"
-                  onClick={() => setExpandedChart(expandedChart === 'radar' ? null : 'radar')}
-                  className="text-[10px] font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: expandedChart === 'radar' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'radar' ? 'white' : '#6c5dd3' }}
+                  onClick={() => setExpandedChart(expandedChart === 'trend' ? null : 'trend')}
+                  className="text-[9px] font-medium px-1.5 py-0.5 rounded"
+                  style={{ background: expandedChart === 'trend' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'trend' ? 'white' : '#6c5dd3' }}
                 >
-                  Radar
+                  Expand
+                </button>
+                {hasRadar && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedChart(expandedChart === 'radar' ? null : 'radar')}
+                    className="text-[9px] font-medium px-1.5 py-0.5 rounded"
+                    style={{ background: expandedChart === 'radar' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'radar' ? 'white' : '#6c5dd3' }}
+                  >
+                    Radar
                 </button>
               )}
             </div>
@@ -236,5 +241,57 @@ function Tile({ label, children }: { label: string; children: React.ReactNode })
       <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>{label}</div>
       {children}
     </div>
+  )
+}
+
+/** Tiny sparkline — no axes, no labels, just the shape. */
+function MiniSparkline({ points }: { points: number[] }) {
+  const W = 90
+  const H = 28
+  const PAD = 2
+  if (points.length < 2) return null
+
+  const maxVal = Math.max(...points, 1)
+  const minVal = Math.min(...points, 0)
+  const range = Math.max(maxVal - minVal, 1)
+
+  const x = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2)
+  const y = (v: number) => H - PAD - ((v - minVal) / range) * (H - PAD * 2)
+
+  // Smooth path
+  const pts = points.map((v, i) => ({ x: x(i), y: y(v) }))
+  let path: string
+  if (pts.length === 2) {
+    path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`
+  } else {
+    const segments = [`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`]
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)]
+      const p1 = pts[i]
+      const p2 = pts[i + 1]
+      const p3 = pts[Math.min(pts.length - 1, i + 2)]
+      const t = 0.3
+      segments.push(`C ${(p1.x + (p2.x - p0.x) * t).toFixed(1)} ${(p1.y + (p2.y - p0.y) * t).toFixed(1)}, ${(p2.x - (p3.x - p1.x) * t).toFixed(1)} ${(p2.y - (p3.y - p1.y) * t).toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`)
+    }
+    path = segments.join(' ')
+  }
+
+  const fillPath = `${path} L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z`
+  const lastPt = pts[pts.length - 1]
+  const trending = points[points.length - 1] >= points[0]
+  const lineColor = trending ? '#6c5dd3' : '#e11d48'
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill="url(#sparkFill)" />
+      <path d={path} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastPt.x} cy={lastPt.y} r="2.5" fill={lineColor} />
+    </svg>
   )
 }
