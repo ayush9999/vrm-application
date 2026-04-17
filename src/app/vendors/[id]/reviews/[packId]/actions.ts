@@ -167,6 +167,97 @@ export async function revokePortalLinkAction(
   }
 }
 
+// ─── Exception management ──────────────────────────────────────────────────
+
+export async function createExceptionAction(
+  vendorId: string,
+  packId: string,
+  itemId: string,
+  input: {
+    reason: string
+    expiryDate: string
+    ownerUserId: string
+    requiresCountersign: boolean
+  },
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const { createException } = await import('@/lib/db/review-exceptions')
+
+    await createException({
+      orgId: user.orgId,
+      vendorId,
+      vendorReviewItemId: itemId,
+      vendorReviewPackId: packId,
+      reason: input.reason,
+      expiryDate: input.expiryDate,
+      ownerUserId: input.ownerUserId,
+      requiresCountersign: input.requiresCountersign,
+      createdByUserId: user.userId,
+    })
+
+    // Also set the decision on the review item
+    await updateReviewItemDecision(itemId, 'exception_approved', `Exception: ${input.reason}`, user.userId)
+
+    const { logActivity } = await import('@/lib/db/activity-log')
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'review_exception',
+      entityId: itemId,
+      action: 'exception_created',
+      title: `Exception approved: ${input.reason.substring(0, 80)}`,
+      metadata: { expiry_date: input.expiryDate, owner_user_id: input.ownerUserId },
+    })
+
+    revalidatePath(`/vendors/${vendorId}/reviews/${packId}`)
+    revalidatePath(`/vendors/${vendorId}`)
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to create exception' }
+  }
+}
+
+// ─── Comments ──────────────────────────────────────────────────────────────
+
+export async function addReviewCommentAction(
+  vendorId: string,
+  packId: string,
+  itemId: string,
+  body: string,
+  parentCommentId?: string | null,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const { addReviewItemComment } = await import('@/lib/db/review-comments')
+    await addReviewItemComment({
+      orgId: user.orgId,
+      reviewItemId: itemId,
+      parentCommentId: parentCommentId ?? null,
+      userId: user.userId,
+      body,
+    })
+    revalidatePath(`/vendors/${vendorId}/reviews/${packId}`)
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to add comment' }
+  }
+}
+
+export async function getReviewCommentsAction(
+  itemId: string,
+): Promise<{ comments?: import('@/lib/db/review-comments').ReviewComment[]; message?: string }> {
+  try {
+    await requireCurrentUser()
+    const { getReviewItemComments } = await import('@/lib/db/review-comments')
+    const comments = await getReviewItemComments(itemId)
+    return { comments }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to load comments' }
+  }
+}
+
 /**
  * AI Assist placeholder — returns a fake suggestion.
  * Real implementation will read uploaded evidence files and call an LLM.

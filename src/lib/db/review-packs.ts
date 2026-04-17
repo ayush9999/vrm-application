@@ -474,6 +474,46 @@ function describeMatchedRule(
   return 'Manually assigned'
 }
 
+/**
+ * Pre-fill: load the most recent completed review for the same vendor + pack,
+ * return a map of review_requirement_id → { decision, comment, decided_at }.
+ */
+export async function getPreviousReviewDecisions(
+  vendorId: string,
+  reviewPackId: string,
+  currentVrpId: string,
+): Promise<Map<string, { decision: ReviewItemDecision; comment: string | null; decided_at: string | null }>> {
+  const supabase = await createServerClient()
+
+  // Find the most recent completed VRP for this vendor + pack (excluding current)
+  const { data: prevVrp } = await supabase
+    .from('vendor_review_packs')
+    .select('id')
+    .eq('vendor_id', vendorId)
+    .eq('review_pack_id', reviewPackId)
+    .neq('id', currentVrpId)
+    .in('status', ['approved', 'approved_with_exception', 'locked'])
+    .is('deleted_at', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!prevVrp) return new Map()
+
+  const { data: items } = await supabase
+    .from('vendor_review_items')
+    .select('review_requirement_id, decision, reviewer_comment, decided_at')
+    .eq('vendor_review_pack_id', (prevVrp as { id: string }).id)
+
+  const map = new Map<string, { decision: ReviewItemDecision; comment: string | null; decided_at: string | null }>()
+  for (const it of (items ?? []) as { review_requirement_id: string; decision: ReviewItemDecision; reviewer_comment: string | null; decided_at: string | null }[]) {
+    if (it.decision !== 'not_started') {
+      map.set(it.review_requirement_id, { decision: it.decision, comment: it.reviewer_comment, decided_at: it.decided_at })
+    }
+  }
+  return map
+}
+
 /** Get review items for a specific vendor review pack — and the linked evidence row id. */
 export async function getVendorReviewItems(vendorReviewPackId: string): Promise<VendorReviewItem[]> {
   const supabase = await createServerClient()

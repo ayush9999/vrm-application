@@ -9,8 +9,10 @@ import { getVendorIssueCounts } from '@/lib/db/issues'
 import { getVendorReviewPacks, getVendorListMetrics } from '@/lib/db/review-packs'
 import { getVendorEvidenceGrouped } from '@/lib/db/evidence'
 import { getVendorSnapshots } from '@/lib/db/readiness-snapshots'
+import { getPeerBenchmark } from '@/lib/db/peer-benchmark'
 import { VendorHeaderStats } from './_components/VendorHeaderStats'
 import { ReadinessTrendChart } from './_components/ReadinessTrendChart'
+import { ReadinessRadarChart } from './_components/ReadinessRadarChart'
 import { VendorTabs } from './_components/VendorTabs'
 import {
   createIncidentAction,
@@ -46,7 +48,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots, benchmark] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
@@ -56,6 +58,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
     getVendorEvidenceGrouped(id),
     getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
     getVendorSnapshots(id),
+    getPeerBenchmark(user.orgId, id, vendor.category_id),
   ])
   const metrics = metricsMap.get(id)!
 
@@ -123,6 +126,13 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         />
       </div>
 
+      {/* Radar chart — readiness per pack */}
+      {reviewPacks.filter((p) => p.item_counts && p.item_counts.total > 0).length >= 3 && (
+        <div className="mb-5">
+          <ReadinessRadarChart packs={reviewPacks} />
+        </div>
+      )}
+
       {/* Three-concept header */}
       <VendorHeaderStats
         vendorId={id}
@@ -137,6 +147,24 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
         exceptionReason={vendor.exception_reason}
         updateApprovalStatusAction={updateApprovalStatusAction}
       />
+
+      {/* Peer benchmark */}
+      {benchmark && (
+        <div
+          className="mb-5 flex items-center gap-3 px-4 py-2.5 rounded-xl"
+          style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}
+        >
+          <span className="text-xs font-medium" style={{ color: '#4a4270' }}>
+            <span style={{ color: '#6c5dd3' }}>Category avg</span> ({benchmark.categoryName}, {benchmark.vendorCount} peers):
+            {' '}<span className="font-bold tabular-nums">{benchmark.categoryAvgReadiness}%</span>
+            {' '}—{' '}
+            <span style={{ color: metrics.readinessPct >= benchmark.categoryAvgReadiness ? '#059669' : '#e11d48', fontWeight: 600 }}>
+              This vendor: {metrics.readinessPct}%
+              {metrics.readinessPct >= benchmark.categoryAvgReadiness ? ' ↑ above avg' : ' ↓ below avg'}
+            </span>
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div

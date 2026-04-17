@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorById } from '@/lib/db/vendors'
-import { getVendorReviewItems, getVendorListMetrics } from '@/lib/db/review-packs'
+import { getVendorReviewItems, getVendorListMetrics, getPreviousReviewDecisions } from '@/lib/db/review-packs'
 import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import { createServerClient } from '@/lib/supabase/server'
 import { ReviewPackClient } from './_components/ReviewPackClient'
@@ -14,6 +14,9 @@ import {
   aiAssistReviewItemAction,
   createPortalLinkAction,
   revokePortalLinkAction,
+  createExceptionAction,
+  addReviewCommentAction,
+  getReviewCommentsAction,
 } from './actions'
 import {
   assignReviewUsersAction,
@@ -53,6 +56,14 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
 
   const items = await getVendorReviewItems(packId)
   const pack = (vrp as { review_packs: { id: string; name: string; code: string | null; description: string | null } }).review_packs
+
+  // Pre-fill: load decisions from the most recent completed review of the same pack
+  const previousDecisions = await getPreviousReviewDecisions(vendorId, pack.id, packId)
+  // Serialize the Map for the client component
+  const prefillData: Record<string, { decision: string; comment: string | null; decided_at: string | null }> = {}
+  for (const [reqId, d] of previousDecisions) {
+    prefillData[reqId] = d
+  }
 
   // Vendor-level risk + readiness for the header badges
   const metricsMap = await getVendorListMetrics([{ id: vendorId, approval_status: vendor.approval_status }])
@@ -173,9 +184,14 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         vendorId={vendorId}
         packId={packId}
         items={items}
+        prefillData={prefillData}
         setDecisionAction={setReviewItemDecisionAction}
         aiAssistAction={aiAssistReviewItemAction}
         uploadEvidenceAction={uploadEvidenceFileAction}
+        createExceptionAction={createExceptionAction}
+        addCommentAction={addReviewCommentAction}
+        getCommentsAction={getReviewCommentsAction}
+        orgUsers={orgUsers}
       />
 
       {/* Approval chain */}

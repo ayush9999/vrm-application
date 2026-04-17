@@ -3,6 +3,10 @@
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
 import type { VendorReviewItem, ReviewItemDecision } from '@/types/review-pack'
+import type { OrgUser } from '@/lib/db/organizations'
+import type { ReviewComment } from '@/lib/db/review-comments'
+import { ExceptionModal } from './ExceptionModal'
+import { CommentThread } from './CommentThread'
 
 const DECISIONS: { value: ReviewItemDecision; label: string; color: string; bg: string }[] = [
   { value: 'pass',               label: 'Pass',               color: '#059669', bg: 'rgba(5,150,105,0.1)' },
@@ -41,9 +45,27 @@ interface Props {
     evidenceId: string,
     formData: FormData,
   ) => Promise<{ message?: string; success?: boolean }>
+  prefillData?: Record<string, { decision: string; comment: string | null; decided_at: string | null }>
+  createExceptionAction?: (
+    vendorId: string,
+    packId: string,
+    itemId: string,
+    input: { reason: string; expiryDate: string; ownerUserId: string; requiresCountersign: boolean },
+  ) => Promise<{ success?: boolean; message?: string }>
+  addCommentAction?: (
+    vendorId: string,
+    packId: string,
+    itemId: string,
+    body: string,
+    parentCommentId?: string | null,
+  ) => Promise<{ success?: boolean; message?: string }>
+  getCommentsAction?: (
+    itemId: string,
+  ) => Promise<{ comments?: ReviewComment[]; message?: string }>
+  orgUsers?: OrgUser[]
 }
 
-export function ReviewPackClient({ vendorId, packId, items: initialItems, setDecisionAction, aiAssistAction, uploadEvidenceAction }: Props) {
+export function ReviewPackClient({ vendorId, packId, items: initialItems, prefillData = {}, setDecisionAction, aiAssistAction, uploadEvidenceAction, createExceptionAction, addCommentAction, getCommentsAction, orgUsers = [] }: Props) {
   const [items, setItems] = useState(initialItems)
   const [filter, setFilter] = useState<Filter>('all')
   const [openItem, setOpenItem] = useState<string | null>(null)
@@ -66,6 +88,11 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
 
   const [createdRemediation, setCreatedRemediation] = useState<{ itemId: string; remediationId: string } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Exception modal state
+  const [exceptionItemId, setExceptionItemId] = useState<string | null>(null)
+  const [isExceptionPending, startExceptionTransition] = useTransition()
+  const exceptionItem = exceptionItemId ? items.find((i) => i.id === exceptionItemId) : null
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -98,6 +125,12 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
   }
 
   const handleSetDecision = async (itemId: string, decision: ReviewItemDecision, comment: string | null) => {
+    // Intercept "Exception Approved" — show modal instead of direct save
+    if (decision === 'exception_approved' && createExceptionAction) {
+      setExceptionItemId(itemId)
+      return
+    }
+
     // Optimistic update
     setItems((prev) =>
       prev.map((i) =>
@@ -119,8 +152,38 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
     }
   }
 
+  const handleExceptionSubmit = (data: { reason: string; expiryDate: string; ownerUserId: string; requiresCountersign: boolean }) => {
+    if (!exceptionItemId || !createExceptionAction) return
+    const itemId = exceptionItemId
+    startExceptionTransition(async () => {
+      const r = await createExceptionAction(vendorId, packId, itemId, data)
+      if (r.success) {
+        setExceptionItemId(null)
+        // Optimistic update
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === itemId
+              ? { ...i, decision: 'exception_approved', reviewer_comment: `Exception: ${data.reason}`, decided_at: new Date().toISOString() }
+              : i,
+          ),
+        )
+      }
+    })
+  }
+
   return (
     <div className="space-y-4">
+      {/* Exception modal */}
+      <ExceptionModal
+        isOpen={!!exceptionItemId}
+        onClose={() => setExceptionItemId(null)}
+        onSubmit={handleExceptionSubmit}
+        isPending={isExceptionPending}
+        users={orgUsers}
+        itemName={exceptionItem?.requirement_name ?? 'Review item'}
+        isRequired={true}
+      />
+
       {/* Remediation created banner */}
       {createdRemediation && (
         <div
@@ -186,6 +249,37 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
         ))}
       </div>
 
+      {/* Pre-fill banner */}
+      {Object.keys(prefillData).length > 0 && items.some((i) => i.decision === 'not_started' && prefillData[i.review_requirement_id]) && (
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl"
+          style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.15)' }}
+        >
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#0284c7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 1v3M12.5 3.5l-2 2M15 8h-3M12.5 12.5l-2-2M8 15v-3M3.5 12.5l2-2M1 8h3M3.5 3.5l2 2" />
+            </svg>
+            <span className="text-xs font-medium" style={{ color: '#0284c7' }}>
+              {items.filter((i) => i.decision === 'not_started' && prefillData[i.review_requirement_id]).length} items pre-filled from the last completed review — verify and confirm
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const toConfirm = items.filter((i) => i.decision === 'not_started' && prefillData[i.review_requirement_id])
+              for (const item of toConfirm) {
+                const pf = prefillData[item.review_requirement_id]
+                if (pf) handleSetDecision(item.id, pf.decision as ReviewItemDecision, pf.comment)
+              }
+            }}
+            className="text-xs font-semibold px-3 py-1 rounded-full text-white shrink-0"
+            style={{ background: '#0284c7' }}
+          >
+            Confirm all pre-filled
+          </button>
+        </div>
+      )}
+
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
         <div
@@ -243,12 +337,16 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, setDec
             <ReviewItemRow
               key={item.id}
               vendorId={vendorId}
+              packId={packId}
               item={item}
+              prefill={item.decision === 'not_started' ? prefillData[item.review_requirement_id] ?? null : null}
               isOpen={openItem === item.id}
               onToggle={() => setOpenItem(openItem === item.id ? null : item.id)}
               onSetDecision={(decision, comment) => handleSetDecision(item.id, decision, comment)}
               onAiAssist={() => aiAssistAction(item.id)}
               uploadEvidenceAction={uploadEvidenceAction}
+              addCommentAction={addCommentAction}
+              getCommentsAction={getCommentsAction}
               isLast={idx === visible.length - 1}
               isSelected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
@@ -273,18 +371,24 @@ function SummaryStat({ label, count, color }: { label: string; count: number; co
 
 function ReviewItemRow({
   vendorId,
+  packId,
   item,
+  prefill,
   isOpen,
   onToggle,
   onSetDecision,
   onAiAssist,
   uploadEvidenceAction,
+  addCommentAction,
+  getCommentsAction,
   isLast,
   isSelected,
   onToggleSelect,
 }: {
   vendorId: string
+  packId: string
   item: VendorReviewItem
+  prefill: { decision: string; comment: string | null; decided_at: string | null } | null
   isOpen: boolean
   onToggle: () => void
   onSetDecision: (decision: ReviewItemDecision, comment: string | null) => Promise<void> | void
@@ -294,6 +398,16 @@ function ReviewItemRow({
     evidenceId: string,
     formData: FormData,
   ) => Promise<{ message?: string; success?: boolean }>
+  addCommentAction?: (
+    vendorId: string,
+    packId: string,
+    itemId: string,
+    body: string,
+    parentCommentId?: string | null,
+  ) => Promise<{ success?: boolean; message?: string }>
+  getCommentsAction?: (
+    itemId: string,
+  ) => Promise<{ comments?: ReviewComment[]; message?: string }>
   isLast: boolean
   isSelected: boolean
   onToggleSelect: () => void
@@ -377,6 +491,17 @@ function ReviewItemRow({
             </div>
           )}
         </div>
+
+        {/* Pre-fill badge */}
+        {prefill && (
+          <span
+            className="text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 whitespace-nowrap"
+            style={{ background: 'rgba(14,165,233,0.08)', color: '#0284c7' }}
+          >
+            Last: {DECISIONS.find((d) => d.value === prefill.decision)?.label ?? prefill.decision}
+            {prefill.decided_at && ` · ${new Date(prefill.decided_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`}
+          </span>
+        )}
 
         {/* Decision badge */}
         {decisionStyle && (
@@ -554,6 +679,17 @@ function ReviewItemRow({
               </div>
               <p style={{ color: '#4a4270' }}>{aiResult.rationale}</p>
             </div>
+          )}
+
+          {/* Comment thread */}
+          {addCommentAction && getCommentsAction && (
+            <CommentThread
+              itemId={item.id}
+              vendorId={vendorId}
+              packId={packId}
+              getCommentsAction={getCommentsAction}
+              addCommentAction={addCommentAction}
+            />
           )}
         </div>
       )}

@@ -2,6 +2,7 @@ import { requireCurrentUser } from '@/lib/current-user'
 import { getOrgReviewsList } from '@/lib/db/reviews-list'
 import { getOrgUsers } from '@/lib/db/organizations'
 import { ReviewsListClient } from './_components/ReviewsListClient'
+import { bulkAssignReviewerAction, bulkAssignApproverAction, bulkStartReviewsAction } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,13 @@ export default async function ReviewsPage() {
         </p>
       </div>
 
-      <ReviewsListClient reviews={reviews} users={users} />
+      <ReviewsListClient
+        reviews={reviews}
+        users={users}
+        bulkAssignReviewerAction={bulkAssignReviewerAction}
+        bulkAssignApproverAction={bulkAssignApproverAction}
+        bulkStartReviewsAction={bulkStartReviewsAction}
+      />
     </div>
   )
 }

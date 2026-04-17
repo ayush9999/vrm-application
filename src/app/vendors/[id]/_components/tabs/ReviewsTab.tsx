@@ -39,6 +39,14 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
     })
   }
 
+  // Due date alerts
+  const today = new Date().toISOString().split('T')[0]
+  const in7Days = new Date(Date.now() + 7 * 86_400_000).toISOString().split('T')[0]
+  const in30Days = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
+  const activePacks = reviewPacks.filter((p) => p.status !== 'approved' && p.status !== 'approved_with_exception' && p.status !== 'locked')
+  const overduePacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] < today)
+  const dueSoonPacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] >= today && p.due_at.split('T')[0] <= in30Days)
+
   if (reviewPacks.length === 0) {
     return (
       <div className="space-y-4">
@@ -71,6 +79,33 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
 
   return (
     <div className="space-y-4">
+      {/* Due date alert banners */}
+      {overduePacks.length > 0 && (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+          style={{ background: 'rgba(225,29,72,0.05)', border: '1px solid rgba(225,29,72,0.15)' }}
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#e11d48' }} />
+          <span className="text-xs font-semibold" style={{ color: '#be123c' }}>
+            {overduePacks.length} review{overduePacks.length !== 1 ? 's' : ''} overdue
+          </span>
+          <span className="text-xs" style={{ color: '#e11d48' }}>
+            — {overduePacks.map((p) => p.review_pack_name).join(', ')}
+          </span>
+        </div>
+      )}
+      {dueSoonPacks.length > 0 && (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)' }}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ background: '#d97706' }} />
+          <span className="text-xs font-medium" style={{ color: '#92400e' }}>
+            {dueSoonPacks.length} review{dueSoonPacks.length !== 1 ? 's' : ''} due within 30 days
+          </span>
+        </div>
+      )}
+
       {/* Header with re-apply */}
       <div className="flex items-center justify-between">
         <div>
@@ -81,15 +116,26 @@ export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: 
             Each pack contains the evidence and review items needed to onboard or re-review this vendor.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleReapply}
-          disabled={isPending}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-          style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
-        >
-          {isPending ? 'Re-applying…' : 'Re-apply packs'}
-        </button>
+        <div className="flex items-center gap-2">
+          {reviewPacks.filter((p) => p.status === 'approved' || p.status === 'approved_with_exception' || p.status === 'locked').length >= 2 && (
+            <Link
+              href={`/vendors/${vendorId}/reviews/compare`}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+            >
+              Compare Reviews
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={handleReapply}
+            disabled={isPending}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+          >
+            {isPending ? 'Re-applying…' : 'Re-apply packs'}
+          </button>
+        </div>
       </div>
 
       {message && (

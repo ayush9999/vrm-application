@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ReviewListRow } from '@/lib/db/reviews-list'
@@ -26,15 +26,35 @@ type ViewMode = 'flat' | 'grouped'
 interface Props {
   reviews: ReviewListRow[]
   users: OrgUser[]
+  bulkAssignReviewerAction?: (vrpIds: string[], userId: string) => Promise<{ success?: boolean; message?: string }>
+  bulkAssignApproverAction?: (vrpIds: string[], userId: string) => Promise<{ success?: boolean; message?: string }>
+  bulkStartReviewsAction?: (vrpIds: string[]) => Promise<{ success?: boolean; message?: string }>
 }
 
-export function ReviewsListClient({ reviews, users }: Props) {
+export function ReviewsListClient({ reviews, users, bulkAssignReviewerAction, bulkAssignApproverAction, bulkStartReviewsAction }: Props) {
+  const router = useRouter()
   const [packFilter, setPackFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [criticalityFilter, setCriticalityFilter] = useState<string>('all')
   const [ownerFilter, setOwnerFilter] = useState<string>('all')
   const [dueFilter, setDueFilter] = useState<DueFilter>('all')
   const [view, setView] = useState<ViewMode>('flat')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkPending, startBulk] = useTransition()
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null)
+
+  const toggleSelect = (id: string) => setSelectedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const clearSelection = () => setSelectedIds(new Set())
+  const selectAll = () => setSelectedIds(new Set(sorted.map((r) => r.vendor_review_pack_id)))
+
+  const handleBulk = (fn: (ids: string[]) => Promise<{ success?: boolean; message?: string }>) => {
+    setBulkMsg(null)
+    startBulk(async () => {
+      const r = await fn(Array.from(selectedIds))
+      if (r.success) { clearSelection(); router.refresh() }
+      else setBulkMsg(r.message ?? 'Failed')
+    })
+  }
 
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
@@ -162,6 +182,61 @@ export function ReviewsListClient({ reviews, users }: Props) {
         </div>
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div
+          className="flex items-center gap-3 px-4 py-2 rounded-xl sticky top-2 z-10 backdrop-blur flex-wrap"
+          style={{ background: 'rgba(28,28,46,0.95)', color: 'white', boxShadow: '0 6px 24px rgba(28,28,46,0.25)' }}
+        >
+          <span className="text-xs font-semibold">{selectedIds.size} selected</span>
+          <div className="h-5 w-px bg-white/20" />
+          {bulkAssignReviewerAction && (
+            <label className="flex items-center gap-1 text-xs">
+              <span>Reviewer:</span>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) handleBulk((ids) => bulkAssignReviewerAction(ids, e.target.value))
+                }}
+                className="rounded px-1.5 py-0.5 text-xs text-black"
+                defaultValue=""
+              >
+                <option value="" disabled>Pick…</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}
+              </select>
+            </label>
+          )}
+          {bulkAssignApproverAction && (
+            <label className="flex items-center gap-1 text-xs">
+              <span>Approver:</span>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) handleBulk((ids) => bulkAssignApproverAction(ids, e.target.value))
+                }}
+                className="rounded px-1.5 py-0.5 text-xs text-black"
+                defaultValue=""
+              >
+                <option value="" disabled>Pick…</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}
+              </select>
+            </label>
+          )}
+          {bulkStartReviewsAction && (
+            <button
+              type="button"
+              onClick={() => handleBulk(bulkStartReviewsAction)}
+              disabled={isBulkPending}
+              className="text-xs font-medium px-3 py-1 rounded-full"
+              style={{ background: 'rgba(5,150,105,0.3)', color: '#a7f3d0' }}
+            >
+              Start selected
+            </button>
+          )}
+          <button type="button" onClick={selectAll} className="ml-auto text-xs hover:underline opacity-80">Select all ({sorted.length})</button>
+          <button type="button" onClick={clearSelection} className="text-xs hover:underline opacity-80">Clear</button>
+          {bulkMsg && <span className="text-xs text-rose-300 w-full">{bulkMsg}</span>}
+        </div>
+      )}
+
       {/* Results */}
       {sorted.length === 0 ? (
         <EmptyState message="No reviews match your filters" sub="Try clearing filters to see more.">
@@ -170,9 +245,9 @@ export function ReviewsListClient({ reviews, users }: Props) {
           </button>
         </EmptyState>
       ) : view === 'flat' ? (
-        <ReviewTable rows={sorted} todayStr={todayStr} />
+        <ReviewTable rows={sorted} todayStr={todayStr} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
       ) : (
-        <GroupedView rows={sorted} todayStr={todayStr} />
+        <GroupedView rows={sorted} todayStr={todayStr} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
       )}
     </div>
   )
@@ -209,7 +284,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
 
 // ─── Flat table ─────────────────────────────────────────────────────────────
 
-function ReviewTable({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: string }) {
+function ReviewTable({ rows, todayStr, selectedIds, onToggleSelect }: { rows: ReviewListRow[]; todayStr: string; selectedIds: Set<string>; onToggleSelect: (id: string) => void }) {
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}>
       {/* Desktop table */}
@@ -217,13 +292,14 @@ function ReviewTable({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: stri
         <table className="min-w-[900px] w-full text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(109,93,211,0.08)', background: 'rgba(109,93,211,0.03)' }}>
+              <th className="px-2 py-2.5 w-8" />
               {['Vendor', 'Pack', 'Status', 'Readiness', 'Missing', 'Rem.', 'Owner', 'Due', ''].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => <ReviewRow key={r.vendor_review_pack_id} r={r} todayStr={todayStr} />)}
+            {rows.map((r) => <ReviewRow key={r.vendor_review_pack_id} r={r} todayStr={todayStr} isSelected={selectedIds.has(r.vendor_review_pack_id)} onToggle={() => onToggleSelect(r.vendor_review_pack_id)} />)}
           </tbody>
         </table>
       </div>
@@ -235,7 +311,7 @@ function ReviewTable({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: stri
   )
 }
 
-function ReviewRow({ r, todayStr }: { r: ReviewListRow; todayStr: string }) {
+function ReviewRow({ r, todayStr, isSelected = false, onToggle }: { r: ReviewListRow; todayStr: string; isSelected?: boolean; onToggle?: () => void }) {
   const router = useRouter()
   const sty = STATUS_STYLE[r.status]
   const isOverdue = r.due_at && r.due_at.split('T')[0] < todayStr && r.status !== 'approved' && r.status !== 'approved_with_exception'
@@ -247,6 +323,16 @@ function ReviewRow({ r, todayStr }: { r: ReviewListRow; todayStr: string }) {
       className="hover:bg-[rgba(109,93,211,0.02)] transition-colors"
       onClick={() => router.push(reviewUrl)}
     >
+      <td className="px-2 py-3 w-8">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => { e.stopPropagation(); onToggle?.() }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-3.5 h-3.5 rounded"
+          style={{ accentColor: '#6c5dd3' }}
+        />
+      </td>
       <td className="px-3 py-3">
         <Link
           href={`/vendors/${r.vendor_id}`}
@@ -331,7 +417,7 @@ function MobileReviewRow({ r, todayStr }: { r: ReviewListRow; todayStr: string }
 
 // ─── Grouped view ───────────────────────────────────────────────────────────
 
-function GroupedView({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: string }) {
+function GroupedView({ rows, todayStr, selectedIds, onToggleSelect }: { rows: ReviewListRow[]; todayStr: string; selectedIds: Set<string>; onToggleSelect: (id: string) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, { name: string; rows: ReviewListRow[] }>()
     for (const r of rows) {
@@ -352,7 +438,7 @@ function GroupedView({ rows, todayStr }: { rows: ReviewListRow[]; todayStr: stri
             {g.name}
             <span className="text-[10px] font-normal" style={{ color: '#a99fd8' }}>({g.rows.length} vendor{g.rows.length !== 1 ? 's' : ''})</span>
           </h3>
-          <ReviewTable rows={g.rows} todayStr={todayStr} />
+          <ReviewTable rows={g.rows} todayStr={todayStr} selectedIds={selectedIds} onToggleSelect={onToggleSelect} />
         </section>
       ))}
     </div>
