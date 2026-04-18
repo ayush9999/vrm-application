@@ -316,7 +316,7 @@ export async function getVendorIssueCounts(
     open: issues.filter(i => i.status === 'open').length,
     in_progress: issues.filter(i => i.status === 'in_progress').length,
     overdue: issues.filter(i =>
-      (i.status === 'open' || i.status === 'in_progress' || i.status === 'blocked') && i.due_date && i.due_date < today
+      (i.status === 'open' || i.status === 'in_progress' || i.status === 'blocked') && i.due_date && String(i.due_date) < today
     ).length,
     critical: issues.filter(i => i.severity === 'critical').length,
     high: issues.filter(i => i.severity === 'high').length,
@@ -337,7 +337,7 @@ export async function getOrgIssueCounts(orgId: string) {
 
   return {
     open: issues.length,
-    overdue: issues.filter(i => i.due_date && i.due_date < today).length,
+    overdue: issues.filter(i => i.due_date && String(i.due_date) < today).length,
   }
 }
 

@@ -84,12 +84,12 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
     const activePacks = packs.filter((p) => activeStatuses.has(p.status))
     const upcomingPacks = packs.filter((p) => p.status === 'upcoming')
     const completedPacks = packs.filter((p) => completedStatuses.has(p.status))
-    const overdue = packs.filter((p) => activeStatuses.has(p.status) && p.due_at && p.due_at.split('T')[0] < todayStr)
+    const overdue = packs.filter((p) => activeStatuses.has(p.status) && p.due_at && String(p.due_at).split('T')[0] < todayStr)
 
     // Next due date across all active/upcoming packs
     const dueDates = packs
       .filter((p) => (activeStatuses.has(p.status) || p.status === 'upcoming') && p.due_at)
-      .map((p) => p.due_at!)
+      .map((p) => String(p.due_at!))
       .sort()
     const nextDue = dueDates[0] ?? null
 

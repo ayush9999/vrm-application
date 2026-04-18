@@ -106,9 +106,10 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
   let docsExpiring60 = 0
   for (const d of docs) {
     if (d.evidence_status !== 'approved' || !d.expiry_date) continue
-    if (d.expiry_date < todayStr) docsExpired++
-    else if (d.expiry_date <= in30Days) docsExpiring30++
-    else if (d.expiry_date <= in60Days) docsExpiring60++
+    const exp = String(d.expiry_date)
+    if (exp < todayStr) docsExpired++
+    else if (exp <= in30Days) docsExpiring30++
+    else if (exp <= in60Days) docsExpiring60++
   }
 
   // Remediation counts
@@ -119,7 +120,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
   for (const i of issues) {
     if (!openStatuses.has(i.status)) continue
     openRemediations++
-    if (i.due_date && i.due_date < todayStr && i.status !== 'deferred') overdueRemediations++
+    if (i.due_date && String(i.due_date) < todayStr && i.status !== 'deferred') overdueRemediations++
     remediationsByVendor.set(i.vendor_id, (remediationsByVendor.get(i.vendor_id) ?? 0) + 1)
   }
 
@@ -140,7 +141,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     if (v.approval_status === 'approved_with_exception') approvedWithException++
     if (v.approval_status === 'suspended' || v.approval_status === 'blocked') suspendedOrBlocked++
     if (v.criticality_tier === 1 && m && m.readinessPct < 80) criticalNotReady++
-    if (v.next_review_due_at && v.next_review_due_at <= endOfMonth) reviewsDueThisMonth++
+    if (v.next_review_due_at && String(v.next_review_due_at) <= endOfMonth) reviewsDueThisMonth++
   }
 
   // Top 8 highest-risk vendors
