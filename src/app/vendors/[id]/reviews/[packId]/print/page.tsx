@@ -99,7 +99,8 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
         `}</style>
       </head>
       <body>
-        <button className="print-btn no-print" onClick="window.print()">🖨 Print / Save PDF</button>
+        <button className="print-btn no-print" id="printBtn">🖨 Print / Save PDF</button>
+        <script dangerouslySetInnerHTML={{ __html: `document.getElementById('printBtn').addEventListener('click',function(){window.print()})` }} />
 
         {/* Header */}
         <div style={{ borderBottom: '2px solid #6c5dd3', paddingBottom: 12, marginBottom: 16 }}>
