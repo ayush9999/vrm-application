@@ -149,7 +149,11 @@ export async function autoAssignReviewPacks(
   const matched = matchReviewPacks((allPacks ?? []) as ReviewPack[], vendor, orgEsgEnabled)
   if (matched.length === 0) return
 
-  // 2. Check which packs are already assigned
+  // 2. Write to vendor_pack_assignments (permanent config)
+  const { bulkAssignPacksToVendor } = await import('@/lib/db/vendor-pack-assignments')
+  await bulkAssignPacksToVendor(vendor.org_id, vendor.id, matched.map((p) => p.id))
+
+  // 3. Check which packs already have active review instances
   const { data: existing } = await service
     .from('vendor_review_packs')
     .select('review_pack_id')
@@ -159,7 +163,7 @@ export async function autoAssignReviewPacks(
   const newPacks = matched.filter((p) => !existingPackIds.has(p.id))
   if (newPacks.length === 0) return
 
-  // 3. For each new pack, get requirements and create instances
+  // 4. For each new pack, get requirements and create review instances
   for (const pack of newPacks) {
     // Create vendor_review_pack
     const { data: vrp, error: vrpErr } = await service

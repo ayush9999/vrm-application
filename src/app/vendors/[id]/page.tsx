@@ -6,7 +6,7 @@ import { getVendorDocumentsData, getAssessmentDocRequestsForVendor } from '@/lib
 import { getVendorActivityLog } from '@/lib/db/activity-log'
 import { getVendorIncidents } from '@/lib/db/incidents'
 import { getVendorIssueCounts } from '@/lib/db/issues'
-import { getVendorReviewPacks, getVendorListMetrics } from '@/lib/db/review-packs'
+import { getVendorReviewPacks, getVendorListMetrics, getReviewPacks } from '@/lib/db/review-packs'
 import { getVendorEvidenceGrouped } from '@/lib/db/evidence'
 import { getVendorSnapshots } from '@/lib/db/readiness-snapshots'
 import { getPeerBenchmark } from '@/lib/db/peer-benchmark'
@@ -26,7 +26,9 @@ import {
   getEvidenceVersionsAction,
   getEvidenceVersionDownloadAction,
 } from './evidence-actions'
-import { deleteVendorAction, reapplyReviewPacksAction, updateApprovalStatusAction, captureReadinessSnapshotAction } from '@/app/vendors/actions'
+import { deleteVendorAction, updateApprovalStatusAction, captureReadinessSnapshotAction } from '@/app/vendors/actions'
+import { assignPackToVendorAction, removePackFromVendorAction } from './reviews/assign-action'
+import { getVendorAssignedPacks } from '@/lib/db/vendor-pack-assignments'
 import type { VendorStatus } from '@/types/vendor'
 
 const STATUS_BADGE: Record<VendorStatus, { label: string; className: string }> = {
@@ -48,7 +50,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots, benchmark] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots, benchmark, allPacks, assignments] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_id),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
@@ -59,6 +61,8 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
     getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
     getVendorSnapshots(id),
     getPeerBenchmark(user.orgId, id, vendor.category_id),
+    getReviewPacks(user.orgId),
+    getVendorAssignedPacks(id),
   ])
   const metrics = metricsMap.get(id)!
 
@@ -71,7 +75,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const boundCreateIncident   = createIncidentAction.bind(null, id)
   const boundUpdateIncident   = updateIncidentAction.bind(null, id)
   const boundDeleteIncident   = deleteIncidentAction.bind(null, id)
-  const boundReapplyPacks     = reapplyReviewPacksAction.bind(null, id)
+  const availablePacksList = allPacks.map((p) => ({ id: p.id, name: p.name, code: p.code }))
   const statusBadge = STATUS_BADGE[vendor.status]
 
   return (
@@ -155,7 +159,10 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           updateIncidentAction={boundUpdateIncident}
           deleteIncidentAction={boundDeleteIncident}
           deleteVendorAction={boundDeleteVendor}
-          reapplyReviewPacksAction={boundReapplyPacks}
+          assignments={assignments}
+          availablePacks={availablePacksList}
+          assignPackAction={assignPackToVendorAction}
+          removePackAction={removePackFromVendorAction}
           uploadEvidenceAction={uploadEvidenceFileAction}
           setEvidenceStatusAction={setEvidenceStatusAction}
           requestEvidenceAction={requestEvidenceFromVendorAction}

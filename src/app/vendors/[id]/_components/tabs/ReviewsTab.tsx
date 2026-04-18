@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { VendorReviewPack, VendorReviewPackStatus } from '@/types/review-pack'
+import type { VendorPackAssignment } from '@/lib/db/vendor-pack-assignments'
 
 const STATUS_STYLE: Record<VendorReviewPackStatus, { bg: string; color: string; label: string }> = {
   not_started:              { bg: 'rgba(148,163,184,0.15)', color: '#64748b', label: 'Not Started' },
@@ -19,237 +21,170 @@ const STATUS_STYLE: Record<VendorReviewPackStatus, { bg: string; color: string; 
 
 interface ReviewsTabProps {
   vendorId: string
+  assignments: VendorPackAssignment[]
   reviewPacks: VendorReviewPack[]
-  reapplyReviewPacksAction: () => Promise<{ message?: string; success?: boolean }>
+  availablePacks: { id: string; name: string; code: string | null }[]
+  assignPackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
+  removePackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
 }
 
-export function ReviewsTab({ vendorId, reviewPacks, reapplyReviewPacksAction }: ReviewsTabProps) {
+export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks, assignPackAction, removePackAction }: ReviewsTabProps) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [message, setMessage] = useState<string | null>(null)
+  const [showAssign, setShowAssign] = useState(false)
 
-  const handleReapply = () => {
-    setMessage(null)
+  const assignedPackIds = new Set(assignments.map((a) => a.review_pack_id))
+  const unassignedPacks = availablePacks.filter((p) => !assignedPackIds.has(p.id))
+
+  const handleAssign = (packId: string) => {
     startTransition(async () => {
-      const result = await reapplyReviewPacksAction()
-      if (result.success) {
-        setMessage('Review packs re-applied. Refresh to see updates.')
-      } else {
-        setMessage(result.message ?? 'Failed to re-apply review packs')
-      }
+      await assignPackAction(vendorId, packId)
+      setShowAssign(false)
+      router.refresh()
     })
   }
 
-  // Filter to onboarding only for this tab
-  const onboardingPacks = reviewPacks.filter((p) => !p.review_type || p.review_type === 'onboarding')
-  const scheduledCount = reviewPacks.filter((p) => p.review_type === 'scheduled').length
-  const onDemandCount = reviewPacks.filter((p) => p.review_type === 'on_demand').length
-
-  // Due date alerts
-  const today = new Date().toISOString().split('T')[0]
-  const in7Days = new Date(Date.now() + 7 * 86_400_000).toISOString().split('T')[0]
-  const in30Days = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
-  const activePacks = onboardingPacks.filter((p) => p.status !== 'approved' && p.status !== 'approved_with_exception' && p.status !== 'locked')
-  const overduePacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] < today)
-  const dueSoonPacks = activePacks.filter((p) => p.due_at && p.due_at.split('T')[0] >= today && p.due_at.split('T')[0] <= in30Days)
-
-  if (reviewPacks.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div
-          className="rounded-2xl p-8 text-center"
-          style={{ background: 'white', border: '1px dashed rgba(109,93,211,0.2)' }}
-        >
-          <p className="text-sm font-medium mb-2" style={{ color: '#1e1550' }}>
-            No Review Packs assigned yet
-          </p>
-          <p className="text-xs mb-4" style={{ color: '#a99fd8' }}>
-            Review Packs are auto-assigned based on the vendor&apos;s service type, criticality, and data access level.
-          </p>
-          <button
-            type="button"
-            onClick={handleReapply}
-            disabled={isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
-          >
-            {isPending ? 'Applying…' : 'Apply Review Packs Now'}
-          </button>
-          {message && (
-            <p className="text-xs mt-3" style={{ color: '#6c5dd3' }}>{message}</p>
-          )}
-        </div>
-      </div>
-    )
+  const handleRemove = (packId: string) => {
+    if (!confirm('Remove this pack? Future scheduled reviews won\'t include it. Existing reviews are not affected.')) return
+    startTransition(async () => {
+      await removePackAction(vendorId, packId)
+      router.refresh()
+    })
   }
 
   return (
-    <div className="space-y-4">
-      {/* Due date alert banners */}
-      {overduePacks.length > 0 && (
-        <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
-          style={{ background: 'rgba(225,29,72,0.05)', border: '1px solid rgba(225,29,72,0.15)' }}
-        >
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#e11d48' }} />
-          <span className="text-xs font-semibold" style={{ color: '#be123c' }}>
-            {overduePacks.length} review{overduePacks.length !== 1 ? 's' : ''} overdue
-          </span>
-          <span className="text-xs" style={{ color: '#e11d48' }}>
-            — {overduePacks.map((p) => p.review_pack_name).join(', ')}
-          </span>
+    <div className="space-y-6">
+      {/* ── Section 1: Assigned Packs (Configuration) ── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>Assigned Packs</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+              Packs assigned to this vendor. Scheduled reviews pull from this list.
+            </p>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowAssign((v) => !v)}
+              disabled={unassignedPacks.length === 0 || isPending}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-40"
+              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+            >
+              + Add Pack
+            </button>
+            {showAssign && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowAssign(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.15)', boxShadow: '0 4px 16px rgba(109,93,211,0.15)' }}>
+                  <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4', borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
+                    Assign a pack
+                  </div>
+                  {unassignedPacks.map((p) => (
+                    <button key={p.id} type="button" onClick={() => handleAssign(p.id)} disabled={isPending} className="w-full text-left px-3 py-2 text-xs hover:bg-[rgba(109,93,211,0.04)] disabled:opacity-50" style={{ color: '#1e1550' }}>
+                      <span className="font-medium">{p.name}</span>
+                      {p.code && <span className="ml-1.5 font-mono text-[10px]" style={{ color: '#a99fd8' }}>{p.code}</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      )}
-      {dueSoonPacks.length > 0 && (
-        <div
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
-          style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)' }}
-        >
-          <span className="w-2 h-2 rounded-full" style={{ background: '#d97706' }} />
-          <span className="text-xs font-medium" style={{ color: '#92400e' }}>
-            {dueSoonPacks.length} review{dueSoonPacks.length !== 1 ? 's' : ''} due within 30 days
-          </span>
-        </div>
-      )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
-            Onboarding Review ({onboardingPacks.length} packs)
-          </h2>
-          <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
-            Initial review packs assigned when this vendor was onboarded.
+        {assignments.length === 0 ? (
+          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
+            No packs assigned. Click "+ Add Pack" to start.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            {assignments.map((a) => (
+              <div
+                key={a.id}
+                className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-lg text-xs"
+                style={{ background: 'rgba(109,93,211,0.06)', border: '1px solid rgba(109,93,211,0.12)' }}
+              >
+                <span className="font-medium" style={{ color: '#1e1550' }}>{a.pack_name}</span>
+                {a.pack_code && <span className="font-mono text-[10px]" style={{ color: '#a99fd8' }}>{a.pack_code}</span>}
+                <button
+                  type="button"
+                  onClick={() => handleRemove(a.review_pack_id)}
+                  disabled={isPending}
+                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-100 disabled:opacity-50 transition-colors"
+                  style={{ color: '#a99fd8' }}
+                  title="Remove pack"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Section 2: Review History (Instances) ── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
+            Review History ({reviewPacks.length})
+          </h2>
           <Link
             href={`/reviews/${vendorId}`}
             className="text-xs font-semibold px-4 py-1.5 rounded-full text-white"
             style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
           >
-            View Full Timeline →
-          </Link>
-          <button
-            type="button"
-            onClick={handleReapply}
-            disabled={isPending}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
-          >
-            {isPending ? 'Re-applying…' : 'Re-apply packs'}
-          </button>
-        </div>
-      </div>
-
-      {message && (
-        <div
-          className="rounded-lg px-3 py-2 text-xs"
-          style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(108,93,211,0.15)' }}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* Other review types summary */}
-      {(scheduledCount > 0 || onDemandCount > 0) && (
-        <div className="flex items-center gap-3 text-xs" style={{ color: '#8b7fd4' }}>
-          {scheduledCount > 0 && <span>{scheduledCount} scheduled review{scheduledCount !== 1 ? 's' : ''}</span>}
-          {onDemandCount > 0 && <span>{onDemandCount} on-demand review{onDemandCount !== 1 ? 's' : ''}</span>}
-          <span>—</span>
-          <Link href={`/reviews/${vendorId}`} className="font-medium hover:underline" style={{ color: '#6c5dd3' }}>
-            See all in timeline →
+            Full Timeline →
           </Link>
         </div>
-      )}
 
-      {/* Onboarding review pack cards */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {onboardingPacks.map((pack) => {
-          const counts = pack.item_counts ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
-          const applicable = counts.total - counts.na
-          const completed = counts.passed
-          const pct = applicable > 0 ? Math.round((completed / applicable) * 100) : 0
-          const statusStyle = STATUS_STYLE[pack.status]
-
-          return (
-            <Link
-              key={pack.id}
-              href={`/vendors/${vendorId}/reviews/${pack.id}`}
-              className="block rounded-2xl p-4 transition-all hover:-translate-y-0.5"
-              style={{
-                background: 'white',
-                border: '1px solid rgba(109,93,211,0.1)',
-                boxShadow: '0 2px 12px rgba(109,93,211,0.06)',
-              }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold truncate" style={{ color: '#1e1550' }}>
-                    {pack.review_pack_name ?? 'Review Pack'}
-                  </h3>
-                  {pack.review_pack_code && (
-                    <span className="text-[10px] font-mono" style={{ color: '#a99fd8' }}>
-                      {pack.review_pack_code}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 ml-2"
-                  style={{ background: statusStyle.bg, color: statusStyle.color }}
+        {reviewPacks.length === 0 ? (
+          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
+            No reviews yet. Create one from the{' '}
+            <Link href="/reviews" className="underline" style={{ color: '#6c5dd3' }}>Reviews module</Link>.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {reviewPacks.map((pack) => {
+              const counts = pack.item_counts ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
+              const applicable = counts.total - counts.na
+              const pct = applicable > 0 ? Math.round((counts.passed / applicable) * 100) : 0
+              const sty = STATUS_STYLE[pack.status]
+              return (
+                <Link
+                  key={pack.id}
+                  href={`/vendors/${vendorId}/reviews/${pack.id}`}
+                  className="block rounded-xl p-4 transition-all hover:-translate-y-0.5"
+                  style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.05)' }}
                 >
-                  {statusStyle.label}
-                </span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span style={{ color: '#8b7fd4' }}>
-                    {completed} / {applicable} applicable items
-                  </span>
-                  <span className="font-bold" style={{ color: pct === 100 ? '#059669' : pct >= 50 ? '#6c5dd3' : '#a99fd8' }}>
-                    {pct}%
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${pct}%`,
-                      background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Item counts */}
-              <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
-                <Mini label="Pass"   count={counts.passed}      color="#059669" />
-                <Mini label="Fail"   count={counts.failed}      color="#e11d48" />
-                <Mini label="Open"   count={counts.not_started} color="#a99fd8" />
-                {counts.na > 0 && <Mini label="N/A" count={counts.na} color="#94a3b8" />}
-              </div>
-
-              {/* Matched rule */}
-              {pack.matched_rule && (
-                <div className="text-[10px] mt-2 italic" style={{ color: '#a99fd8' }}>
-                  Assigned: {pack.matched_rule}
-                </div>
-              )}
-            </Link>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function Mini({ label, count, color }: { label: string; count: number; color: string }) {
-  return (
-    <div className="flex items-center gap-1">
-      <span className="w-1 h-1 rounded-full" style={{ background: color }} />
-      <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#a99fd8' }}>{label}</span>
-      <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{count}</span>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                      <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>{pack.review_pack_name ?? 'Review'}</span>
+                      {pack.review_type && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{
+                          background: pack.review_type === 'onboarding' ? 'rgba(14,165,233,0.08)' : pack.review_type === 'scheduled' ? 'rgba(124,58,237,0.08)' : 'rgba(245,158,11,0.08)',
+                          color: pack.review_type === 'onboarding' ? '#0284c7' : pack.review_type === 'scheduled' ? '#7c3aed' : '#d97706',
+                        }}>{pack.review_type.replace('_', '-')}</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 ml-2" style={{ background: sty.bg, color: sty.color }}>{sty.label}</span>
+                  </div>
+                  {applicable > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span style={{ color: '#8b7fd4' }}>{counts.passed} / {applicable}</span>
+                        <span className="font-bold" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>{pct}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }} />
+                      </div>
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

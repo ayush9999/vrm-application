@@ -221,27 +221,38 @@ export async function approveReviewAction(
           else if (cadence === 'quarterly') nextDueMs = now + 91 * 86_400_000
 
           if (nextDueMs) {
-            // Check if an upcoming review already exists
-            const { data: existing } = await supabase
-              .from('vendor_review_packs')
+            // Only schedule if the pack is still in the vendor's assignments
+            const { data: assignment } = await supabase
+              .from('vendor_pack_assignments')
               .select('id')
               .eq('vendor_id', raw.vendor_id)
               .eq('review_pack_id', raw.review_pack_id)
-              .eq('status', 'upcoming')
-              .is('deleted_at', null)
+              .is('removed_at', null)
               .maybeSingle()
 
-            if (!existing) {
-              await supabase.from('vendor_review_packs').insert({
-                org_id: raw.org_id,
-                vendor_id: raw.vendor_id,
-                review_pack_id: raw.review_pack_id,
-                status: 'upcoming',
-                review_type: 'scheduled',
-                due_at: new Date(nextDueMs).toISOString(),
-                reviewer_user_id: raw.reviewer_user_id,
-                approver_user_id: raw.approver_user_id,
-              })
+            if (assignment) {
+              // Check if an upcoming review already exists
+              const { data: existing } = await supabase
+                .from('vendor_review_packs')
+                .select('id')
+                .eq('vendor_id', raw.vendor_id)
+                .eq('review_pack_id', raw.review_pack_id)
+                .eq('status', 'upcoming')
+                .is('deleted_at', null)
+                .maybeSingle()
+
+              if (!existing) {
+                await supabase.from('vendor_review_packs').insert({
+                  org_id: raw.org_id,
+                  vendor_id: raw.vendor_id,
+                  review_pack_id: raw.review_pack_id,
+                  status: 'upcoming',
+                  review_type: 'scheduled',
+                  due_at: new Date(nextDueMs).toISOString(),
+                  reviewer_user_id: raw.reviewer_user_id,
+                  approver_user_id: raw.approver_user_id,
+                })
+              }
             }
           }
         }

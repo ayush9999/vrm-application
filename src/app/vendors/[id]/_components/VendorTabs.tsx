@@ -43,7 +43,10 @@ export interface VendorTabsProps {
   updateIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteIncidentAction: (prevState: FormState, formData: FormData) => Promise<FormState>
   deleteVendorAction: (prevState: FormState, formData: FormData) => Promise<FormState>
-  reapplyReviewPacksAction: () => Promise<{ message?: string; success?: boolean }>
+  assignments: import('@/lib/db/vendor-pack-assignments').VendorPackAssignment[]
+  availablePacks: { id: string; name: string; code: string | null }[]
+  assignPackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
+  removePackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
   uploadEvidenceAction: (
     vendorId: string,
     evidenceId: string,
@@ -83,7 +86,10 @@ export function VendorTabs({
   updateIncidentAction,
   deleteIncidentAction,
   deleteVendorAction,
-  reapplyReviewPacksAction,
+  assignments,
+  availablePacks,
+  assignPackAction,
+  removePackAction,
   uploadEvidenceAction,
   setEvidenceStatusAction,
   requestEvidenceAction,
@@ -151,8 +157,11 @@ export function VendorTabs({
       {active === 'reviews' && (
         <ReviewsTab
           vendorId={vendor.id}
+          assignments={assignments}
           reviewPacks={reviewPacks}
-          reapplyReviewPacksAction={reapplyReviewPacksAction}
+          availablePacks={availablePacks}
+          assignPackAction={assignPackAction}
+          removePackAction={removePackAction}
         />
       )}
       {active === 'evidence' && (
