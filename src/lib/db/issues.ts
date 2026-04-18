@@ -32,7 +32,7 @@ export async function getIssues(
     'i.org_id = $1',
     'i.deleted_at IS NULL',
   ]
-  const params: unknown[] = [orgId]
+  const params: (string | string[] | number | boolean)[] = [orgId]
   let paramIdx = 1
 
   if (opts.vendorId) {
