@@ -76,7 +76,8 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
   }
 
   const handleRemove = (packId: string) => {
-    if (!confirm('Remove this pack? Future scheduled reviews won\'t include it. Existing reviews are not affected.')) return
+    const packName = assignments.find((a) => a.review_pack_id === packId)?.pack_name ?? 'this pack'
+    if (!confirm(`Are you sure you want to remove "${packName}"?\n\nFuture scheduled reviews won't include it. Existing reviews are not affected.`)) return
     startTransition(async () => {
       await removePackAction(vendorId, packId)
       router.refresh()
@@ -125,30 +126,77 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
         {assignments.length === 0 ? (
           <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
-            No packs assigned. Click "+ Add Pack" to start.
+            No packs assigned. Click &quot;+ Add Pack&quot; to start.
           </p>
         ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            {assignments.map((a) => (
-              <div
-                key={a.id}
-                className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-lg text-xs"
-                style={{ background: 'rgba(109,93,211,0.06)', border: '1px solid rgba(109,93,211,0.12)' }}
-              >
-                <span className="font-medium" style={{ color: '#1e1550' }}>{a.pack_name}</span>
-                {a.pack_code && <span className="font-mono text-[10px]" style={{ color: '#a99fd8' }}>{a.pack_code}</span>}
-                <button
-                  type="button"
-                  onClick={() => handleRemove(a.review_pack_id)}
-                  disabled={isPending}
-                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-100 disabled:opacity-50 transition-colors"
-                  style={{ color: '#a99fd8' }}
-                  title="Remove pack"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {assignments.map((a) => {
+              // Find review data for this pack if it exists
+              const packReview = vendorReviews.find((r) =>
+                r.packs?.some((p) => p.review_pack_id === a.review_pack_id),
+              )
+              const packInReview = packReview?.packs?.find((p) => p.review_pack_id === a.review_pack_id)
+              const itemCounts = packInReview?.item_counts
+              const applicable = itemCounts ? itemCounts.total - itemCounts.na : 0
+              const passed = itemCounts?.passed ?? 0
+              const pct = applicable > 0 ? Math.round((passed / applicable) * 100) : 0
+
+              return (
+                <div
+                  key={a.id}
+                  className="rounded-xl p-3.5 group transition-all hover:shadow-sm"
+                  style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
                 >
-                  ×
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold truncate" style={{ color: '#1e1550' }}>
+                          {a.pack_name}
+                        </span>
+                        {a.pack_code && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+                            {a.pack_code}
+                          </span>
+                        )}
+                      </div>
+                      {/* Progress bar */}
+                      {applicable > 0 && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${pct}%`,
+                                background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)',
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold tabular-nums shrink-0" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>
+                            {passed}/{applicable}
+                          </span>
+                        </div>
+                      )}
+                      {applicable === 0 && (
+                        <p className="text-[10px] mt-1.5" style={{ color: '#a99fd8' }}>No review items yet</p>
+                      )}
+                    </div>
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(a.review_pack_id)}
+                      disabled={isPending}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-50 disabled:opacity-50 transition-all shrink-0"
+                      title="Remove pack"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#e11d48" strokeWidth="1.2" strokeLinecap="round">
+                        <path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M5 4.5v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-8M7 7v3.5M9 7v3.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </section>
@@ -164,7 +212,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
             className="text-xs font-semibold px-4 py-1.5 rounded-full text-white"
             style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
           >
-            Full Timeline →
+            All Reviews →
           </Link>
         </div>
 
