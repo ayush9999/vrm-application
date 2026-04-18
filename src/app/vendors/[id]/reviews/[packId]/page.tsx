@@ -18,6 +18,7 @@ import {
   addReviewCommentAction,
   getReviewCommentsAction,
   exportReviewCsvAction,
+  exportReviewPdfDataAction,
 } from './actions'
 import { ExportButton } from './_components/ExportButton'
 import { ComplianceControlsSection } from './_components/ComplianceControlsSection'
@@ -121,7 +122,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
           <span>/</span>
           <span className="font-medium" style={{ color: '#1e1550' }}>{pack.name}</span>
         </div>
-        <ExportButton vendorId={vendorId} packId={packId} exportAction={exportReviewCsvAction} />
+        <ExportButton vendorId={vendorId} packId={packId} exportCsvAction={exportReviewCsvAction} exportPdfDataAction={exportReviewPdfDataAction} />
       </div>
 
       {/* Header */}

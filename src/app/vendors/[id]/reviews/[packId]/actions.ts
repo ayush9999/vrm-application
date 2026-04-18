@@ -7,9 +7,41 @@ import { updateReviewItemDecision } from '@/lib/db/review-packs'
 import { createIssue } from '@/lib/db/issues'
 import { createPortalLink, listPortalLinks, revokePortalLink } from '@/lib/db/vendor-portal'
 import { logActivity } from '@/lib/db/activity-log'
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import type { ReviewItemDecision } from '@/types/review-pack'
 import type { VendorPortalLink } from '@/lib/db/vendor-portal'
+
+// ─── PDF export data types ────────────────────────────────────────────────
+
+export interface ReviewExportData {
+  vendorName: string
+  vendorCode: string | null
+  packName: string
+  packCode: string | null
+  packDescription: string | null
+  status: string
+  reviewType: string
+  completedAt: string | null
+  readinessPct: number
+  totalItems: number
+  passedCount: number
+  failedCount: number
+  items: Array<{
+    name: string
+    description: string | null
+    decision: string
+    comment: string | null
+    complianceRefs: Array<{ standard: string; reference: string }>
+  }>
+  approvals: Array<{
+    level: number
+    decision: string
+    comment: string | null
+    decidedAt: string
+    userName: string
+  }>
+}
 
 export async function setReviewItemDecisionAction(
   vendorId: string,
@@ -317,6 +349,86 @@ export async function exportReviewCsvAction(
     return { csv: lines.join('\n'), fileName: `${v?.vendor_code ?? 'vendor'}-${packName}-${new Date().toISOString().split('T')[0]}.csv` }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to export' }
+  }
+}
+
+// ─── Export review data for PDF generation ────────────────────────────────
+
+export async function exportReviewPdfDataAction(
+  vendorId: string,
+  packId: string,
+): Promise<{ data?: ReviewExportData; message?: string }> {
+  try {
+    await requireCurrentUser()
+
+    // Fetch pack + vendor info + items + approvals in parallel
+    const [vrpRows, items, approvalRows] = await Promise.all([
+      sql<Array<{
+        status: string; completed_at: string | null; review_type: string
+        vendor_name: string; vendor_code: string | null
+        pack_name: string; pack_code: string | null; pack_description: string | null
+      }>>`
+        SELECT vrp.status, vrp.completed_at, vrp.review_type,
+          v.name AS vendor_name, v.vendor_code,
+          rp.name AS pack_name, rp.code AS pack_code, rp.description AS pack_description
+        FROM vendor_review_packs vrp
+        JOIN vendors v ON v.id = vrp.vendor_id
+        JOIN review_packs rp ON rp.id = vrp.review_pack_id
+        WHERE vrp.id = ${packId} AND vrp.vendor_id = ${vendorId}
+        LIMIT 1
+      `,
+      import('@/lib/db/review-packs').then((m) => m.getVendorReviewItems(packId)),
+      sql<Array<{
+        level: number; decision: string; comment: string | null; decided_at: string
+        user_name: string | null; user_email: string | null
+      }>>`
+        SELECT ra.level, ra.decision, ra.comment, ra.decided_at,
+          u.name AS user_name, u.email AS user_email
+        FROM review_approvals ra
+        JOIN users u ON u.id = ra.user_id
+        WHERE ra.vendor_review_pack_id = ${packId}
+        ORDER BY ra.decided_at
+      `,
+    ])
+
+    const vrp = vrpRows[0]
+    if (!vrp) return { message: 'Not found' }
+
+    const applicable = items.filter((i) => i.decision !== 'na').length
+    const passed = items.filter((i) => i.decision === 'pass' || i.decision === 'exception_approved').length
+
+    return {
+      data: {
+        vendorName: vrp.vendor_name,
+        vendorCode: vrp.vendor_code,
+        packName: vrp.pack_name,
+        packCode: vrp.pack_code,
+        packDescription: vrp.pack_description,
+        status: vrp.status,
+        reviewType: vrp.review_type,
+        completedAt: vrp.completed_at,
+        readinessPct: applicable > 0 ? Math.round((passed / applicable) * 100) : 0,
+        totalItems: items.length,
+        passedCount: passed,
+        failedCount: items.filter((i) => i.decision === 'fail').length,
+        items: items.map((i) => ({
+          name: i.requirement_name ?? 'Unknown',
+          description: i.requirement_description ?? null,
+          decision: i.decision,
+          comment: i.reviewer_comment ?? null,
+          complianceRefs: i.compliance_references ?? [],
+        })),
+        approvals: approvalRows.map((a) => ({
+          level: a.level,
+          decision: a.decision,
+          comment: a.comment,
+          decidedAt: a.decided_at,
+          userName: a.user_name ?? a.user_email ?? 'Unknown',
+        })),
+      },
+    }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to load export data' }
   }
 }
 

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorById } from '@/lib/db/vendors'
 import { getVendorReviewItems } from '@/lib/db/review-packs'
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import type { VendorReviewItem } from '@/types/review-pack'
 
 interface PageProps {
@@ -27,24 +27,25 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
   const vendor = await getVendorById(user.orgId, vendorId)
   if (!vendor) notFound()
 
-  const supabase = await createServerClient()
-  const { data: vrp } = await supabase
-    .from('vendor_review_packs')
-    .select(`
-      *, review_packs!inner ( name, code, description )
-    `)
-    .eq('id', packId)
-    .eq('vendor_id', vendorId)
-    .maybeSingle()
+  const [vrpRows, items] = await Promise.all([
+    sql<Array<{
+      status: string; completed_at: string | null; review_type: string
+      pack_name: string; pack_code: string | null; pack_description: string | null
+    }>>`
+      SELECT vrp.status, vrp.completed_at, vrp.review_type,
+        rp.name AS pack_name, rp.code AS pack_code, rp.description AS pack_description
+      FROM vendor_review_packs vrp
+      JOIN review_packs rp ON rp.id = vrp.review_pack_id
+      WHERE vrp.id = ${packId} AND vrp.vendor_id = ${vendorId}
+      LIMIT 1
+    `,
+    getVendorReviewItems(packId),
+  ])
+  const vrp = vrpRows[0]
   if (!vrp) notFound()
 
-  const items = await getVendorReviewItems(packId)
-
-  const raw = vrp as unknown as {
-    status: string; completed_at: string | null; review_type: string
-    review_packs: { name: string; code: string | null; description: string | null } | { name: string; code: string | null; description: string | null }[]
-  }
-  const rp = Array.isArray(raw.review_packs) ? raw.review_packs[0] : raw.review_packs
+  const raw = vrp
+  const rp = { name: vrp.pack_name, code: vrp.pack_code, description: vrp.pack_description }
 
   // Determine which sections to show
   const includeParam = sp.include
@@ -59,18 +60,21 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
   // Fetch approvals if requested
   let approvals: Array<{ level: number; decision: string; comment: string | null; decided_at: string; user_name: string }> = []
   if (includes.has('approvals')) {
-    const { data } = await supabase
-      .from('review_approvals')
-      .select('level, decision, comment, decided_at, users!inner(name, email)')
-      .eq('vendor_review_pack_id', packId)
-      .order('decided_at')
-    approvals = ((data ?? []) as unknown as Array<{
+    const rows = await sql<Array<{
       level: number; decision: string; comment: string | null; decided_at: string
-      users: { name: string | null; email: string | null } | { name: string | null; email: string | null }[]
-    }>).map((a) => {
-      const u = Array.isArray(a.users) ? a.users[0] : a.users
-      return { ...a, user_name: u?.name ?? u?.email ?? 'Unknown' }
-    })
+      user_name: string | null; user_email: string | null
+    }>>`
+      SELECT ra.level, ra.decision, ra.comment, ra.decided_at,
+        u.name AS user_name, u.email AS user_email
+      FROM review_approvals ra
+      JOIN users u ON u.id = ra.user_id
+      WHERE ra.vendor_review_pack_id = ${packId}
+      ORDER BY ra.decided_at
+    `
+    approvals = rows.map((a) => ({
+      ...a,
+      user_name: a.user_name ?? a.user_email ?? 'Unknown',
+    }))
   }
 
   return (
