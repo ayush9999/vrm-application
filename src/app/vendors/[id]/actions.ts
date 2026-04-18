@@ -154,9 +154,22 @@ export async function updateDocumentMetaAction(
 const incidentSchema = z.object({
   incident_date: z.string().min(1, 'Date is required'),
   severity: z.enum(['low', 'medium', 'high', 'critical']),
-  status: z.enum(['open', 'resolved']).default('open'),
+  status: z.enum(['detected', 'investigating', 'contained', 'resolved', 'closed']).default('detected'),
   description: z.string().min(1, 'Description is required'),
   notes: z.string().optional().transform((v) => v?.trim() || null),
+  incident_type: z.string().optional().transform((v) => v?.trim() || null),
+  impact_scope: z.string().optional().transform((v) => v?.trim() || null),
+  records_affected: z.preprocess((v) => (v === '' || v === null ? null : Number(v)), z.number().nullable().optional()),
+  users_affected: z.preprocess((v) => (v === '' || v === null ? null : Number(v)), z.number().nullable().optional()),
+  data_types_involved: z.string().optional().transform((v) => v?.trim() || null),
+  detected_at: z.string().optional().transform((v) => v?.trim() || null),
+  reported_by_vendor_at: z.string().optional().transform((v) => v?.trim() || null),
+  root_cause: z.string().optional().transform((v) => v?.trim() || null),
+  root_cause_detail: z.string().optional().transform((v) => v?.trim() || null),
+  sla_notification_hours: z.preprocess((v) => (v === '' || v === null ? null : Number(v)), z.number().nullable().optional()),
+  is_reportable: z.preprocess((v) => v === 'true', z.boolean().optional()),
+  applicable_regulation: z.string().optional().transform((v) => v?.trim() || null),
+  reporting_deadline: z.string().optional().transform((v) => v?.trim() || null),
 })
 
 export async function createIncidentAction(
@@ -164,13 +177,11 @@ export async function createIncidentAction(
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const parsed = incidentSchema.safeParse({
-    incident_date: formData.get('incident_date'),
-    severity: formData.get('severity'),
-    status: formData.get('status'),
-    description: formData.get('description'),
-    notes: formData.get('notes'),
-  })
+  const raw: Record<string, unknown> = {}
+  for (const key of ['incident_date', 'severity', 'status', 'description', 'notes', 'incident_type', 'impact_scope', 'records_affected', 'users_affected', 'data_types_involved', 'detected_at', 'reported_by_vendor_at', 'root_cause', 'root_cause_detail', 'sla_notification_hours', 'is_reportable', 'applicable_regulation', 'reporting_deadline']) {
+    raw[key] = formData.get(key)
+  }
+  const parsed = incidentSchema.safeParse(raw)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
   try {
@@ -184,13 +195,40 @@ export async function createIncidentAction(
       entityId: incident.id,
       action: 'incident_created',
       title: `Incident raised: "${incident.description.slice(0, 60)}${incident.description.length > 60 ? '…' : ''}"`,
-      metadata: { severity: incident.severity, incident_date: incident.incident_date },
+      metadata: { severity: incident.severity, incident_date: incident.incident_date, incident_type: incident.incident_type },
     })
+
+    // Auto-create remediation for critical/high incidents
+    if (incident.severity === 'critical' || incident.severity === 'high') {
+      try {
+        const { createIssue } = await import('@/lib/db/issues')
+        const issue = await createIssue({
+          orgId: user.orgId,
+          vendorId,
+          title: `Incident: ${incident.description.slice(0, 80)}`,
+          description: `Auto-created from ${incident.severity} severity incident on ${incident.incident_date}.${incident.incident_type ? ` Type: ${incident.incident_type.replace(/_/g, ' ')}.` : ''}`,
+          severity: incident.severity,
+          source: 'monitoring',
+          type: 'general',
+          createdByUserId: user.userId,
+        })
+
+        // Link remediation back to the incident
+        const supabase = await createServerClient()
+        await supabase
+          .from('vendor_incidents')
+          .update({ created_remediation_id: issue.id })
+          .eq('id', incident.id)
+      } catch {
+        // Non-critical — don't fail incident creation on remediation failure
+      }
+    }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to create incident.' }
   }
 
   revalidatePath(`/vendors/${vendorId}`)
+  revalidatePath('/issues')
   return { success: true }
 }
 
@@ -200,7 +238,7 @@ const updateIncidentSchema = z.object({
   incident_id: z.string().uuid(),
   incident_date: z.string().min(1, 'Date is required'),
   severity: z.enum(['low', 'medium', 'high', 'critical']),
-  status: z.enum(['open', 'resolved']),
+  status: z.enum(['detected', 'investigating', 'contained', 'resolved', 'closed']),
   description: z.string().min(1, 'Description is required'),
   notes: z.string().optional().transform((v) => v?.trim() || null),
 })

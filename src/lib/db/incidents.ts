@@ -31,13 +31,10 @@ export async function createIncident(
   const { data, error } = await supabase
     .from('vendor_incidents')
     .insert({
+      ...input,
       org_id: orgId,
       vendor_id: vendorId,
-      incident_date: input.incident_date,
-      severity: input.severity,
-      status: input.status ?? 'open',
-      description: input.description,
-      notes: input.notes ?? null,
+      status: input.status ?? 'detected',
       created_by_user_id: actorUserId,
     })
     .select()
