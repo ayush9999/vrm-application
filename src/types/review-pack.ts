@@ -121,6 +121,8 @@ export interface VendorReviewItem {
   decision: ReviewItemDecision
   reviewer_comment: string | null
   linked_evidence_id: string | null
+  linked_evidence_name?: string | null
+  linked_evidence_status?: string | null
   created_remediation_id: string | null
   decided_at: string | null
   decided_by_user_id: string | null

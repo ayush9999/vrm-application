@@ -2,15 +2,16 @@ import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getVendorCategories } from '@/lib/db/vendor-categories'
 import { getOrgUsers } from '@/lib/db/organizations'
-import { COUNTRIES } from '@/lib/countries'
-import { OnboardingWizard } from './_components/OnboardingWizard'
-import { createVendorFromWizardAction, previewMatchedReviewPacksAction, generatePortalLinksForVendorAction } from '@/app/vendors/actions'
+import { listCustomFields } from '@/lib/db/custom-fields'
+import { VendorForm } from '../../_components/VendorForm'
+import { createVendorAction } from '../../actions'
 
-export default async function NewVendorWizardPage() {
+export default async function QuickVendorFormPage() {
   const user = await requireCurrentUser()
-  const [categories, users] = await Promise.all([
+  const [categories, users, customFields] = await Promise.all([
     getVendorCategories(user.orgId),
     getOrgUsers(user.orgId),
+    listCustomFields(user.orgId, 'vendor'),
   ])
 
   return (
@@ -25,31 +26,34 @@ export default async function NewVendorWizardPage() {
         </Link>
         <div className="flex items-end justify-between flex-wrap gap-3 mt-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
-              Add Vendor
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Add Vendor — Quick Form</h1>
             <p className="text-sm mt-1" style={{ color: '#8b7fd4' }}>
-              Follow the steps to onboard a new vendor — classify, assign review packs, and optionally request evidence.
+              All fields in one form. Review packs auto-applied on save.
             </p>
           </div>
           <Link
-            href="/vendors/new/quick"
+            href="/vendors/new/wizard"
             className="text-sm font-medium px-4 py-2 rounded-full transition-colors"
             style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}
           >
-            Quick form (advanced) →
+            ← Guided wizard
           </Link>
         </div>
       </div>
 
-      <OnboardingWizard
-        categories={categories}
-        users={users}
-        countries={COUNTRIES}
-        createAction={createVendorFromWizardAction}
-        previewAction={previewMatchedReviewPacksAction}
-        generatePortalLinksAction={generatePortalLinksForVendorAction}
-      />
+      <div
+        className="bg-white rounded-2xl p-6"
+        style={{ boxShadow: '0 2px 12px rgba(109,93,211,0.08)', border: '1px solid rgba(109,93,211,0.1)' }}
+      >
+        <VendorForm
+          action={createVendorAction}
+          categories={categories}
+          users={users}
+          customFields={customFields}
+          submitLabel="Create Vendor & Continue"
+          cancelHref="/vendors"
+        />
+      </div>
     </div>
   )
 }

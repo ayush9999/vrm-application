@@ -543,17 +543,25 @@ export async function getVendorReviewItems(vendorReviewPackId: string): Promise<
     .maybeSingle()
   const vendorId = (vrpRow as { vendor_id: string } | null)?.vendor_id
 
-  // Build a map: evidence_requirement_id → vendor_documents.id (one per requirement, per vendor)
-  const evidenceIdByReq = new Map<string, string>()
+  // Build maps: evidence_requirement_id → { vendor_doc_id, evidence_status, evidence_name }
+  const evidenceByReq = new Map<string, { docId: string; status: string; name: string }>()
   if (vendorId) {
     const { data: docs } = await supabase
       .from('vendor_documents')
-      .select('id, evidence_requirement_id')
+      .select(`
+        id, evidence_requirement_id, evidence_status,
+        evidence_requirements ( name )
+      `)
       .eq('vendor_id', vendorId)
       .not('evidence_requirement_id', 'is', null)
       .is('deleted_at', null)
-    for (const d of (docs ?? []) as { id: string; evidence_requirement_id: string }[]) {
-      evidenceIdByReq.set(d.evidence_requirement_id, d.id)
+    for (const d of (docs ?? []) as unknown as { id: string; evidence_requirement_id: string; evidence_status: string; evidence_requirements: { name: string } | { name: string }[] | null }[]) {
+      const er = Array.isArray(d.evidence_requirements) ? d.evidence_requirements[0] : d.evidence_requirements
+      evidenceByReq.set(d.evidence_requirement_id, {
+        docId: d.id,
+        status: d.evidence_status,
+        name: er?.name ?? 'Evidence',
+      })
     }
   }
 
@@ -561,10 +569,12 @@ export async function getVendorReviewItems(vendorReviewPackId: string): Promise<
     const req = row.review_requirements as Record<string, unknown> | null
     const pack = req?.review_packs as { name: string } | null
     const linkedReqId = req?.linked_evidence_requirement_id as string | null | undefined
-    const linkedVendorDocId = linkedReqId ? evidenceIdByReq.get(linkedReqId) : undefined
+    const linkedEvidence = linkedReqId ? evidenceByReq.get(linkedReqId) : undefined
     return {
       ...(row as unknown as VendorReviewItem),
-      linked_evidence_id: linkedVendorDocId ?? null,
+      linked_evidence_id: linkedEvidence?.docId ?? null,
+      linked_evidence_name: linkedEvidence?.name ?? null,
+      linked_evidence_status: linkedEvidence?.status ?? null,
       requirement_name: req?.name as string | undefined,
       requirement_description: req?.description as string | undefined,
       compliance_references: req?.compliance_references as VendorReviewItem['compliance_references'],

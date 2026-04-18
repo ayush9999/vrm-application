@@ -575,12 +575,34 @@ function ReviewItemRow({
             />
           </div>
 
-          {/* Evidence upload (if this requirement has linked evidence) */}
+          {/* Linked evidence (name + status + upload) */}
           {item.linked_evidence_requirement_id && (
-            <div className="rounded-lg p-2 flex items-center gap-2" style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}>
-              <span className="text-[10px] font-bold uppercase tracking-widest shrink-0" style={{ color: '#a99fd8' }}>
-                Evidence:
-              </span>
+            <div className="rounded-lg p-2.5 space-y-2" style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                  Linked Evidence:
+                </span>
+                <span className="text-xs font-medium" style={{ color: '#1e1550' }}>
+                  {item.linked_evidence_name ?? 'Evidence requirement'}
+                </span>
+                {item.linked_evidence_status && (
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    style={{
+                      background: item.linked_evidence_status === 'approved' ? 'rgba(5,150,105,0.1)' :
+                        item.linked_evidence_status === 'uploaded' ? 'rgba(14,165,233,0.1)' :
+                        item.linked_evidence_status === 'missing' ? 'rgba(148,163,184,0.15)' :
+                        'rgba(225,29,72,0.1)',
+                      color: item.linked_evidence_status === 'approved' ? '#059669' :
+                        item.linked_evidence_status === 'uploaded' ? '#0284c7' :
+                        item.linked_evidence_status === 'missing' ? '#64748b' :
+                        '#e11d48',
+                    }}
+                  >
+                    {item.linked_evidence_status.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
               <form action={handleUpload} className="flex items-center gap-2 flex-1">
                 <input
                   type="file"
