@@ -276,34 +276,42 @@ function EvidenceRowItem({
           )}
 
           {/* Upload */}
-          <form action={handleUpload} className="flex items-center gap-2">
-            <label className="text-xs font-medium" style={{ color: '#8b7fd4' }}>
-              {row.file_name ? 'Replace file:' : 'Upload file:'}
-            </label>
-            <input
-              type="file"
-              name="file"
-              required
-              className="text-xs flex-1"
-              style={{ color: '#4a4270' }}
-            />
-            {row.requirement_expiry_applies && (
-              <input
-                type="date"
-                name="expiry_date"
-                defaultValue={row.expiry_date ?? ''}
-                className="text-xs px-2 py-1 rounded-lg"
-                style={{ border: '1px solid rgba(109,93,211,0.2)', background: 'white', color: '#1e1550' }}
-              />
-            )}
-            <button
-              type="submit"
-              disabled={isPending}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white disabled:opacity-50"
-              style={{ background: '#6c5dd3' }}
+          <form action={handleUpload} className="space-y-2">
+            <div
+              className="rounded-lg p-3 flex flex-col items-center gap-2"
+              style={{ border: '1.5px dashed rgba(109,93,211,0.2)', background: 'rgba(109,93,211,0.02)' }}
             >
-              {isPending ? 'Uploading…' : 'Upload'}
-            </button>
+              <label className="cursor-pointer flex flex-col items-center gap-1.5 w-full">
+                <input type="file" name="file" required className="hidden" id={`file-${row.id}`} onChange={(e) => {
+                  const label = e.target.closest('label')?.querySelector('[data-filename]') as HTMLElement | null
+                  if (label && e.target.files?.[0]) label.textContent = e.target.files[0].name
+                }} />
+                <span className="text-xs font-semibold" style={{ color: '#6c5dd3' }}>
+                  {row.file_name ? 'Click to replace file' : 'Click to upload file'}
+                </span>
+                <span data-filename className="text-[10px]" style={{ color: '#a99fd8' }}>No file selected</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              {row.requirement_expiry_applies && (
+                <input
+                  type="date"
+                  name="expiry_date"
+                  defaultValue={row.expiry_date ?? ''}
+                  placeholder="Expiry date"
+                  className="text-xs px-2.5 py-1.5 rounded-lg flex-1"
+                  style={{ border: '1px solid rgba(109,93,211,0.2)', background: 'white', color: '#1e1550' }}
+                />
+              )}
+              <button
+                type="submit"
+                disabled={isPending}
+                className="text-xs font-semibold px-4 py-1.5 rounded-lg text-white disabled:opacity-50"
+                style={{ background: '#6c5dd3' }}
+              >
+                {isPending ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
           </form>
 
           {/* Reviewer comment */}
