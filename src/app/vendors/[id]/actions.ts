@@ -6,6 +6,7 @@ import { requireCurrentUser } from '@/lib/current-user'
 import { createPlaceholderDocumentVersion, createDocumentType, updateVendorDocumentMeta, deleteDocumentVersion, deleteVendorDocument, uploadDocumentFile, getDocumentSignedUrl } from '@/lib/db/documents'
 import { createIncident, updateIncident, deleteIncident } from '@/lib/db/incidents'
 import { logActivity } from '@/lib/db/activity-log'
+import { createServerClient } from '@/lib/supabase/server'
 import type { FormState } from '@/types/common'
 import type { IncidentSeverity, IncidentStatus } from '@/types/incident'
 
