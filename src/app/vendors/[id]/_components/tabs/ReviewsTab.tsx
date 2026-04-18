@@ -250,7 +250,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                     {/* Open link */}
                     <Link
-                      href={`/vendors/${vendorId}/reviews/${review.id}`}
+                      href={`/vendors/${vendorId}/reviews/view/${review.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className="text-[11px] font-medium px-2.5 py-1 rounded-lg shrink-0 transition-colors hover:opacity-80"
                       style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
