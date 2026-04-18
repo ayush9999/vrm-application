@@ -4,12 +4,17 @@
  * Reads auth.uid() via the cookie-aware server client, then looks up:
  *   - public.users (id = auth.uid()) → home org_id
  *   - org_memberships → role within that org
+ *
+ * Wrapped in React cache() so multiple calls within the same server
+ * render (layout.tsx + page.tsx + server actions) share one result
+ * instead of making redundant auth + DB round-trips.
  */
 
+import { cache } from 'react'
 import { createServerClient } from '@/lib/supabase/server'
 import type { CurrentUser, OrgRole } from '@/types/org'
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createServerClient()
 
   const {
@@ -40,7 +45,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const role: OrgRole = (membership?.role as OrgRole) ?? 'vendor_admin'
   return { userId: userRow.id, orgId: userRow.org_id, role }
-}
+})
 
 /**
  * Like getCurrentUser but throws if no context is available.

@@ -15,6 +15,7 @@
  * cross-org admin tasks), use createServiceClient() from ./service.ts instead.
  */
 
+import { cache } from 'react'
 import { createServerClient as createSsrServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -29,12 +30,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * Returns a server-side Supabase client bound to the current request's
- * auth cookies. Reads/writes auth state via the Next.js cookie store so
- * Supabase Auth can refresh expired tokens transparently.
- *
- * Note: this is async because Next.js 16's cookies() API is async.
+ * auth cookies. Wrapped in React cache() so layout.tsx and page.tsx
+ * share one client instance (and one auth.getUser() round-trip) instead
+ * of creating separate ones within the same server render.
  */
-export async function createServerClient() {
+export const createServerClient = cache(async () => {
   const cookieStore = await cookies()
 
   return createSsrServerClient(supabaseUrl, supabaseAnonKey, {
@@ -55,4 +55,4 @@ export async function createServerClient() {
       },
     },
   })
-}
+})

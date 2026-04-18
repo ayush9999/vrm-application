@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { SidebarShell } from './_components/SidebarShell'
 import { NavigationProgress } from './_components/NavigationProgress'
+import { getCurrentUser } from '@/lib/current-user'
 import { createServerClient } from '@/lib/supabase/server'
 import './globals.css'
 
@@ -21,31 +22,27 @@ interface SidebarUser {
 
 /**
  * Fetches the minimal user/org info needed by the sidebar UserMenu.
+ * Reuses getCurrentUser() (React cached) so the auth.getUser() + users
+ * lookup is shared with the page component — no duplicate round-trips.
  * Returns null if there's no session — SidebarShell hides itself in that case.
- * Errors are swallowed so the layout never throws (e.g. mid-signup edge cases).
  */
 async function getSidebarUser(): Promise<SidebarUser | null> {
   try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return null
+
     const supabase = await createServerClient()
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser()
-    if (!authUser) return null
+    // Only fetch the extra sidebar fields — auth + user lookup is already done
+    const [{ data: userRow }, { data: org }] = await Promise.all([
+      supabase.from('users').select('name, email').eq('id', currentUser.userId).maybeSingle(),
+      supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle(),
+    ])
 
-    const { data: row } = await supabase
-      .from('users')
-      .select('name, email, org_id')
-      .eq('id', authUser.id)
-      .maybeSingle()
-    if (!row) return null
-
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', row.org_id)
-      .maybeSingle()
-
-    return { email: row.email, name: row.name, orgName: org?.name ?? null }
+    return {
+      email: userRow?.email ?? null,
+      name: userRow?.name ?? null,
+      orgName: org?.name ?? null,
+    }
   } catch {
     return null
   }
