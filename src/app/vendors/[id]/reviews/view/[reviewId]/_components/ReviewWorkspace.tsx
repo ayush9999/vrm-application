@@ -368,6 +368,12 @@ export function ReviewWorkspace({
             const dec = DECISION_LABEL[item.decision] ?? DECISION_LABEL.not_started
             const isOpen = openItemId === item.id
             const isDecided = item.decision !== 'not_started'
+            const refs = item.compliance_references ?? []
+            const hasEvidence = !!item.linked_evidence_name
+            const evidenceColor = item.linked_evidence_status === 'approved' ? '#059669'
+              : item.linked_evidence_status === 'missing' || item.linked_evidence_status === 'rejected' ? '#e11d48'
+              : item.linked_evidence_status === 'uploaded' || item.linked_evidence_status === 'under_review' ? '#d97706'
+              : '#94a3b8'
 
             return (
               <div key={item.id} style={{ borderBottom: i < currentItems.length - 1 ? '1px solid rgba(109,93,211,0.06)' : 'none' }}>
@@ -375,29 +381,37 @@ export function ReviewWorkspace({
                 <button
                   type="button"
                   onClick={() => setOpenItemId(isOpen ? null : item.id)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-[rgba(109,93,211,0.02)] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-5 py-3.5 text-left hover:bg-[rgba(109,93,211,0.02)] transition-colors"
                 >
                   {/* Decision indicator */}
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: dec.color }}
-                  />
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dec.color }} />
 
                   {/* Item name */}
-                  <span className="flex-1 text-sm min-w-0" style={{ color: '#1e1550' }}>
+                  <span className="flex-1 text-sm min-w-0 truncate" style={{ color: '#1e1550' }}>
                     {item.requirement_name}
-                    {item.requirement_description && (
-                      <span className="text-[11px] ml-2" style={{ color: '#a99fd8' }}>
-                        {item.requirement_description.substring(0, 60)}{item.requirement_description.length > 60 ? '…' : ''}
-                      </span>
-                    )}
                   </span>
 
-                  {/* Compliance refs */}
-                  {item.compliance_references && item.compliance_references.length > 0 && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}>
-                      {item.compliance_references[0].standard} {item.compliance_references[0].reference}
+                  {/* Compliance refs — all of them, compact */}
+                  {refs.length > 0 && (
+                    <span className="flex items-center gap-1 shrink-0">
+                      {refs.slice(0, 3).map((ref, ri) => (
+                        <span key={ri} className="text-[8px] font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}>
+                          {ref.standard} {ref.reference}
+                        </span>
+                      ))}
+                      {refs.length > 3 && (
+                        <span className="text-[8px]" style={{ color: '#a99fd8' }}>+{refs.length - 3}</span>
+                      )}
                     </span>
+                  )}
+
+                  {/* Evidence status dot */}
+                  {hasEvidence && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: evidenceColor }}
+                      title={`Evidence: ${item.linked_evidence_status}`}
+                    />
                   )}
 
                   {/* Decision badge */}
@@ -409,50 +423,85 @@ export function ReviewWorkspace({
                   </span>
 
                   {/* Chevron */}
-                  <span className="text-xs shrink-0 transition-transform" style={{ color: '#c4bae8', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                  <span className="text-[10px] shrink-0 transition-transform" style={{ color: '#c4bae8', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
                     ▸
                   </span>
                 </button>
 
-                {/* Expanded: decision buttons */}
-                {isOpen && isReviewing && (
-                  <div className="px-5 pb-4 pt-1 flex items-center gap-2 flex-wrap" style={{ background: 'rgba(109,93,211,0.015)' }}>
-                    <span className="text-[11px] mr-1" style={{ color: '#8b7fd4' }}>Decision:</span>
-                    {DECISION_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleDecision(activePack, item.id, opt.value)}
-                        disabled={isPending}
-                        className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
-                        style={
-                          item.decision === opt.value
-                            ? { background: opt.color, color: 'white' }
-                            : { background: opt.bg, color: opt.color, border: `1px solid ${opt.color}30` }
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                {/* Expanded section */}
+                {isOpen && (
+                  <div className="px-5 pb-4 pt-2 space-y-3" style={{ background: 'rgba(109,93,211,0.015)' }}>
 
-                    {/* Linked evidence */}
-                    {item.linked_evidence_name && (
-                      <span className="text-[10px] ml-auto" style={{ color: '#8b7fd4' }}>
-                        Evidence: <strong>{item.linked_evidence_name}</strong>
-                        {item.linked_evidence_status && (
-                          <span className="ml-1 uppercase font-bold" style={{ color: item.linked_evidence_status === 'approved' ? '#059669' : '#d97706' }}>
-                            {item.linked_evidence_status}
+                    {/* Decision buttons (when reviewing) */}
+                    {isReviewing && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px]" style={{ color: '#8b7fd4' }}>Decision:</span>
+                        {DECISION_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => handleDecision(activePack, item.id, opt.value)}
+                            disabled={isPending}
+                            className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
+                            style={
+                              item.decision === opt.value
+                                ? { background: opt.color, color: 'white' }
+                                : { background: opt.bg, color: opt.color, border: `1px solid ${opt.color}30` }
+                            }
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                        {item.creates_remediation_on_fail && (
+                          <span className="text-[10px] ml-auto" style={{ color: '#d97706' }}>
+                            Failing creates a remediation
                           </span>
                         )}
-                      </span>
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {/* Expanded but locked: show decision info */}
-                {isOpen && isLocked && isDecided && (
-                  <div className="px-5 pb-3 pt-1 text-xs" style={{ color: '#8b7fd4', background: 'rgba(109,93,211,0.015)' }}>
-                    Decision: <strong style={{ color: dec.color }}>{dec.label}</strong>
-                    {item.reviewer_comment && <> · {item.reviewer_comment}</>}
+                    {/* Evidence link */}
+                    {hasEvidence && (
+                      <div className="flex items-center gap-2 text-[11px]" style={{ color: '#4a4270' }}>
+                        <span style={{ color: '#8b7fd4' }}>Evidence:</span>
+                        <span className="font-medium">{item.linked_evidence_name}</span>
+                        <span
+                          className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                          style={{ background: `${evidenceColor}18`, color: evidenceColor }}
+                        >
+                          {item.linked_evidence_status ?? 'unknown'}
+                        </span>
+                        {item.linked_evidence_id && (
+                          <Link
+                            href={`/vendors/${vendorId}?tab=evidence`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-medium hover:opacity-70"
+                            style={{ color: '#6c5dd3' }}
+                          >
+                            View
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                    {!hasEvidence && item.linked_evidence_requirement_id && (
+                      <div className="text-[11px]" style={{ color: '#d97706' }}>
+                        No evidence linked yet
+                      </div>
+                    )}
+
+                    {/* Reviewer comment (if any) */}
+                    {item.reviewer_comment && (
+                      <div className="text-[11px] italic" style={{ color: '#6a6860' }}>
+                        &ldquo;{item.reviewer_comment}&rdquo;
+                      </div>
+                    )}
+
+                    {/* Decision info when locked */}
+                    {isLocked && isDecided && !isReviewing && (
+                      <div className="text-[11px]" style={{ color: '#8b7fd4' }}>
+                        Decision: <strong style={{ color: dec.color }}>{dec.label}</strong>
+                        {item.decided_at && <> · {new Date(item.decided_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
