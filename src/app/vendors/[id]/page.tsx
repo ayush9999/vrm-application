@@ -66,26 +66,14 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   ])
   const metrics = metricsMap.get(id)!
 
-  // Tab-specific data (only fetch what the active tab needs)
+  // All tab data fetched in parallel — fast on direct Postgres connection
   const [documents, activityLog, incidents, assessmentDocRequests, evidenceGroups, benchmark] = await Promise.all([
-    defaultTab === 'overview' || defaultTab === 'evidence'
-      ? getVendorDocumentsData(user.orgId, id, vendor.category_id)
-      : Promise.resolve({ suggested: [], custom: [], history: [] } as Awaited<ReturnType<typeof getVendorDocumentsData>>),
-    defaultTab === 'activity'
-      ? getVendorActivityLog(user.orgId, id)
-      : Promise.resolve([]),
-    defaultTab === 'overview' || defaultTab === 'incidents'
-      ? getVendorIncidents(user.orgId, id)
-      : Promise.resolve([]),
-    defaultTab === 'evidence'
-      ? getAssessmentDocRequestsForVendor(user.orgId, id)
-      : Promise.resolve([]),
-    defaultTab === 'evidence'
-      ? getVendorEvidenceGrouped(id)
-      : Promise.resolve([]),
-    defaultTab === 'overview'
-      ? getPeerBenchmark(user.orgId, id, vendor.category_id)
-      : Promise.resolve(null),
+    getVendorDocumentsData(user.orgId, id, vendor.category_id),
+    getVendorActivityLog(user.orgId, id),
+    getVendorIncidents(user.orgId, id),
+    getAssessmentDocRequestsForVendor(user.orgId, id),
+    getVendorEvidenceGrouped(id),
+    getPeerBenchmark(user.orgId, id, vendor.category_id),
   ])
 
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)
