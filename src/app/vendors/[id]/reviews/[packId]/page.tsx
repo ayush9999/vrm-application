@@ -112,7 +112,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
     : null
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="px-6 py-5 max-w-5xl mx-auto">
       {/* Breadcrumb + Export */}
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>

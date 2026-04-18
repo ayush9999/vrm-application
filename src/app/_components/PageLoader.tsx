@@ -4,7 +4,7 @@
  */
 export function PageLoader({ label }: { label?: string }) {
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Shimmer header */}
       <div className="mb-6 space-y-2">
         <div className="h-7 w-48 rounded-lg animate-pulse" style={{ background: 'rgba(108,93,211,0.08)' }} />

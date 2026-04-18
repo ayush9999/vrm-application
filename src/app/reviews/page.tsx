@@ -27,7 +27,7 @@ export default async function ReviewsPage() {
   const vendorsAwaitingApproval = vendors.filter((v) => v.active_packs > 0).length
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-5">
+    <div className="px-6 py-5 max-w-6xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Reviews</h1>

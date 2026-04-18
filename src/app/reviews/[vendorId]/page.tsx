@@ -29,7 +29,7 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
   const completedCount = reviews.filter((r) => ['approved', 'approved_with_exception', 'done'].includes(r.status)).length
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="px-6 py-5 max-w-4xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs mb-6" style={{ color: '#a99fd8' }}>
         <Link href="/reviews" className="hover:text-[#6c5dd3]">Reviews</Link>
