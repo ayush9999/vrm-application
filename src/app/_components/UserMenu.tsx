@@ -89,7 +89,7 @@ export function UserMenu({ email, name, orgName }: UserMenuProps) {
                 <circle cx="8" cy="8" r="2.5" />
                 <path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5" />
               </svg>
-              Settings
+              Administration
             </Link>
           </div>
 
