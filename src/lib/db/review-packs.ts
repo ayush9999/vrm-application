@@ -29,7 +29,7 @@ export async function getReviewPacks(orgId: string): Promise<ReviewPack[]> {
       AND deleted_at IS NULL
     ORDER BY name
   `
-  return rows as ReviewPack[]
+  return rows as unknown as ReviewPack[]
 }
 
 /** Fetch all review packs visible to the org including archived (custom only — standard packs can't be archived). */
@@ -41,7 +41,7 @@ export async function getReviewPacksWithArchived(orgId: string): Promise<ReviewP
       AND deleted_at IS NULL
     ORDER BY is_active DESC, name
   `
-  return rows as ReviewPack[]
+  return rows as unknown as ReviewPack[]
 }
 
 /** Fetch a single review pack with its evidence and review requirements. */
@@ -64,9 +64,9 @@ export async function getReviewPackWithRequirements(packId: string) {
 
   if (packRows.length === 0) throw new Error('Review pack not found')
   return {
-    pack: packRows[0] as ReviewPack,
-    evidenceRequirements: evidenceRows as EvidenceRequirement[],
-    reviewRequirements: reviewRows as ReviewRequirement[],
+    pack: packRows[0] as unknown as ReviewPack,
+    evidenceRequirements: evidenceRows as unknown as EvidenceRequirement[],
+    reviewRequirements: reviewRows as unknown as ReviewRequirement[],
   }
 }
 

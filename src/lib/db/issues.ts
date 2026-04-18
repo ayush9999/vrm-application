@@ -125,9 +125,9 @@ export async function getIssueById(
   if (!issue) return null
 
   return {
-    ...issue,
-    evidence: evidenceRows,
-    activity: activityRows,
+    ...(issue as unknown as Issue),
+    evidence: evidenceRows as unknown as Issue['evidence'],
+    activity: activityRows as unknown as Issue['activity'],
   } as Issue
 }
 
