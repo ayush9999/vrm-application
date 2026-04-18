@@ -110,7 +110,7 @@ export default async function DashboardPage() {
       >
         <div>
           <div style={{ fontSize: 16, fontWeight: 500, color: '#18181b', letterSpacing: '-0.01em' }}>
-            Dashboard v2
+            Dashboard vv
           </div>
           <div style={{ fontSize: 11, color: '#9a9890', marginTop: 2 }}>
             {new Date().toLocaleDateString('en-GB', {
