@@ -249,9 +249,30 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
     .order('assigned_at')
   if (error) throw new Error(error.message)
 
-  // Fetch item counts for each pack
-  const packs: VendorReviewPack[] = []
-  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+  const rows = (data ?? []) as Array<Record<string, unknown>>
+  const vrpIds = rows.map((r) => r.id as string)
+
+  // Batch: fetch ALL item decisions for ALL packs in ONE query
+  const countsByPack = new Map<string, { total: number; passed: number; failed: number; not_started: number; na: number }>()
+  if (vrpIds.length > 0) {
+    const { data: allItems } = await supabase
+      .from('vendor_review_items')
+      .select('vendor_review_pack_id, decision')
+      .in('vendor_review_pack_id', vrpIds)
+
+    // Group by pack
+    for (const item of (allItems ?? []) as { vendor_review_pack_id: string; decision: ReviewItemDecision }[]) {
+      const counts = countsByPack.get(item.vendor_review_pack_id) ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
+      counts.total++
+      if (item.decision === 'pass') counts.passed++
+      else if (item.decision === 'fail') counts.failed++
+      else if (item.decision === 'not_started') counts.not_started++
+      else if (item.decision === 'na') counts.na++
+      countsByPack.set(item.vendor_review_pack_id, counts)
+    }
+  }
+
+  return rows.map((row) => {
     const rp = row.review_packs as {
       name: string
       code: string
@@ -264,27 +285,14 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
       processes_personal_data: boolean
     } | null
 
-    const { data: items } = await supabase
-      .from('vendor_review_items')
-      .select('decision')
-      .eq('vendor_review_pack_id', row.id as string)
-
-    const decisions = (items ?? []) as { decision: ReviewItemDecision }[]
-    packs.push({
+    return {
       ...(row as unknown as VendorReviewPack),
       review_pack_name: rp?.name,
       review_pack_code: rp?.code,
       matched_rule: rp && v ? describeMatchedRule(rp.applicability_rules, v) : undefined,
-      item_counts: {
-        total: decisions.length,
-        passed: decisions.filter((d) => d.decision === 'pass').length,
-        failed: decisions.filter((d) => d.decision === 'fail').length,
-        not_started: decisions.filter((d) => d.decision === 'not_started').length,
-        na: decisions.filter((d) => d.decision === 'na').length,
-      },
-    })
-  }
-  return packs
+      item_counts: countsByPack.get(row.id as string) ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 },
+    }
+  })
 }
 
 /**

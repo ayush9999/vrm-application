@@ -50,26 +50,43 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const vendor = await getVendorById(user.orgId, id)
   if (!vendor) notFound()
 
-  const [documents, activityLog, incidents, assessmentDocRequests, issueCounts, reviewPacks, evidenceGroups, metricsMap, snapshots, benchmark, allPacks, assignments] = await Promise.all([
-    getVendorDocumentsData(user.orgId, id, vendor.category_id),
-    getVendorActivityLog(user.orgId, id),
-    getVendorIncidents(user.orgId, id),
-    getAssessmentDocRequestsForVendor(user.orgId, id),
-    getVendorIssueCounts(user.orgId, id),
-    getVendorReviewPacks(id),
-    getVendorEvidenceGrouped(id),
+  const tabParam = sp.tab as
+    | 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
+    | undefined
+  const defaultTab = tabParam ?? 'overview'
+
+  // Essential data (always needed for header + overview)
+  const [metricsMap, snapshots, issueCounts, reviewPacks, allPacks, assignments] = await Promise.all([
     getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
     getVendorSnapshots(id),
-    getPeerBenchmark(user.orgId, id, vendor.category_id),
+    getVendorIssueCounts(user.orgId, id),
+    getVendorReviewPacks(id),
     getReviewPacks(user.orgId),
     getVendorAssignedPacks(id),
   ])
   const metrics = metricsMap.get(id)!
 
-  const tabParam = sp.tab as
-    | 'overview' | 'reviews' | 'evidence' | 'incidents' | 'activity'
-    | undefined
-  const defaultTab = tabParam ?? 'overview'
+  // Tab-specific data (only fetch what the active tab needs)
+  const [documents, activityLog, incidents, assessmentDocRequests, evidenceGroups, benchmark] = await Promise.all([
+    defaultTab === 'overview' || defaultTab === 'evidence'
+      ? getVendorDocumentsData(user.orgId, id, vendor.category_id)
+      : Promise.resolve({ suggested: [], custom: [], history: [] } as Awaited<ReturnType<typeof getVendorDocumentsData>>),
+    defaultTab === 'activity'
+      ? getVendorActivityLog(user.orgId, id)
+      : Promise.resolve([]),
+    defaultTab === 'overview' || defaultTab === 'incidents'
+      ? getVendorIncidents(user.orgId, id)
+      : Promise.resolve([]),
+    defaultTab === 'evidence'
+      ? getAssessmentDocRequestsForVendor(user.orgId, id)
+      : Promise.resolve([]),
+    defaultTab === 'evidence'
+      ? getVendorEvidenceGrouped(id)
+      : Promise.resolve([]),
+    defaultTab === 'overview'
+      ? getPeerBenchmark(user.orgId, id, vendor.category_id)
+      : Promise.resolve(null),
+  ])
 
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)
   const boundCreateIncident   = createIncidentAction.bind(null, id)

@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
-import { getDashboardData } from '@/lib/db/dashboard'
+import { getCachedDashboardData } from '@/lib/db/cached'
 import { RISK_BAND_STYLE } from '@/lib/risk-score'
 import type { ActivityLogEntry } from '@/types/activity'
 
 export default async function DashboardPage() {
   const user = await requireCurrentUser()
-  const data = await getDashboardData(user.orgId)
+  const data = await getCachedDashboardData(user.orgId)
   const { totals, operational, highRiskVendors, recentRemediations, recentActivity } = data
 
   return (
