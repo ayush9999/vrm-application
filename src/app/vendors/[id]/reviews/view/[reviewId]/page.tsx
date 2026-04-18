@@ -45,7 +45,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   })
 
   return (
-    <div className="px-6 py-5 max-w-5xl mx-auto">
+    <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
         <Link href="/vendors" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Vendors</Link>

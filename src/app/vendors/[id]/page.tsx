@@ -86,7 +86,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const statusBadge = STATUS_BADGE[vendor.status]
 
   return (
-    <div className="px-6 py-5 max-w-5xl mx-auto">
+    <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
         <Link
