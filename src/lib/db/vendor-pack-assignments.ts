@@ -25,7 +25,7 @@ export async function getVendorAssignedPacks(vendorId: string): Promise<VendorPa
       AND vpa.removed_at IS NULL
     ORDER BY vpa.assigned_at
   `
-  return rows as VendorPackAssignment[]
+  return rows as unknown as VendorPackAssignment[]
 }
 
 /** Get just the pack IDs assigned to a vendor (for auto-schedule). */

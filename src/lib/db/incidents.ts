@@ -18,7 +18,7 @@ export async function getVendorIncidents(
       AND deleted_at IS NULL
     ORDER BY incident_date DESC
   `
-  return rows as VendorIncident[]
+  return rows as unknown as VendorIncident[]
 }
 
 export async function createIncident(

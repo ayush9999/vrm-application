@@ -37,7 +37,7 @@ export async function getOrgUsers(orgId: string): Promise<OrgUser[]> {
     WHERE org_id = ${orgId}
     ORDER BY name
   `
-  return rows as OrgUser[]
+  return rows as unknown as OrgUser[]
 }
 
 /**

@@ -116,7 +116,7 @@ export async function getEvidenceVersions(vendorDocumentId: string): Promise<Evi
       AND vdv.deleted_at IS NULL
     ORDER BY vdv.uploaded_at DESC
   `
-  return rows as EvidenceVersion[]
+  return rows as unknown as EvidenceVersion[]
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────────

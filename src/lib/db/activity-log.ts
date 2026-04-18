@@ -45,7 +45,7 @@ export async function getAssessmentActivityLog(
     ORDER BY created_at DESC
     LIMIT ${limit}
   `
-  return rows as ActivityLogEntry[]
+  return rows as unknown as ActivityLogEntry[]
 }
 
 /** Fetch activity log for a vendor, most recent first, with actor name joined. */
@@ -64,5 +64,5 @@ export async function getVendorActivityLog(
     ORDER BY al.created_at DESC
     LIMIT ${limit}
   `
-  return rows as ActivityLogEntry[]
+  return rows as unknown as ActivityLogEntry[]
 }

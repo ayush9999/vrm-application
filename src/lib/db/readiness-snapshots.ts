@@ -76,5 +76,5 @@ export async function getVendorSnapshots(vendorId: string): Promise<ReadinessSna
     WHERE vendor_id = ${vendorId}
     ORDER BY created_at ASC
   `
-  return rows as ReadinessSnapshot[]
+  return rows as unknown as ReadinessSnapshot[]
 }

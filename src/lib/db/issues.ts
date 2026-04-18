@@ -86,7 +86,7 @@ export async function getIssues(
     params,
   )
 
-  return rows as Issue[]
+  return rows as unknown as Issue[]
 }
 
 // ─── Get single issue with relations ────────────────────────────────────────
