@@ -75,15 +75,16 @@ const ghostButtonStyle = {
   fontSize: 12,
   padding: '7px 14px',
   borderRadius: 8,
-  border: '0.5px solid #e8e5e0',
+  border: '1px solid #eceae4',
   background: 'transparent',
   color: '#6a6860',
 }
 
 const cardStyle = {
   background: 'white',
-  border: '0.5px solid #e8e5e0',
+  border: '1px solid #e8e5de',
   borderRadius: 12,
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
 }
 
 /* ------------------------------------------------------------------ */
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
     <div style={{ background: '#f9f8f6', minHeight: '100vh' }}>
       {/* ── Topbar ── */}
       <div
-        style={{ background: 'white', borderBottom: '0.5px solid #e8e5e0', padding: '14px 28px' }}
+        style={{ background: 'white', borderBottom: '1px solid #eceae4', padding: '14px 28px' }}
         className="flex items-center justify-between"
       >
         <div>
@@ -280,7 +281,7 @@ export default async function DashboardPage() {
 
             <div
               style={{
-                borderTop: '0.5px solid #e8e5e0',
+                borderTop: '1px solid #eceae4',
                 padding: '10px 18px',
                 fontSize: 11,
                 color: '#9a9890',
@@ -354,7 +355,7 @@ export default async function DashboardPage() {
 
         {/* ── Attention Section ── */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
             Needs your attention
           </div>
           <div style={cardStyle}>
@@ -365,7 +366,7 @@ export default async function DashboardPage() {
                   className="flex items-center gap-3"
                   style={{
                     padding: '12px 18px',
-                    borderBottom: i < attentionItems.length - 1 ? '0.5px solid #e8e5e0' : 'none',
+                    borderBottom: i < attentionItems.length - 1 ? '1px solid #eceae4' : 'none',
                     cursor: item.href ? 'pointer' : 'default',
                   }}
                 >
@@ -431,12 +432,12 @@ export default async function DashboardPage() {
         <div className="grid gap-2.5" style={{ gridTemplateColumns: '1.3fr 1fr' }}>
           {/* Left: Vendor Risk Overview */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
               Vendor risk overview
             </div>
             <div style={cardStyle}>
               {/* Card header */}
-              <div className="flex items-center justify-between" style={{ padding: '14px 18px', borderBottom: '0.5px solid #e8e5e0' }}>
+              <div className="flex items-center justify-between" style={{ padding: '14px 18px', borderBottom: '1px solid #eceae4' }}>
                 <span style={{ fontSize: 12, fontWeight: 500, color: '#18181b' }}>Ranked by risk</span>
                 <Link href="/vendors" style={{ fontSize: 11, color: '#9a9890' }}>
                   View all &rarr;
@@ -466,7 +467,7 @@ export default async function DashboardPage() {
                       className="flex items-center gap-3 hover:bg-[#fafaf8] transition-colors"
                       style={{
                         padding: '10px 18px',
-                        borderBottom: i < Math.min(data.highRiskVendors.length, 6) - 1 ? '0.5px solid #e8e5e0' : 'none',
+                        borderBottom: i < Math.min(data.highRiskVendors.length, 6) - 1 ? '1px solid #eceae4' : 'none',
                       }}
                     >
                       {/* Avatar */}
@@ -526,7 +527,7 @@ export default async function DashboardPage() {
 
           {/* Right: Recent Activity */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
               Recent activity
             </div>
             <div style={cardStyle}>
@@ -545,7 +546,7 @@ export default async function DashboardPage() {
                       className="flex items-center gap-3"
                       style={{
                         padding: '10px 18px',
-                        borderBottom: i < Math.min(data.recentActivity.length, 6) - 1 ? '0.5px solid #e8e5e0' : 'none',
+                        borderBottom: i < Math.min(data.recentActivity.length, 6) - 1 ? '1px solid #eceae4' : 'none',
                       }}
                     >
                       {/* Chip avatar */}
@@ -608,19 +609,19 @@ function KpiCard({
   icon: React.ReactNode
 }) {
   return (
-    <div style={{ background: 'white', border: '0.5px solid #e8e5e0', borderRadius: 12, padding: '16px 18px' }}>
+    <div style={{ background: 'white', border: '1px solid #e8e5de', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
       <div className="flex items-start justify-between">
-        <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#78756d' }}>
           {label}
         </span>
         <div
           className="flex items-center justify-center"
-          style={{ width: 28, height: 28, borderRadius: 6, background: iconBg }}
+          style={{ width: 30, height: 30, borderRadius: 8, background: iconBg }}
         >
           {icon}
         </div>
       </div>
-      <div style={{ fontSize: 34, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor, marginTop: 10 }}>
+      <div style={{ fontSize: 36, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor, marginTop: 12 }}>
         {value}
       </div>
     </div>
@@ -631,11 +632,11 @@ function BreakdownRow({ label, pct }: { label: string; pct: number }) {
   const color = barColor(pct)
   return (
     <div className="flex items-center gap-2">
-      <span style={{ fontSize: 11, color: '#6a6860', flex: 1 }}>{label}</span>
-      <div style={{ width: 80, height: 3, background: '#F1EFE8', borderRadius: 2 }}>
-        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: color }} />
+      <span style={{ fontSize: 12, color: '#4a4840', flex: 1 }}>{label}</span>
+      <div style={{ width: 80, height: 4, background: '#eeece6', borderRadius: 2 }}>
+        <div style={{ width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: 2, background: color }} />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 500, color, width: 32, textAlign: 'right' }}>{pct}%</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color, width: 36, textAlign: 'right' }}>{pct}%</span>
     </div>
   )
 }
