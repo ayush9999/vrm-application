@@ -46,10 +46,10 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
     const bActive = activeStatuses.includes(b.status) ? 0 : b.status === 'upcoming' ? 1 : b.status === 'blocked' ? 2 : 3
     if (aActive !== bActive) return aActive - bActive
     // Within same group, sort by date
-    const aDate = a.due_at ?? a.completed_at ?? a.created_at
-    const bDate = b.due_at ?? b.completed_at ?? b.created_at
-    if (aActive <= 1) return (aDate ?? '9999').localeCompare(bDate ?? '9999') // active/upcoming: earliest first
-    return (bDate ?? '').localeCompare(aDate ?? '') // completed: newest first
+    const aDate = String(a.due_at ?? a.completed_at ?? a.created_at ?? '9999')
+    const bDate = String(b.due_at ?? b.completed_at ?? b.created_at ?? '9999')
+    if (aActive <= 1) return aDate.localeCompare(bDate) // active/upcoming: earliest first
+    return bDate.localeCompare(aDate) // completed: newest first
   })
 
   return (
