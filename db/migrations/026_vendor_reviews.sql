@@ -51,6 +51,9 @@ ALTER TABLE vendor_review_packs
 CREATE INDEX IF NOT EXISTS ix_vendor_review_packs_review
   ON vendor_review_packs(vendor_review_id) WHERE deleted_at IS NULL;
 
+-- Drop old unique constraint — a pack can now appear in multiple reviews for the same vendor
+ALTER TABLE vendor_review_packs DROP CONSTRAINT IF EXISTS ux_vendor_review_packs_vendor_pack;
+
 -- ─── 4. Add vendor_review_id to review_approvals ──────────────────────────
 
 ALTER TABLE review_approvals

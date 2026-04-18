@@ -252,6 +252,17 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
             </div>
           )
         })}
+
+        {/* Timeline start marker */}
+        <div className="relative pl-12 pb-2 pt-2">
+          <div
+            className="absolute left-3.5 top-4 w-3 h-3 rounded-full ring-2 ring-white"
+            style={{ background: '#6c5dd3' }}
+          />
+          <div className="text-[11px] font-medium pt-1" style={{ color: '#8b7fd4' }}>
+            Vendor review journey started
+          </div>
+        </div>
       </div>
     </div>
   )
