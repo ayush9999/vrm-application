@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getVendorListMetrics } from '@/lib/db/review-packs'
 import type { VendorApprovalStatus } from '@/types/review-pack'
@@ -70,12 +70,11 @@ export async function captureReadinessSnapshot(params: {
 
 /** Fetch all snapshots for a vendor in chronological order. */
 export async function getVendorSnapshots(vendorId: string): Promise<ReadinessSnapshot[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendor_readiness_snapshots')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .order('created_at', { ascending: true })
-  if (error) throw new Error(error.message)
-  return (data ?? []) as ReadinessSnapshot[]
+  const rows = await sql<ReadinessSnapshot[]>`
+    SELECT *
+    FROM vendor_readiness_snapshots
+    WHERE vendor_id = ${vendorId}
+    ORDER BY created_at ASC
+  `
+  return rows as ReadinessSnapshot[]
 }

@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import type { EvidenceStatus } from '@/types/review-pack'
 import type { EvidenceRow, EvidenceByPack, EvidenceVersion } from '@/lib/evidence-ui'
@@ -10,24 +11,7 @@ export { computeEvidenceUiStatus } from '@/lib/evidence-ui'
 
 /** Fetch all evidence rows for a vendor, grouped by review pack. */
 export async function getVendorEvidenceGrouped(vendorId: string): Promise<EvidenceByPack[]> {
-  const supabase = await createServerClient()
-
-  // Fetch vendor_documents with joined requirement + pack
-  const { data, error } = await supabase
-    .from('vendor_documents')
-    .select(`
-      id, vendor_id, evidence_requirement_id, evidence_status, expiry_date,
-      current_version_id, last_verified_at, verified_by_user_id, verification_notes,
-      evidence_requirements (
-        id, name, description, required, expiry_applies,
-        review_packs ( id, name, code )
-      )
-    `)
-    .eq('vendor_id', vendorId)
-    .is('deleted_at', null)
-  if (error) throw new Error(error.message)
-
-  type Row = {
+  type DocRow = {
     id: string
     vendor_id: string
     evidence_requirement_id: string | null
@@ -37,27 +21,41 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
     last_verified_at: string | null
     verified_by_user_id: string | null
     verification_notes: string | null
-    evidence_requirements: {
-      id: string
-      name: string
-      description: string | null
-      required: boolean
-      expiry_applies: boolean
-      review_packs: { id: string; name: string; code: string | null } | null
-    } | null
+    req_id: string | null
+    req_name: string | null
+    req_description: string | null
+    req_required: boolean | null
+    req_expiry_applies: boolean | null
+    pack_id: string | null
+    pack_name: string | null
+    pack_code: string | null
   }
 
-  const rows = (data ?? []) as unknown as Row[]
+  const rows = await sql<DocRow[]>`
+    SELECT
+      vd.id, vd.vendor_id, vd.evidence_requirement_id, vd.evidence_status,
+      vd.expiry_date, vd.current_version_id, vd.last_verified_at,
+      vd.verified_by_user_id, vd.verification_notes,
+      er.id AS req_id, er.name AS req_name, er.description AS req_description,
+      er.required AS req_required, er.expiry_applies AS req_expiry_applies,
+      rp.id AS pack_id, rp.name AS pack_name, rp.code AS pack_code
+    FROM vendor_documents vd
+    LEFT JOIN evidence_requirements er ON er.id = vd.evidence_requirement_id
+    LEFT JOIN review_packs rp ON rp.id = er.review_pack_id
+    WHERE vd.vendor_id = ${vendorId}
+      AND vd.deleted_at IS NULL
+  `
 
   // Fetch all current versions in one query (only for rows that have a version)
   const versionIds = rows.map((r) => r.current_version_id).filter((v): v is string => !!v)
   const versionMap = new Map<string, { file_name: string | null; file_key: string; uploaded_at: string }>()
   if (versionIds.length > 0) {
-    const { data: versions } = await supabase
-      .from('vendor_document_versions')
-      .select('id, file_name, file_key, uploaded_at')
-      .in('id', versionIds)
-    for (const v of (versions ?? []) as Array<{ id: string; file_name: string | null; file_key: string; uploaded_at: string }>) {
+    const versions = await sql<{ id: string; file_name: string | null; file_key: string; uploaded_at: string }[]>`
+      SELECT id, file_name, file_key, uploaded_at
+      FROM vendor_document_versions
+      WHERE id = ANY(${versionIds})
+    `
+    for (const v of versions) {
       versionMap.set(v.id, { file_name: v.file_name, file_key: v.file_key, uploaded_at: v.uploaded_at })
     }
   }
@@ -74,13 +72,13 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
       last_verified_at: r.last_verified_at,
       verified_by_user_id: r.verified_by_user_id,
       verification_notes: r.verification_notes,
-      requirement_name: r.evidence_requirements?.name ?? null,
-      requirement_description: r.evidence_requirements?.description ?? null,
-      requirement_required: r.evidence_requirements?.required ?? false,
-      requirement_expiry_applies: r.evidence_requirements?.expiry_applies ?? false,
-      pack_id: r.evidence_requirements?.review_packs?.id ?? null,
-      pack_name: r.evidence_requirements?.review_packs?.name ?? null,
-      pack_code: r.evidence_requirements?.review_packs?.code ?? null,
+      requirement_name: r.req_name ?? null,
+      requirement_description: r.req_description ?? null,
+      requirement_required: r.req_required ?? false,
+      requirement_expiry_applies: r.req_expiry_applies ?? false,
+      pack_id: r.pack_id ?? null,
+      pack_name: r.pack_name ?? null,
+      pack_code: r.pack_code ?? null,
       file_name: v?.file_name ?? null,
       file_key: v?.file_key ?? null,
       uploaded_at: v?.uploaded_at ?? null,
@@ -109,38 +107,16 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
 
 /** Get version history (all uploads) for a single evidence row. */
 export async function getEvidenceVersions(vendorDocumentId: string): Promise<EvidenceVersion[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendor_document_versions')
-    .select(`
-      id, file_name, file_key, uploaded_at, uploaded_by_user_id,
-      users:users!vendor_document_versions_uploaded_by_user_id_fkey ( name )
-    `)
-    .eq('vendor_document_id', vendorDocumentId)
-    .is('deleted_at', null)
-    .order('uploaded_at', { ascending: false })
-  if (error) throw new Error(error.message)
-
-  type Row = {
-    id: string
-    file_name: string | null
-    file_key: string
-    uploaded_at: string
-    uploaded_by_user_id: string | null
-    users: { name: string | null } | null
-  }
-
-  return (data ?? []).map((r) => {
-    const row = r as unknown as Row
-    return {
-      id: row.id,
-      file_name: row.file_name,
-      file_key: row.file_key,
-      uploaded_at: row.uploaded_at,
-      uploaded_by_user_id: row.uploaded_by_user_id,
-      uploaded_by_name: row.users?.name ?? null,
-    }
-  })
+  const rows = await sql`
+    SELECT vdv.id, vdv.file_name, vdv.file_key, vdv.uploaded_at,
+      vdv.uploaded_by_user_id, u.name AS uploaded_by_name
+    FROM vendor_document_versions vdv
+    LEFT JOIN users u ON u.id = vdv.uploaded_by_user_id
+    WHERE vdv.vendor_document_id = ${vendorDocumentId}
+      AND vdv.deleted_at IS NULL
+    ORDER BY vdv.uploaded_at DESC
+  `
+  return rows as EvidenceVersion[]
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────────

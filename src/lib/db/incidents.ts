@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import type {
   VendorIncident,
@@ -9,16 +10,15 @@ export async function getVendorIncidents(
   orgId: string,
   vendorId: string,
 ): Promise<VendorIncident[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendor_incidents')
-    .select('*')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .is('deleted_at', null)
-    .order('incident_date', { ascending: false })
-  if (error) throw new Error(error.message)
-  return (data ?? []) as VendorIncident[]
+  const rows = await sql<VendorIncident[]>`
+    SELECT *
+    FROM vendor_incidents
+    WHERE org_id = ${orgId}
+      AND vendor_id = ${vendorId}
+      AND deleted_at IS NULL
+    ORDER BY incident_date DESC
+  `
+  return rows as VendorIncident[]
 }
 
 export async function createIncident(

@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
 import type {
@@ -27,47 +28,65 @@ export async function getIssues(
   orgId: string,
   opts: GetIssuesOptions = {},
 ): Promise<Issue[]> {
-  const sb = await createServerClient()
-  let q = sb
-    .from('issues')
-    .select(`
-      *,
-      vendors!inner(name),
-      users!issues_owner_user_id_fkey(name)
-    `)
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+  const conditions: string[] = [
+    'i.org_id = $1',
+    'i.deleted_at IS NULL',
+  ]
+  const params: unknown[] = [orgId]
+  let paramIdx = 1
 
-  if (opts.vendorId) q = q.eq('vendor_id', opts.vendorId)
-  if (opts.severity) q = q.eq('severity', opts.severity)
-  if (opts.source) q = q.eq('source', opts.source)
-  if (opts.ownerUserId) q = q.eq('owner_user_id', opts.ownerUserId)
-
+  if (opts.vendorId) {
+    paramIdx++
+    conditions.push(`i.vendor_id = $${paramIdx}`)
+    params.push(opts.vendorId)
+  }
+  if (opts.severity) {
+    paramIdx++
+    conditions.push(`i.severity = $${paramIdx}`)
+    params.push(opts.severity)
+  }
+  if (opts.source) {
+    paramIdx++
+    conditions.push(`i.source = $${paramIdx}`)
+    params.push(opts.source)
+  }
+  if (opts.ownerUserId) {
+    paramIdx++
+    conditions.push(`i.owner_user_id = $${paramIdx}`)
+    params.push(opts.ownerUserId)
+  }
   if (opts.status) {
     const statuses = Array.isArray(opts.status) ? opts.status : [opts.status]
-    q = q.in('status', statuses)
+    paramIdx++
+    conditions.push(`i.status = ANY($${paramIdx})`)
+    params.push(statuses)
   }
-
   if (opts.overdue) {
-    q = q.lt('due_date', new Date().toISOString().split('T')[0])
-      .in('status', ['open', 'in_progress', 'blocked'])
+    paramIdx++
+    conditions.push(`i.due_date < $${paramIdx}`)
+    params.push(new Date().toISOString().split('T')[0])
+    conditions.push(`i.status IN ('open', 'in_progress', 'blocked')`)
   }
-
   if (opts.search) {
-    q = q.or(`title.ilike.%${opts.search}%,description.ilike.%${opts.search}%`)
+    paramIdx++
+    const pattern = `%${opts.search}%`
+    conditions.push(`(i.title ILIKE $${paramIdx} OR i.description ILIKE $${paramIdx})`)
+    params.push(pattern)
   }
 
-  const { data, error } = await q
-  if (error) throw error
+  const where = conditions.join(' AND ')
 
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    vendor_name: row.vendors?.name ?? null,
-    owner_name: row.users?.name ?? null,
-    vendors: undefined,
-    users: undefined,
-  }))
+  const rows = await sql.unsafe(
+    `SELECT i.*, v.name AS vendor_name, u.name AS owner_name
+     FROM issues i
+     INNER JOIN vendors v ON v.id = i.vendor_id
+     LEFT JOIN users u ON u.id = i.owner_user_id
+     WHERE ${where}
+     ORDER BY i.created_at DESC`,
+    params,
+  )
+
+  return rows as Issue[]
 }
 
 // ─── Get single issue with relations ────────────────────────────────────────
@@ -76,51 +95,40 @@ export async function getIssueById(
   orgId: string,
   issueId: string,
 ): Promise<Issue | null> {
-  const sb = await createServerClient()
-
-  const { data: issue, error } = await sb
-    .from('issues')
-    .select(`
-      *,
-      vendors!inner(name),
-      users!issues_owner_user_id_fkey(name)
-    `)
-    .eq('id', issueId)
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-    .maybeSingle()
-
-  if (error) throw error
-  if (!issue) return null
-
-  // Fetch evidence and activity in parallel (controls/findings tables were dropped)
-  const [evidenceRes, activityRes] = await Promise.all([
-    sb.from('issue_evidence')
-      .select('*')
-      .eq('issue_id', issueId)
-      .order('uploaded_at', { ascending: false }),
-    sb.from('issue_activity')
-      .select(`
-        *,
-        users(name)
-      `)
-      .eq('issue_id', issueId)
-      .order('created_at', { ascending: false }),
+  const [issueRows, evidenceRows, activityRows] = await Promise.all([
+    sql`
+      SELECT i.*, v.name AS vendor_name, u.name AS owner_name
+      FROM issues i
+      INNER JOIN vendors v ON v.id = i.vendor_id
+      LEFT JOIN users u ON u.id = i.owner_user_id
+      WHERE i.id = ${issueId}
+        AND i.org_id = ${orgId}
+        AND i.deleted_at IS NULL
+      LIMIT 1
+    `,
+    sql`
+      SELECT *
+      FROM issue_evidence
+      WHERE issue_id = ${issueId}
+      ORDER BY uploaded_at DESC
+    `,
+    sql`
+      SELECT ia.*, u.name AS user_name
+      FROM issue_activity ia
+      LEFT JOIN users u ON u.id = ia.user_id
+      WHERE ia.issue_id = ${issueId}
+      ORDER BY ia.created_at DESC
+    `,
   ])
+
+  const issue = issueRows[0]
+  if (!issue) return null
 
   return {
     ...issue,
-    vendor_name: issue.vendors?.name ?? null,
-    owner_name: issue.users?.name ?? null,
-    vendors: undefined,
-    users: undefined,
-    evidence: evidenceRes.data ?? [],
-    activity: (activityRes.data ?? []).map((a: any) => ({
-      ...a,
-      user_name: a.users?.name ?? null,
-      users: undefined,
-    })),
-  }
+    evidence: evidenceRows,
+    activity: activityRows,
+  } as Issue
 }
 
 // ─── Create issue ───────────────────────────────────────────────────────────
@@ -293,17 +301,14 @@ export async function getVendorIssueCounts(
   orgId: string,
   vendorId: string,
 ): Promise<VendorIssueCounts> {
-  const sb = await createServerClient()
-  const { data, error } = await sb
-    .from('issues')
-    .select('status, severity, due_date')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .is('deleted_at', null)
-    .in('status', ['open', 'in_progress', 'blocked', 'deferred', 'resolved'])
-
-  if (error) throw error
-  const issues = data ?? []
+  const issues = await sql<{ status: string; severity: string; due_date: string | null }[]>`
+    SELECT status, severity, due_date
+    FROM issues
+    WHERE org_id = ${orgId}
+      AND vendor_id = ${vendorId}
+      AND deleted_at IS NULL
+      AND status IN ('open', 'in_progress', 'blocked', 'deferred', 'resolved')
+  `
   const today = new Date().toISOString().split('T')[0]
 
   return {
@@ -321,16 +326,13 @@ export async function getVendorIssueCounts(
 // ─── Org-wide issue counts (for nav badge / dashboard) ──────────────────────
 
 export async function getOrgIssueCounts(orgId: string) {
-  const sb = await createServerClient()
-  const { data, error } = await sb
-    .from('issues')
-    .select('status, due_date')
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-    .in('status', ['open', 'in_progress', 'blocked', 'deferred'])
-
-  if (error) throw error
-  const issues = data ?? []
+  const issues = await sql<{ status: string; due_date: string | null }[]>`
+    SELECT status, due_date
+    FROM issues
+    WHERE org_id = ${orgId}
+      AND deleted_at IS NULL
+      AND status IN ('open', 'in_progress', 'blocked', 'deferred')
+  `
   const today = new Date().toISOString().split('T')[0]
 
   return {

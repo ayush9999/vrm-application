@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import type { ActivityLogEntry } from '@/types/activity'
 
@@ -35,18 +36,16 @@ export async function getAssessmentActivityLog(
   assessmentId: string,
   limit = 50,
 ): Promise<ActivityLogEntry[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('activity_log')
-    .select('*')
-    .eq('org_id', orgId)
-    .eq('entity_type', 'vendor_assessment')
-    .eq('entity_id', assessmentId)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) throw new Error(error.message)
-  return (data ?? []) as ActivityLogEntry[]
+  const rows = await sql<ActivityLogEntry[]>`
+    SELECT *
+    FROM activity_log
+    WHERE org_id = ${orgId}
+      AND entity_type = 'vendor_assessment'
+      AND entity_id = ${assessmentId}
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `
+  return rows as ActivityLogEntry[]
 }
 
 /** Fetch activity log for a vendor, most recent first, with actor name joined. */
@@ -55,24 +54,15 @@ export async function getVendorActivityLog(
   vendorId: string,
   limit = 50,
 ): Promise<ActivityLogEntry[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('activity_log')
-    .select(`
-      *,
-      actor:users!activity_log_actor_user_id_fkey ( name, email )
-    `)
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) throw new Error(error.message)
-
-  type Row = ActivityLogEntry & { actor: { name: string | null; email: string | null } | null }
-  return ((data ?? []) as unknown as Row[]).map((r) => ({
-    ...r,
-    actor_name: r.actor?.name ?? r.actor?.email ?? null,
-    actor: undefined,
-  })) as ActivityLogEntry[]
+  const rows = await sql`
+    SELECT al.*,
+      COALESCE(u.name, u.email) AS actor_name
+    FROM activity_log al
+    LEFT JOIN users u ON u.id = al.actor_user_id
+    WHERE al.org_id = ${orgId}
+      AND al.vendor_id = ${vendorId}
+    ORDER BY al.created_at DESC
+    LIMIT ${limit}
+  `
+  return rows as ActivityLogEntry[]
 }

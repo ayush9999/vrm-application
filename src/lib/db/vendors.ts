@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
 import type {
@@ -9,6 +10,15 @@ import type {
 } from '@/types/vendor'
 
 export type VendorSortField = 'name' | 'created_at' | 'criticality_tier' | 'next_review_due_at' | 'approval_status'
+
+// Validated sort columns — prevents SQL injection in ORDER BY
+const SORT_COLUMNS: Record<VendorSortField, string> = {
+  name: 'v.name',
+  created_at: 'v.created_at',
+  criticality_tier: 'v.criticality_tier',
+  next_review_due_at: 'v.next_review_due_at',
+  approval_status: 'v.approval_status',
+}
 
 export interface GetVendorsOptions {
   search?: string
@@ -33,36 +43,47 @@ export async function getVendors(
   orgId: string,
   opts: GetVendorsOptions = {},
 ): Promise<VendorListPage> {
-  const supabase = await createServerClient()
   const sort = opts.sort ?? 'name'
   const sortDir = opts.sortDir ?? 'asc'
   const page = Math.max(1, opts.page ?? 1)
   const pageSize = opts.pageSize ?? 25
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+  const offset = (page - 1) * pageSize
 
-  let query = supabase
-    .from('vendors')
-    .select(
-      `*, vendor_categories(name), internal_owner:users!vendors_internal_owner_user_id_fkey(name, email)`,
-      { count: 'exact' },
-    )
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-    .order(sort, { ascending: sortDir === 'asc', nullsFirst: false })
-    .range(from, to)
+  const orderCol = SORT_COLUMNS[sort] ?? 'v.name'
+  const orderDir = sortDir === 'desc' ? 'DESC' : 'ASC'
 
-  if (opts.search) query = query.ilike('name', `%${opts.search}%`)
-  if (opts.status) query = query.eq('status', opts.status)
-  if (opts.criticalOnly) query = query.eq('is_critical', true)
+  const rows = await sql`
+    SELECT
+      v.*,
+      COUNT(*) OVER() AS _total_count,
+      CASE WHEN vc.id IS NOT NULL
+        THEN jsonb_build_object('name', vc.name)
+        ELSE NULL
+      END AS vendor_categories,
+      CASE WHEN u.id IS NOT NULL
+        THEN jsonb_build_object('name', u.name, 'email', u.email)
+        ELSE NULL
+      END AS internal_owner
+    FROM vendors v
+    LEFT JOIN vendor_categories vc ON vc.id = v.category_id
+    LEFT JOIN users u ON u.id = v.internal_owner_user_id
+    WHERE v.org_id = ${orgId}
+      AND v.deleted_at IS NULL
+      AND v.archived_at IS NULL
+      ${opts.search ? sql`AND v.name ILIKE ${`%${opts.search}%`}` : sql``}
+      ${opts.status ? sql`AND v.status = ${opts.status}` : sql``}
+      ${opts.criticalOnly ? sql`AND v.is_critical = true` : sql``}
+    ORDER BY ${sql.unsafe(orderCol)} ${sql.unsafe(orderDir)} NULLS LAST
+    LIMIT ${pageSize} OFFSET ${offset}
+  `
 
-  const { data, error, count } = await query
-  if (error) throw new Error(error.message)
+  const total = rows.length > 0 ? Number(rows[0]._total_count) : 0
 
-  const total = count ?? 0
+  // Strip the _total_count helper column before returning
+  const cleaned = rows.map(({ _total_count, ...rest }) => rest) as unknown as Vendor[]
+
   return {
-    rows: (data ?? []) as Vendor[],
+    rows: cleaned,
     total,
     page,
     pageSize,
@@ -72,18 +93,26 @@ export async function getVendors(
 
 /** Fetch a single vendor by id (scoped to org) */
 export async function getVendorById(orgId: string, id: string): Promise<Vendor | null> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendors')
-    .select(
-      `*, vendor_categories(name), internal_owner:users!vendors_internal_owner_user_id_fkey(name, email)`,
-    )
-    .eq('id', id)
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return data as Vendor | null
+  const rows = await sql`
+    SELECT
+      v.*,
+      CASE WHEN vc.id IS NOT NULL
+        THEN jsonb_build_object('name', vc.name)
+        ELSE NULL
+      END AS vendor_categories,
+      CASE WHEN u.id IS NOT NULL
+        THEN jsonb_build_object('name', u.name, 'email', u.email)
+        ELSE NULL
+      END AS internal_owner
+    FROM vendors v
+    LEFT JOIN vendor_categories vc ON vc.id = v.category_id
+    LEFT JOIN users u ON u.id = v.internal_owner_user_id
+    WHERE v.id = ${id}
+      AND v.org_id = ${orgId}
+      AND v.deleted_at IS NULL
+    LIMIT 1
+  `
+  return (rows[0] as unknown as Vendor) ?? null
 }
 
 /** Generate the next VND-XXXX code for an org (includes deleted vendors to avoid reuse) */

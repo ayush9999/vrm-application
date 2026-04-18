@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { SidebarShell } from './_components/SidebarShell'
 import { NavigationProgress } from './_components/NavigationProgress'
 import { getCurrentUser } from '@/lib/current-user'
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -31,17 +31,20 @@ async function getSidebarUser(): Promise<SidebarUser | null> {
     const currentUser = await getCurrentUser()
     if (!currentUser) return null
 
-    const supabase = await createServerClient()
-    // Only fetch the extra sidebar fields — auth + user lookup is already done
-    const [{ data: userRow }, { data: org }] = await Promise.all([
-      supabase.from('users').select('name, email').eq('id', currentUser.userId).maybeSingle(),
-      supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle(),
+    // Direct Postgres — both queries pipelined on one connection
+    const [userRows, orgRows] = await Promise.all([
+      sql<{ name: string | null; email: string | null }[]>`
+        SELECT name, email FROM users WHERE id = ${currentUser.userId} LIMIT 1
+      `,
+      sql<{ name: string | null }[]>`
+        SELECT name FROM organizations WHERE id = ${currentUser.orgId} LIMIT 1
+      `,
     ])
 
     return {
-      email: userRow?.email ?? null,
-      name: userRow?.name ?? null,
-      orgName: org?.name ?? null,
+      email: userRows[0]?.email ?? null,
+      name: userRows[0]?.name ?? null,
+      orgName: orgRows[0]?.name ?? null,
     }
   } catch {
     return null

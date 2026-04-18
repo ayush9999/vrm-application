@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import { getVendorListMetrics } from '@/lib/db/review-packs'
 import type { VendorReviewPackStatus, VendorApprovalStatus } from '@/types/review-pack'
 import type { RiskBand } from '@/lib/risk-score'
@@ -28,35 +28,27 @@ export interface ReviewVendorRow {
  * Aggregates pack counts + vendor-level metrics.
  */
 export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow[]> {
-  const supabase = await createServerClient()
-
-  const { data, error } = await supabase
-    .from('vendor_review_packs')
-    .select(`
-      id, vendor_id, status, due_at,
-      vendors!inner ( id, name, vendor_code, criticality_tier, service_type, approval_status )
-    `)
-    .eq('org_id', orgId)
-    .is('deleted_at', null)
-  if (error) throw new Error(error.message)
-
   type Row = {
     id: string
     vendor_id: string
     status: VendorReviewPackStatus
     due_at: string | null
-    vendors: {
-      id: string; name: string; vendor_code: string | null
-      criticality_tier: number | null; service_type: string
-      approval_status: VendorApprovalStatus
-    } | {
-      id: string; name: string; vendor_code: string | null
-      criticality_tier: number | null; service_type: string
-      approval_status: VendorApprovalStatus
-    }[] | null
+    vendor_name: string
+    vendor_code: string | null
+    criticality_tier: number | null
+    service_type: string
+    approval_status: VendorApprovalStatus
   }
 
-  const rows = (data ?? []) as unknown as Row[]
+  const rows = await sql<Row[]>`
+    SELECT vrp.id, vrp.vendor_id, vrp.status, vrp.due_at,
+      v.name AS vendor_name, v.vendor_code, v.criticality_tier,
+      v.service_type, v.approval_status
+    FROM vendor_review_packs vrp
+    INNER JOIN vendors v ON v.id = vrp.vendor_id
+    WHERE vrp.org_id = ${orgId}
+      AND vrp.deleted_at IS NULL
+  `
   const todayStr = new Date().toISOString().split('T')[0]
   const activeStatuses = new Set<string>(['in_progress', 'awaiting_approval', 'sent_back', 'not_started'])
   const completedStatuses = new Set<string>(['approved', 'approved_with_exception', 'locked'])
@@ -68,8 +60,14 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
   }>()
 
   for (const r of rows) {
-    const v = Array.isArray(r.vendors) ? r.vendors[0] : r.vendors
-    if (!v) continue
+    const v = {
+      id: r.vendor_id,
+      name: r.vendor_name,
+      vendor_code: r.vendor_code,
+      criticality_tier: r.criticality_tier,
+      service_type: r.service_type,
+      approval_status: r.approval_status,
+    }
     const existing = byVendor.get(r.vendor_id) ?? { vendor: v, packs: [] }
     existing.packs.push({ status: r.status, due_at: r.due_at })
     byVendor.set(r.vendor_id, existing)

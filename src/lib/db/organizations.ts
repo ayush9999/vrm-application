@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import { createServiceClient } from '@/lib/supabase/service'
 
 // ─── Seed data ─────────────────────────────────────────────────────────────────
@@ -31,14 +31,13 @@ export interface OrgUser {
 
 /** Fetch all users belonging to an org, ordered by name then email */
 export async function getOrgUsers(orgId: string): Promise<OrgUser[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, name, email')
-    .eq('org_id', orgId)
-    .order('name')
-  if (error) throw new Error(error.message)
-  return (data ?? []) as OrgUser[]
+  const rows = await sql<OrgUser[]>`
+    SELECT id, name, email
+    FROM users
+    WHERE org_id = ${orgId}
+    ORDER BY name
+  `
+  return rows as OrgUser[]
 }
 
 /**

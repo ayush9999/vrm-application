@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -13,49 +14,29 @@ export interface VendorPackAssignment {
 
 /** Get all active pack assignments for a vendor. */
 export async function getVendorAssignedPacks(vendorId: string): Promise<VendorPackAssignment[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendor_pack_assignments')
-    .select(`
-      id, vendor_id, review_pack_id, assigned_at,
-      review_packs!inner ( name, code ),
-      assigned_by:users!vendor_pack_assignments_assigned_by_user_id_fkey ( name )
-    `)
-    .eq('vendor_id', vendorId)
-    .is('removed_at', null)
-    .order('assigned_at')
-  if (error) throw new Error(error.message)
-
-  type Row = {
-    id: string; vendor_id: string; review_pack_id: string; assigned_at: string
-    review_packs: { name: string; code: string | null } | { name: string; code: string | null }[] | null
-    assigned_by: { name: string | null } | { name: string | null }[] | null
-  }
-  return ((data ?? []) as unknown as Row[]).map((r) => {
-    const rp = Array.isArray(r.review_packs) ? r.review_packs[0] : r.review_packs
-    const by = Array.isArray(r.assigned_by) ? r.assigned_by[0] : r.assigned_by
-    return {
-      id: r.id,
-      vendor_id: r.vendor_id,
-      review_pack_id: r.review_pack_id,
-      pack_name: rp?.name ?? 'Unknown',
-      pack_code: rp?.code ?? null,
-      assigned_at: r.assigned_at,
-      assigned_by_name: by?.name ?? null,
-    }
-  })
+  const rows = await sql`
+    SELECT vpa.id, vpa.vendor_id, vpa.review_pack_id, vpa.assigned_at,
+      rp.name AS pack_name, rp.code AS pack_code,
+      u.name AS assigned_by_name
+    FROM vendor_pack_assignments vpa
+    INNER JOIN review_packs rp ON rp.id = vpa.review_pack_id
+    LEFT JOIN users u ON u.id = vpa.assigned_by_user_id
+    WHERE vpa.vendor_id = ${vendorId}
+      AND vpa.removed_at IS NULL
+    ORDER BY vpa.assigned_at
+  `
+  return rows as VendorPackAssignment[]
 }
 
 /** Get just the pack IDs assigned to a vendor (for auto-schedule). */
 export async function getVendorAssignedPackIds(vendorId: string): Promise<string[]> {
-  const supabase = await createServerClient()
-  const { data, error } = await supabase
-    .from('vendor_pack_assignments')
-    .select('review_pack_id')
-    .eq('vendor_id', vendorId)
-    .is('removed_at', null)
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((r: { review_pack_id: string }) => r.review_pack_id)
+  const rows = await sql<{ review_pack_id: string }[]>`
+    SELECT review_pack_id
+    FROM vendor_pack_assignments
+    WHERE vendor_id = ${vendorId}
+      AND removed_at IS NULL
+  `
+  return rows.map((r) => r.review_pack_id)
 }
 
 /** Assign a pack to a vendor (add to the permanent list). */

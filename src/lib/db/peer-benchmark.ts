@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import { getVendorListMetrics } from '@/lib/db/review-packs'
 import type { VendorApprovalStatus } from '@/types/review-pack'
 
@@ -20,30 +20,23 @@ export async function getPeerBenchmark(
 ): Promise<PeerBenchmark | null> {
   if (!categoryId) return null
 
-  const supabase = await createServerClient()
-
   // Find all OTHER vendors in the same category
-  const { data, error } = await supabase
-    .from('vendors')
-    .select('id, approval_status, vendor_categories!inner ( name )')
-    .eq('org_id', orgId)
-    .eq('category_id', categoryId)
-    .neq('id', vendorId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-  if (error) throw new Error(error.message)
-
-  type Row = { id: string; approval_status: VendorApprovalStatus; vendor_categories: { name: string } | { name: string }[] | null }
-  const peers = (data ?? []) as unknown as Row[]
+  type PeerRow = { id: string; approval_status: VendorApprovalStatus; category_name: string }
+  const peers = await sql<PeerRow[]>`
+    SELECT v.id, v.approval_status, vc.name AS category_name
+    FROM vendors v
+    INNER JOIN vendor_categories vc ON vc.id = v.category_id
+    WHERE v.org_id = ${orgId}
+      AND v.category_id = ${categoryId}
+      AND v.id != ${vendorId}
+      AND v.deleted_at IS NULL
+      AND v.archived_at IS NULL
+  `
 
   // Need at least 3 peers for a meaningful comparison
   if (peers.length < 3) return null
 
-  const categoryName = (() => {
-    const raw = peers[0]?.vendor_categories
-    const cat = Array.isArray(raw) ? raw[0] : raw
-    return cat?.name ?? 'Unknown'
-  })()
+  const categoryName = peers[0]?.category_name ?? 'Unknown'
 
   // Compute readiness for all peers
   const metrics = await getVendorListMetrics(

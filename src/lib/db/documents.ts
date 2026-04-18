@@ -1,3 +1,4 @@
+import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import type {
   VendorDocument,
@@ -86,35 +87,33 @@ export async function getVendorDocumentsData(
   vendorId: string,
   categoryId: string | null,
 ): Promise<VendorDocumentsData> {
-  const supabase = await createServerClient()
-
   // ── 1. Get required docs for category ──────────────────────────────────────
   type RequiredDocRow = {
     id: string
     is_required: boolean
     doc_type_id: string
-    document_types: { name: string } | null
+    doc_type_name: string
   }
 
   let requiredDocs: RequiredDocRow[] = []
   if (categoryId) {
-    const { data } = await supabase
-      .from('category_document_templates')
-      .select('id, is_required, doc_type_id, document_types(name)')
-      .eq('category_id', categoryId)
-      .is('deleted_at', null)
-    requiredDocs = (data ?? []) as unknown as RequiredDocRow[]
+    requiredDocs = await sql<RequiredDocRow[]>`
+      SELECT cdt.id, cdt.is_required, cdt.doc_type_id, dt.name AS doc_type_name
+      FROM category_document_templates cdt
+      LEFT JOIN document_types dt ON dt.id = cdt.doc_type_id
+      WHERE cdt.category_id = ${categoryId}
+        AND cdt.deleted_at IS NULL
+    `
   }
 
   // ── 2. Get all vendor_documents for this vendor ─────────────────────────────
-  const { data: vendorDocs } = await supabase
-    .from('vendor_documents')
-    .select('*')
-    .eq('org_id', orgId)
-    .eq('vendor_id', vendorId)
-    .is('deleted_at', null)
-
-  const vendorDocList = (vendorDocs ?? []) as VendorDocument[]
+  const vendorDocList = await sql<VendorDocument[]>`
+    SELECT *
+    FROM vendor_documents
+    WHERE org_id = ${orgId}
+      AND vendor_id = ${vendorId}
+      AND deleted_at IS NULL
+  `
   const vendorDocByDocTypeId = new Map(vendorDocList.map((d) => [d.doc_type_id, d]))
 
   // ── 3. Fetch current versions for all vendor_docs that have them ────────────
@@ -124,25 +123,20 @@ export async function getVendorDocumentsData(
 
   const versionMap = new Map<string, VendorDocumentVersion>()
   if (versionIds.length > 0) {
-    const { data: versions } = await supabase
-      .from('vendor_document_versions')
-      .select('*')
-      .in('id', versionIds)
-      .is('deleted_at', null)
-    for (const v of (versions ?? []) as VendorDocumentVersion[]) {
+    const versions = await sql<VendorDocumentVersion[]>`
+      SELECT *
+      FROM vendor_document_versions
+      WHERE id = ANY(${versionIds})
+        AND deleted_at IS NULL
+    `
+    for (const v of versions) {
       versionMap.set(v.id, v)
     }
   }
 
   // ── 4. Fetch document_types for custom docs ─────────────────────────────────
-  // Exclude doc types already covered by category templates OR by active assessment framework items.
-  // Without this second exclusion, framework-requested docs appear in both the checklist and custom section.
   const categoryDocTypeIds = new Set(requiredDocs.map((r) => r.doc_type_id))
-
-  // vendor_assessments table removed — framework doc type exclusion is no longer needed
   const frameworkDocTypeIds = new Set<string>()
-
-  // A doc is "custom" only if it's not covered by category templates
   const checkedDocTypeIds = new Set([...categoryDocTypeIds, ...frameworkDocTypeIds])
   const customVendorDocs = vendorDocList.filter(
     (d) => !checkedDocTypeIds.has(d.doc_type_id),
@@ -151,12 +145,12 @@ export async function getVendorDocumentsData(
 
   const customDocTypeMap = new Map<string, { name: string; description: string | null }>()
   if (customDocTypeIds.length > 0) {
-    const { data: dtRows } = await supabase
-      .from('document_types')
-      .select('id, name, description')
-      .in('id', customDocTypeIds)
-    for (const dt of dtRows ?? []) {
-      const row = dt as { id: string; name: string; description: string | null }
+    const dtRows = await sql<{ id: string; name: string; description: string | null }[]>`
+      SELECT id, name, description
+      FROM document_types
+      WHERE id = ANY(${customDocTypeIds})
+    `
+    for (const row of dtRows) {
       customDocTypeMap.set(row.id, { name: row.name, description: row.description })
     }
   }
@@ -170,7 +164,7 @@ export async function getVendorDocumentsData(
       required_doc_id: req.id,
       is_required: req.is_required,
       doc_type_id: req.doc_type_id,
-      doc_type_name: req.document_types?.name ?? '',
+      doc_type_name: req.doc_type_name ?? '',
       vendor_doc_id: vendorDoc?.id ?? null,
       current_version_id: vendorDoc?.current_version_id ?? null,
       expiry_date: vendorDoc?.expiry_date ?? null,
@@ -207,43 +201,43 @@ export async function getVendorDocumentsData(
   if (vendorDocIds.length > 0) {
     // Get doc_type names for vendor docs
     const vendorDocDocTypeIds = [...new Set(vendorDocList.map((d) => d.doc_type_id))]
-    const { data: dtHistRows } = await supabase
-      .from('document_types')
-      .select('id, name')
-      .in('id', vendorDocDocTypeIds)
-    const docTypeNameById = new Map(
-      (dtHistRows ?? []).map((dt) => [
-        (dt as { id: string; name: string }).id,
-        (dt as { id: string; name: string }).name,
-      ]),
-    )
-    const vendorDocDocTypeMap = new Map(vendorDocList.map((d) => [d.id, d.doc_type_id]))
 
-    const { data: allVersions } = await supabase
-      .from('vendor_document_versions')
-      .select('id, vendor_document_id, file_key, file_name, uploaded_at, ai_status')
-      .in('vendor_document_id', vendorDocIds)
-      .is('deleted_at', null)
-      .order('uploaded_at', { ascending: false })
-
-    history = (allVersions ?? []).map((v) => {
-      const typedV = v as {
+    // Run both queries in parallel
+    const [dtHistRows, allVersions] = await Promise.all([
+      sql<{ id: string; name: string }[]>`
+        SELECT id, name
+        FROM document_types
+        WHERE id = ANY(${vendorDocDocTypeIds})
+      `,
+      sql<{
         id: string
         vendor_document_id: string
         file_key: string
         file_name: string | null
         uploaded_at: string
         ai_status: string
-      }
-      const docTypeId = vendorDocDocTypeMap.get(typedV.vendor_document_id) ?? ''
+      }[]>`
+        SELECT id, vendor_document_id, file_key, file_name, uploaded_at, ai_status
+        FROM vendor_document_versions
+        WHERE vendor_document_id = ANY(${vendorDocIds})
+          AND deleted_at IS NULL
+        ORDER BY uploaded_at DESC
+      `,
+    ])
+
+    const docTypeNameById = new Map(dtHistRows.map((dt) => [dt.id, dt.name]))
+    const vendorDocDocTypeMap = new Map(vendorDocList.map((d) => [d.id, d.doc_type_id]))
+
+    history = allVersions.map((v) => {
+      const docTypeId = vendorDocDocTypeMap.get(v.vendor_document_id) ?? ''
       return {
-        version_id: typedV.id,
-        vendor_document_id: typedV.vendor_document_id,
+        version_id: v.id,
+        vendor_document_id: v.vendor_document_id,
         doc_type_name: docTypeNameById.get(docTypeId) ?? 'Unknown',
-        file_key: typedV.file_key,
-        file_name: typedV.file_name,
-        uploaded_at: typedV.uploaded_at,
-        ai_status: typedV.ai_status as import('@/types/document').AiProcessingStatus,
+        file_key: v.file_key,
+        file_name: v.file_name,
+        uploaded_at: v.uploaded_at,
+        ai_status: v.ai_status as import('@/types/document').AiProcessingStatus,
       }
     })
   }

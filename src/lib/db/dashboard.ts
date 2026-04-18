@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/pool'
 import { getVendorListMetrics } from '@/lib/db/review-packs'
 import type { VendorStatus, VendorApprovalStatus } from '@/types/vendor'
 import type { ActivityLogEntry } from '@/types/activity'
@@ -50,74 +50,57 @@ export interface RecentRemediation {
 }
 
 export async function getDashboardData(orgId: string): Promise<DashboardData> {
-  const supabase = await createServerClient()
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const in30Days = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
   const in60Days = new Date(Date.now() + 60 * 86_400_000).toISOString().split('T')[0]
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
 
-  const [
-    vendorsRes,
-    docsRes,
-    issuesRes,
-    recentIssuesRes,
-    activityRes,
-  ] = await Promise.all([
-    supabase
-      .from('vendors')
-      .select('id, name, status, is_critical, criticality_tier, approval_status, next_review_due_at')
-      .eq('org_id', orgId)
-      .is('deleted_at', null)
-      .is('archived_at', null),
-
-    supabase
-      .from('vendor_documents')
-      .select('expiry_date, evidence_status')
-      .eq('org_id', orgId)
-      .is('deleted_at', null),
-
-    supabase
-      .from('issues')
-      .select('id, status, severity, due_date, vendor_id')
-      .eq('org_id', orgId)
-      .is('deleted_at', null),
-
-    supabase
-      .from('issues')
-      .select('id, title, severity, status, due_date, vendor_id, vendors(name)')
-      .eq('org_id', orgId)
-      .is('deleted_at', null)
-      .in('status', ['open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred'])
-      .order('created_at', { ascending: false })
-      .limit(5),
-
-    supabase
-      .from('activity_log')
-      .select('*')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(10),
+  // All 5 queries pipelined on one Postgres connection
+  const [vendors, docs, issues, recentIssues, activity] = await Promise.all([
+    sql<{
+      id: string; name: string; status: VendorStatus; is_critical: boolean
+      criticality_tier: number | null; approval_status: VendorApprovalStatus
+      next_review_due_at: string | null
+    }[]>`
+      SELECT id, name, status, is_critical, criticality_tier, approval_status, next_review_due_at
+      FROM vendors
+      WHERE org_id = ${orgId} AND deleted_at IS NULL AND archived_at IS NULL
+    `,
+    sql<{ expiry_date: string | null; evidence_status: string }[]>`
+      SELECT expiry_date, evidence_status
+      FROM vendor_documents
+      WHERE org_id = ${orgId} AND deleted_at IS NULL
+    `,
+    sql<{ id: string; status: string; severity: string; due_date: string | null; vendor_id: string }[]>`
+      SELECT id, status, severity, due_date, vendor_id
+      FROM issues
+      WHERE org_id = ${orgId} AND deleted_at IS NULL
+    `,
+    sql<{ id: string; title: string; severity: string; status: string; due_date: string | null; vendor_id: string; vendor_name: string }[]>`
+      SELECT i.id, i.title, i.severity, i.status, i.due_date, i.vendor_id, v.name AS vendor_name
+      FROM issues i
+      JOIN vendors v ON v.id = i.vendor_id
+      WHERE i.org_id = ${orgId}
+        AND i.deleted_at IS NULL
+        AND i.status IN ('open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred')
+      ORDER BY i.created_at DESC
+      LIMIT 5
+    `,
+    sql<ActivityLogEntry[]>`
+      SELECT * FROM activity_log
+      WHERE org_id = ${orgId}
+      ORDER BY created_at DESC
+      LIMIT 10
+    `,
   ])
 
-  type VendorRow = {
-    id: string
-    name: string
-    status: VendorStatus
-    is_critical: boolean
-    criticality_tier: number | null
-    approval_status: VendorApprovalStatus
-    next_review_due_at: string | null
-  }
-  const vendors = (vendorsRes.data ?? []) as VendorRow[]
-
-  // Compute risk + readiness for every vendor
+  // Compute risk + readiness for every vendor (also uses direct Postgres internally)
   const metrics = await getVendorListMetrics(
     vendors.map((v) => ({ id: v.id, approval_status: v.approval_status })),
   )
 
-  // Doc expiry counts (only count Approved evidence — expiry doesn't apply otherwise)
-  const docs = (docsRes.data ?? []) as { expiry_date: string | null; evidence_status: string }[]
+  // Doc expiry counts
   let docsExpired = 0
   let docsExpiring30 = 0
   let docsExpiring60 = 0
@@ -129,18 +112,14 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
   }
 
   // Remediation counts
-  const issues = (issuesRes.data ?? []) as { status: string; due_date: string | null; vendor_id: string }[]
   const openStatuses = new Set(['open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred'])
   let openRemediations = 0
   let overdueRemediations = 0
+  const remediationsByVendor = new Map<string, number>()
   for (const i of issues) {
     if (!openStatuses.has(i.status)) continue
     openRemediations++
     if (i.due_date && i.due_date < todayStr && i.status !== 'deferred') overdueRemediations++
-  }
-  const remediationsByVendor = new Map<string, number>()
-  for (const i of issues) {
-    if (!openStatuses.has(i.status)) continue
     remediationsByVendor.set(i.vendor_id, (remediationsByVendor.get(i.vendor_id) ?? 0) + 1)
   }
 
@@ -164,7 +143,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     if (v.next_review_due_at && v.next_review_due_at <= endOfMonth) reviewsDueThisMonth++
   }
 
-  // Top 8 highest-risk vendors (Critical band first, then High)
+  // Top 8 highest-risk vendors
   const enriched: HighRiskVendor[] = vendors
     .map((v) => {
       const m = metrics.get(v.id)
@@ -188,18 +167,14 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
 
   const highRiskVendors = enriched.filter((v) => v.riskBand === 'critical' || v.riskBand === 'high').slice(0, 8)
 
-  type RemRow = {
-    id: string; title: string; severity: string; status: string; due_date: string | null
-    vendor_id: string; vendors: { name: string } | null
-  }
-  const recentRemediations: RecentRemediation[] = ((recentIssuesRes.data ?? []) as unknown as RemRow[]).map((r) => ({
+  const recentRemediations: RecentRemediation[] = recentIssues.map((r) => ({
     id: r.id,
     title: r.title,
     severity: r.severity,
     status: r.status,
     due_date: r.due_date,
     vendor_id: r.vendor_id,
-    vendor_name: r.vendors?.name ?? 'Unknown',
+    vendor_name: r.vendor_name ?? 'Unknown',
   }))
 
   return {
@@ -224,6 +199,6 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     },
     highRiskVendors,
     recentRemediations,
-    recentActivity: (activityRes.data ?? []) as ActivityLogEntry[],
+    recentActivity: activity as unknown as ActivityLogEntry[],
   }
 }
