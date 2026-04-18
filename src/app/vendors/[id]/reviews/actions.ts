@@ -511,10 +511,3 @@ export async function reopenVendorReviewAction(
   }
 }
 
-// ─── Re-export item-level actions for use in review workspace ──────────────
-// These live in [packId]/actions.ts but are needed by the review-level page too.
-
-export {
-  setReviewItemDecisionAction,
-  aiAssistReviewItemAction,
-} from './[packId]/actions'

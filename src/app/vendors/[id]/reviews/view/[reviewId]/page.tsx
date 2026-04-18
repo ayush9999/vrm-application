@@ -7,13 +7,15 @@ import { getVendorReviewItems } from '@/lib/db/review-packs'
 import { getOrgUsers } from '@/lib/db/organizations'
 import { ReviewWorkspace } from './_components/ReviewWorkspace'
 import {
-  setReviewItemDecisionAction,
-  aiAssistReviewItemAction,
   startVendorReviewAction,
   submitVendorReviewForApprovalAction,
   approveVendorReviewAction,
-} from '../../../reviews/actions'
-import { uploadEvidenceFileAction } from '../../../evidence-actions'
+} from '@/app/vendors/[id]/reviews/actions'
+import {
+  setReviewItemDecisionAction,
+  aiAssistReviewItemAction,
+} from '@/app/vendors/[id]/reviews/[packId]/actions'
+import { uploadEvidenceFileAction } from '@/app/vendors/[id]/evidence-actions'
 import type { VendorReviewItem } from '@/types/review-pack'
 
 interface PageProps {
