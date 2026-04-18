@@ -7,6 +7,7 @@ import { getVendorActivityLog } from '@/lib/db/activity-log'
 import { getVendorIncidents } from '@/lib/db/incidents'
 import { getVendorIssueCounts } from '@/lib/db/issues'
 import { getVendorReviewPacks, getVendorListMetrics, getReviewPacks } from '@/lib/db/review-packs'
+import { getVendorReviews } from '@/lib/db/vendor-reviews'
 import { getVendorEvidenceGrouped } from '@/lib/db/evidence'
 import { getVendorSnapshots } from '@/lib/db/readiness-snapshots'
 import { getPeerBenchmark } from '@/lib/db/peer-benchmark'
@@ -56,13 +57,14 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const defaultTab = tabParam ?? 'overview'
 
   // Essential data (always needed for header + overview)
-  const [metricsMap, snapshots, issueCounts, reviewPacks, allPacks, assignments] = await Promise.all([
+  const [metricsMap, snapshots, issueCounts, reviewPacks, allPacks, assignments, vendorReviews] = await Promise.all([
     getVendorListMetrics([{ id, approval_status: vendor.approval_status }]),
     getVendorSnapshots(id),
     getVendorIssueCounts(user.orgId, id),
     getVendorReviewPacks(id),
     getReviewPacks(user.orgId),
     getVendorAssignedPacks(id),
+    getVendorReviews(id),
   ])
   const metrics = metricsMap.get(id)!
 
@@ -175,6 +177,7 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           getEvidenceDownloadAction={getEvidenceVersionDownloadAction}
           issueCounts={issueCounts}
           vendorId={id}
+          vendorReviews={vendorReviews}
         />
       </div>
     </div>

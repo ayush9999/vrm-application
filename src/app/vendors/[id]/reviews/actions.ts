@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireCurrentUser } from '@/lib/current-user'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/db/activity-log'
+import { updateReviewStatus } from '@/lib/db/vendor-reviews'
 
 /**
  * Start a review — move from not_started/upcoming to in_progress.
@@ -337,5 +338,175 @@ export async function reopenReviewAction(
     return { success: true }
   } catch (err) {
     return { message: err instanceof Error ? err.message : 'Failed to reopen' }
+  }
+}
+
+// ─── Review-level actions (vendor_reviews) ─────────────────────────────────
+
+/**
+ * Start a review at the vendor_reviews level — sets status to in_progress
+ * and starts all non-excluded child packs.
+ */
+export async function startVendorReviewAction(
+  vendorId: string,
+  vendorReviewId: string,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+
+    // Update vendor_reviews status
+    await updateReviewStatus(vendorReviewId, 'in_progress', {
+      started_at: new Date().toISOString(),
+    })
+
+    // Set all non-excluded child packs to in_progress
+    const { error: packErr } = await supabase
+      .from('vendor_review_packs')
+      .update({ status: 'in_progress' })
+      .eq('vendor_review_id', vendorReviewId)
+      .eq('org_id', user.orgId)
+      .eq('is_excluded', false)
+      .in('status', ['not_started', 'upcoming'])
+      .is('deleted_at', null)
+    if (packErr) throw new Error(packErr.message)
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_review',
+      entityId: vendorReviewId,
+      action: 'review_started',
+      title: 'Review started',
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath('/reviews')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to start review' }
+  }
+}
+
+/**
+ * Submit a review for approval at the vendor_reviews level.
+ */
+export async function submitVendorReviewForApprovalAction(
+  vendorId: string,
+  vendorReviewId: string,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+
+    await updateReviewStatus(vendorReviewId, 'submitted', {
+      submitted_at: new Date().toISOString(),
+    })
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_review',
+      entityId: vendorReviewId,
+      action: 'review_submitted_for_approval',
+      title: 'Review submitted for approval',
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath('/reviews')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to submit review' }
+  }
+}
+
+/**
+ * Approve or reject a review at the vendor_reviews level.
+ * Locks all child packs on approval.
+ */
+export async function approveVendorReviewAction(
+  vendorId: string,
+  vendorReviewId: string,
+  decision: 'approved' | 'approved_with_exception',
+  comment: string | null,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+
+    const now = new Date().toISOString()
+
+    // Update vendor_reviews status
+    await updateReviewStatus(vendorReviewId, decision, {
+      completed_at: now,
+      locked_at: now,
+      locked_by_user_id: user.userId,
+    })
+
+    // Lock all child packs
+    const { error: packErr } = await supabase
+      .from('vendor_review_packs')
+      .update({
+        status: decision,
+        completed_at: now,
+        locked_at: now,
+        locked_by_user_id: user.userId,
+      })
+      .eq('vendor_review_id', vendorReviewId)
+      .eq('org_id', user.orgId)
+      .eq('is_excluded', false)
+      .is('deleted_at', null)
+    if (packErr) throw new Error(packErr.message)
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_review',
+      entityId: vendorReviewId,
+      action: 'review_approved',
+      title: `Review ${decision.replace(/_/g, ' ')}`,
+      description: comment,
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath('/reviews')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to approve review' }
+  }
+}
+
+/**
+ * Reopen a review at the vendor_reviews level — sets status back to in_progress
+ * and clears submitted_at.
+ */
+export async function reopenVendorReviewAction(
+  vendorId: string,
+  vendorReviewId: string,
+): Promise<{ success?: boolean; message?: string }> {
+  try {
+    const user = await requireCurrentUser()
+
+    await updateReviewStatus(vendorReviewId, 'in_progress', {
+      submitted_at: null,
+    })
+
+    await logActivity({
+      orgId: user.orgId,
+      vendorId,
+      actorUserId: user.userId,
+      entityType: 'vendor_review',
+      entityId: vendorReviewId,
+      action: 'review_reopened',
+      title: 'Review reopened',
+    })
+
+    revalidatePath(`/vendors/${vendorId}`)
+    revalidatePath('/reviews')
+    return { success: true }
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Failed to reopen review' }
   }
 }

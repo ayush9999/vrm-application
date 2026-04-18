@@ -7,6 +7,37 @@ export type ReviewItemDecision = 'not_started' | 'pass' | 'fail' | 'na' | 'needs
 export type VendorReviewPackStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'blocked' | 'upcoming' | 'awaiting_approval' | 'sent_back' | 'locked'
 export type EvidenceStatus = 'missing' | 'uploaded' | 'under_review' | 'approved' | 'rejected' | 'expired' | 'waived'
 export type ReviewType = 'onboarding' | 'scheduled' | 'on_demand'
+export type VendorReviewStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'done' | 'cancelled'
+
+// ─── Vendor Review (parent entity grouping packs) ──────────────────────────
+
+export interface VendorReview {
+  id: string
+  org_id: string
+  vendor_id: string
+  review_code: string
+  review_type: ReviewType
+  status: VendorReviewStatus
+  reviewer_user_id: string | null
+  approver_user_id: string | null
+  due_at: string | null
+  started_at: string | null
+  submitted_at: string | null
+  completed_at: string | null
+  locked_at: string | null
+  created_by_user_id: string | null
+  created_at: string
+  deleted_at: string | null
+  // Joined fields
+  vendor_name?: string
+  reviewer_name?: string | null
+  approver_name?: string | null
+  packs?: VendorReviewPack[]
+  // Computed
+  total_items?: number
+  completed_items?: number
+  readiness_pct?: number
+}
 
 export type VendorDataAccessLevel = 'none' | 'internal_only' | 'personal_data' | 'sensitive_personal_data' | 'financial_data'
 export type VendorServiceType = 'saas' | 'contractor' | 'supplier' | 'logistics' | 'professional_services' | 'other'
@@ -96,6 +127,8 @@ export interface VendorReviewPack {
   approver_user_id: string | null
   created_at: string
   updated_at: string
+  vendor_review_id: string | null
+  is_excluded: boolean
   deleted_at: string | null
   // joined
   review_pack_name?: string

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { VendorReviewPack, VendorReviewPackStatus } from '@/types/review-pack'
+import type { VendorReviewPack, VendorReviewPackStatus, VendorReview, VendorReviewStatus, ReviewType } from '@/types/review-pack'
 import type { VendorPackAssignment } from '@/lib/db/vendor-pack-assignments'
 
 const STATUS_STYLE: Record<VendorReviewPackStatus, { bg: string; color: string; label: string }> = {
@@ -19,6 +19,22 @@ const STATUS_STYLE: Record<VendorReviewPackStatus, { bg: string; color: string; 
   locked:                   { bg: 'rgba(5,150,105,0.1)',    color: '#059669', label: 'Locked' },
 }
 
+const REVIEW_STATUS_STYLE: Record<VendorReviewStatus, { bg: string; color: string; label: string; strikethrough?: boolean }> = {
+  not_started:             { bg: 'rgba(148,163,184,0.15)', color: '#64748b', label: 'Not Started' },
+  in_progress:             { bg: 'rgba(14,165,233,0.1)',   color: '#0284c7', label: 'In Progress' },
+  submitted:               { bg: 'rgba(245,158,11,0.1)',   color: '#d97706', label: 'Submitted' },
+  approved:                { bg: 'rgba(5,150,105,0.1)',    color: '#059669', label: 'Approved' },
+  approved_with_exception: { bg: 'rgba(245,158,11,0.1)',   color: '#d97706', label: 'Approved (Exception)' },
+  done:                    { bg: 'rgba(5,150,105,0.1)',    color: '#059669', label: 'Done' },
+  cancelled:               { bg: 'rgba(148,163,184,0.15)', color: '#64748b', label: 'Cancelled', strikethrough: true },
+}
+
+const REVIEW_TYPE_STYLE: Record<ReviewType, { bg: string; color: string }> = {
+  onboarding: { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed' },
+  scheduled:  { bg: 'rgba(14,165,233,0.08)', color: '#0284c7' },
+  on_demand:  { bg: 'rgba(245,158,11,0.08)', color: '#d97706' },
+}
+
 interface ReviewsTabProps {
   vendorId: string
   assignments: VendorPackAssignment[]
@@ -26,12 +42,27 @@ interface ReviewsTabProps {
   availablePacks: { id: string; name: string; code: string | null }[]
   assignPackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
   removePackAction: (vendorId: string, reviewPackId: string) => Promise<{ success?: boolean; message?: string }>
+  vendorReviews: VendorReview[]
 }
 
-export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks, assignPackAction, removePackAction }: ReviewsTabProps) {
+export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks, assignPackAction, removePackAction, vendorReviews }: ReviewsTabProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showAssign, setShowAssign] = useState(false)
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(() => {
+    const initial = new Set<string>()
+    if (vendorReviews.length > 0) initial.add(vendorReviews[0].id)
+    return initial
+  })
+
+  const toggleReview = (reviewId: string) => {
+    setExpandedReviews((prev) => {
+      const next = new Set(prev)
+      if (next.has(reviewId)) next.delete(reviewId)
+      else next.add(reviewId)
+      return next
+    })
+  }
 
   const assignedPackIds = new Set(assignments.map((a) => a.review_pack_id))
   const unassignedPacks = availablePacks.filter((p) => !assignedPackIds.has(p.id))
@@ -122,11 +153,11 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
         )}
       </section>
 
-      {/* ── Section 2: Review History (Instances) ── */}
+      {/* ── Section 2: Review History (Grouped by Vendor Review) ── */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
-            Review History ({reviewPacks.length})
+            Reviews ({vendorReviews.length})
           </h2>
           <Link
             href={`/reviews/${vendorId}`}
@@ -137,49 +168,163 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
           </Link>
         </div>
 
-        {reviewPacks.length === 0 ? (
+        {vendorReviews.length === 0 ? (
           <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
             No reviews yet. Create one from the{' '}
             <Link href="/reviews" className="underline" style={{ color: '#6c5dd3' }}>Reviews module</Link>.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {reviewPacks.map((pack) => {
-              const counts = pack.item_counts ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
-              const applicable = counts.total - counts.na
-              const pct = applicable > 0 ? Math.round((counts.passed / applicable) * 100) : 0
-              const sty = STATUS_STYLE[pack.status]
+          <div className="space-y-3">
+            {vendorReviews.map((review) => {
+              const isExpanded = expandedReviews.has(review.id)
+              const rSty = REVIEW_STATUS_STYLE[review.status]
+              const tSty = REVIEW_TYPE_STYLE[review.review_type]
+              const readiness = review.readiness_pct ?? 0
+              const dateStr = review.due_at
+                ? new Date(review.due_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : review.created_at
+                  ? new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : null
+              const packs = review.packs ?? []
+
               return (
-                <Link
-                  key={pack.id}
-                  href={`/vendors/${vendorId}/reviews/${pack.id}`}
-                  className="block rounded-xl p-4 transition-all hover:-translate-y-0.5"
+                <div
+                  key={review.id}
+                  className="rounded-2xl overflow-hidden"
                   style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.05)' }}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                      <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>{pack.review_pack_name ?? 'Review'}</span>
-                      {pack.review_type && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{
-                          background: pack.review_type === 'onboarding' ? 'rgba(14,165,233,0.08)' : pack.review_type === 'scheduled' ? 'rgba(124,58,237,0.08)' : 'rgba(245,158,11,0.08)',
-                          color: pack.review_type === 'onboarding' ? '#0284c7' : pack.review_type === 'scheduled' ? '#7c3aed' : '#d97706',
-                        }}>{pack.review_type.replace('_', '-')}</span>
+                  {/* Review header — clickable to expand/collapse */}
+                  <button
+                    type="button"
+                    onClick={() => toggleReview(review.id)}
+                    className="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors hover:bg-[rgba(109,93,211,0.02)]"
+                  >
+                    {/* Chevron */}
+                    <svg
+                      width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"
+                      className="shrink-0 transition-transform"
+                      style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    >
+                      <path d="M4 6l4 4 4-4" />
+                    </svg>
+
+                    {/* Review code */}
+                    <span
+                      className="text-xs font-mono font-semibold px-2 py-0.5 rounded shrink-0"
+                      style={{ background: 'rgba(109,93,211,0.08)', color: '#6b5fa8' }}
+                    >
+                      {review.review_code}
+                    </span>
+
+                    {/* Review type badge */}
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0"
+                      style={{ background: tSty.bg, color: tSty.color }}
+                    >
+                      {review.review_type.replace('_', ' ')}
+                    </span>
+
+                    {/* Status badge */}
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0${rSty.strikethrough ? ' line-through' : ''}`}
+                      style={{ background: rSty.bg, color: rSty.color }}
+                    >
+                      {rSty.label}
+                    </span>
+
+                    {/* Spacer */}
+                    <span className="flex-1" />
+
+                    {/* Readiness percentage */}
+                    <span className="text-xs font-bold shrink-0" style={{ color: readiness === 100 ? '#059669' : '#6c5dd3' }}>
+                      {readiness}%
+                    </span>
+
+                    {/* Date */}
+                    {dateStr && (
+                      <span className="text-[11px] shrink-0" style={{ color: '#a99fd8' }}>
+                        {dateStr}
+                      </span>
+                    )}
+
+                    {/* Open link */}
+                    <Link
+                      href={`/vendors/${vendorId}/reviews/${review.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[11px] font-medium px-2.5 py-1 rounded-lg shrink-0 transition-colors hover:opacity-80"
+                      style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+                    >
+                      Open →
+                    </Link>
+                  </button>
+
+                  {/* Expanded: pack list */}
+                  {isExpanded && (
+                    <div className="px-4 pb-3" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
+                      {packs.length === 0 ? (
+                        <p className="text-xs py-3" style={{ color: '#8b7fd4' }}>No packs in this review.</p>
+                      ) : (
+                        <div className="pt-2 space-y-0">
+                          {packs.map((pack, idx) => {
+                            const counts = pack.item_counts ?? { total: 0, passed: 0, failed: 0, not_started: 0, na: 0 }
+                            const applicable = counts.total - counts.na
+                            const pct = applicable > 0 ? Math.round((counts.passed / applicable) * 100) : 0
+                            const isLast = idx === packs.length - 1
+                            const packSty = STATUS_STYLE[pack.status]
+
+                            return (
+                              <div key={pack.id} className="flex items-center gap-3 py-2">
+                                {/* Tree connector */}
+                                <span className="text-xs shrink-0 w-6 text-right select-none" style={{ color: '#c4bfe6', fontFamily: 'monospace' }}>
+                                  {isLast ? '└──' : '├──'}
+                                </span>
+
+                                {/* Pack name */}
+                                <span className="text-xs font-medium truncate min-w-0" style={{ color: '#1e1550' }}>
+                                  {pack.review_pack_name ?? 'Pack'}
+                                </span>
+
+                                {/* Pack status badge (small) */}
+                                <span
+                                  className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+                                  style={{ background: packSty.bg, color: packSty.color }}
+                                >
+                                  {packSty.label}
+                                </span>
+
+                                {/* Spacer */}
+                                <span className="flex-1" />
+
+                                {/* Item progress */}
+                                {applicable > 0 ? (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[11px]" style={{ color: '#8b7fd4' }}>
+                                      {counts.passed}/{applicable} passed
+                                    </span>
+                                    <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
+                                      <div
+                                        className="h-full rounded-full transition-all"
+                                        style={{ width: `${pct}%`, background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }}
+                                      />
+                                    </div>
+                                    <span className="text-[11px] font-bold w-8 text-right" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>
+                                      {pct}%
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px]" style={{ color: '#a99fd8' }}>
+                                    {counts.total > 0 ? `0/${counts.total} started` : 'No items'}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
                       )}
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 ml-2" style={{ background: sty.bg, color: sty.color }}>{sty.label}</span>
-                  </div>
-                  {applicable > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span style={{ color: '#8b7fd4' }}>{counts.passed} / {applicable}</span>
-                        <span className="font-bold" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>{pct}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }} />
-                      </div>
-                    </div>
                   )}
-                </Link>
+                </div>
               )
             })}
           </div>

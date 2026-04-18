@@ -2,6 +2,7 @@ import sql from '@/lib/db/pool'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { computeRiskScore, type RiskScoreOutput } from '@/lib/risk-score'
+import { generateReviewCode } from '@/lib/db/vendor-reviews'
 import type {
   ReviewPack,
   EvidenceRequirement,
@@ -223,6 +224,41 @@ export async function autoAssignReviewPacks(
         })
         if (docErr) throw new Error(docErr.message)
       }
+    }
+  }
+
+  // 5. Create a vendor_reviews row to group all newly created packs under an onboarding review
+  const reviewCode = await generateReviewCode(vendor.org_id)
+  const { data: vendorReview, error: vrErr } = await service
+    .from('vendor_reviews')
+    .insert({
+      org_id: vendor.org_id,
+      vendor_id: vendor.id,
+      review_code: reviewCode,
+      review_type: 'onboarding',
+      status: 'not_started',
+    })
+    .select('id')
+    .single()
+  if (vrErr) throw new Error(vrErr.message)
+
+  // 6. Link all newly created vendor_review_packs to this review
+  const newPackIds = newPacks.map((p) => p.id)
+  const { data: createdVrps } = await service
+    .from('vendor_review_packs')
+    .select('id')
+    .eq('vendor_id', vendor.id)
+    .in('review_pack_id', newPackIds)
+    .is('deleted_at', null)
+
+  if (createdVrps && createdVrps.length > 0) {
+    const vrpIdsToLink = (createdVrps as { id: string }[]).map((r) => r.id)
+    for (const vrpId of vrpIdsToLink) {
+      const { error: linkErr } = await service
+        .from('vendor_review_packs')
+        .update({ vendor_review_id: (vendorReview as { id: string }).id })
+        .eq('id', vrpId)
+      if (linkErr) throw new Error(linkErr.message)
     }
   }
 }

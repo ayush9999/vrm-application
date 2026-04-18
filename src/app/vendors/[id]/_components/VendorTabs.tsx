@@ -9,7 +9,7 @@ import type { VendorIncident } from '@/types/incident'
 import type { FormState } from '@/types/common'
 import type { OrgRole } from '@/types/org'
 import type { VendorIssueCounts } from '@/lib/db/issues'
-import type { VendorReviewPack } from '@/types/review-pack'
+import type { VendorReviewPack, VendorReview } from '@/types/review-pack'
 import { getCountryName } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 import { EvidenceTab } from './tabs/EvidenceTab'
@@ -71,6 +71,7 @@ export interface VendorTabsProps {
   ) => Promise<{ url?: string; message?: string }>
   issueCounts: VendorIssueCounts
   vendorId: string
+  vendorReviews: VendorReview[]
 }
 
 export function VendorTabs({
@@ -97,6 +98,7 @@ export function VendorTabs({
   getEvidenceDownloadAction,
   issueCounts,
   vendorId,
+  vendorReviews,
 }: VendorTabsProps) {
   const [active, setActive] = useState<Tab>(defaultTab)
 
@@ -117,12 +119,12 @@ export function VendorTabs({
               }
             >
               {tab.label}
-              {tab.id === 'reviews' && reviewPacks.length > 0 && (
+              {tab.id === 'reviews' && vendorReviews.length > 0 && (
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full leading-none"
                   style={{ background: 'rgba(109,93,211,0.1)', color: '#6b5fa8' }}
                 >
-                  {reviewPacks.length}
+                  {vendorReviews.length}
                 </span>
               )}
               {tab.id === 'evidence' && evidenceGroups.reduce((s, g) => s + g.rows.length, 0) > 0 && (
@@ -162,6 +164,7 @@ export function VendorTabs({
           availablePacks={availablePacks}
           assignPackAction={assignPackAction}
           removePackAction={removePackAction}
+          vendorReviews={vendorReviews}
         />
       )}
       {active === 'evidence' && (
