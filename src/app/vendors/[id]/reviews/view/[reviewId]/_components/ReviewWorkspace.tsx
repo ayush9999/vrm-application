@@ -69,7 +69,7 @@ interface Props {
   uploadEvidenceAction: (vendorId: string, evidenceId: string, formData: FormData) => Promise<{ success?: boolean; message?: string }>
   startReviewAction: (vendorId: string, reviewId: string) => Promise<{ success?: boolean; message?: string }>
   submitForApprovalAction: (vendorId: string, reviewId: string) => Promise<{ success?: boolean; message?: string }>
-  approveReviewAction: (vendorId: string, reviewId: string, decision: 'approved' | 'approved_with_exception', comment: string | null) => Promise<{ success?: boolean; message?: string }>
+  approveReviewAction: (vendorId: string, reviewId: string, decision: 'approved' | 'approved_with_exception' | 'sent_back', comment: string | null) => Promise<{ success?: boolean; message?: string }>
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export function ReviewWorkspace({
     })
   }
 
-  const handleApprove = (decision: 'approved' | 'approved_with_exception') => {
+  const handleApprove = (decision: 'approved' | 'approved_with_exception' | 'sent_back') => {
     setError(null)
     startTransition(async () => {
       const r = await approveReviewAction(vendorId, review.id, decision, approverComment.trim() || null)

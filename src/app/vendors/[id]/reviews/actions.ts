@@ -428,7 +428,7 @@ export async function submitVendorReviewForApprovalAction(
 export async function approveVendorReviewAction(
   vendorId: string,
   vendorReviewId: string,
-  decision: 'approved' | 'approved_with_exception',
+  decision: 'approved' | 'approved_with_exception' | 'sent_back',
   comment: string | null,
 ): Promise<{ success?: boolean; message?: string }> {
   try {
