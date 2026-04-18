@@ -8,16 +8,21 @@ export interface VendorPackAssignment {
   review_pack_id: string
   pack_name: string
   pack_code: string | null
+  pack_description: string | null
+  review_item_count: number
+  evidence_item_count: number
   assigned_at: string
   assigned_by_name: string | null
 }
 
-/** Get all active pack assignments for a vendor. */
+/** Get all active pack assignments for a vendor with pack details. */
 export async function getVendorAssignedPacks(vendorId: string): Promise<VendorPackAssignment[]> {
   const rows = await sql`
     SELECT vpa.id, vpa.vendor_id, vpa.review_pack_id, vpa.assigned_at,
-      rp.name AS pack_name, rp.code AS pack_code,
-      u.name AS assigned_by_name
+      rp.name AS pack_name, rp.code AS pack_code, rp.description AS pack_description,
+      u.name AS assigned_by_name,
+      (SELECT COUNT(*) FROM review_requirements rr WHERE rr.review_pack_id = rp.id AND rr.deleted_at IS NULL)::int AS review_item_count,
+      (SELECT COUNT(*) FROM evidence_requirements er WHERE er.review_pack_id = rp.id AND er.deleted_at IS NULL)::int AS evidence_item_count
     FROM vendor_pack_assignments vpa
     INNER JOIN review_packs rp ON rp.id = vpa.review_pack_id
     LEFT JOIN users u ON u.id = vpa.assigned_by_user_id

@@ -144,13 +144,14 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
               return (
                 <div
                   key={a.id}
-                  className="rounded-xl p-3.5 group transition-all hover:shadow-sm"
+                  className="rounded-xl p-4 group transition-all hover:shadow-sm"
                   style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
+                      {/* Pack name + code */}
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold truncate" style={{ color: '#1e1550' }}>
+                        <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>
                           {a.pack_name}
                         </span>
                         {a.pack_code && (
@@ -159,26 +160,25 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                           </span>
                         )}
                       </div>
-                      {/* Progress bar */}
-                      {applicable > 0 && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${pct}%`,
-                                background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)',
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-bold tabular-nums shrink-0" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>
-                            {passed}/{applicable}
-                          </span>
-                        </div>
+
+                      {/* Description */}
+                      {a.pack_description && (
+                        <p className="text-[11px] mt-1 leading-relaxed" style={{ color: '#8b7fd4' }}>
+                          {a.pack_description.length > 100 ? a.pack_description.substring(0, 100) + '…' : a.pack_description}
+                        </p>
                       )}
-                      {applicable === 0 && (
-                        <p className="text-[10px] mt-1.5" style={{ color: '#a99fd8' }}>No review items yet</p>
-                      )}
+
+                      {/* Counts */}
+                      <div className="flex items-center gap-3 mt-2.5">
+                        <span className="text-[10px] flex items-center gap-1" style={{ color: '#4a4270' }}>
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6c5dd3" strokeWidth="1.2" strokeLinecap="round"><path d="M3 4h10M3 8h7M3 12h5" /></svg>
+                          {a.review_item_count} review item{a.review_item_count !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-[10px] flex items-center gap-1" style={{ color: '#4a4270' }}>
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6c5dd3" strokeWidth="1.2" strokeLinecap="round"><path d="M8 2v5l3 2M14 8a6 6 0 1 1-12 0 6 6 0 0 1 12 0z" /></svg>
+                          {a.evidence_item_count} evidence doc{a.evidence_item_count !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Delete button */}
