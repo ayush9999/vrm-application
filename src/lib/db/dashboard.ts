@@ -476,7 +476,7 @@ export async function getAttentionItems(orgId: string): Promise<AttentionItem[]>
       SELECT i.title, v.name as vendor_name, u.name as owner_name
       FROM issues i
       JOIN vendors v ON v.id = i.vendor_id
-      LEFT JOIN users u ON u.id = i.assigned_to_user_id
+      LEFT JOIN users u ON u.id = i.owner_user_id
       WHERE i.org_id = ${orgId} AND i.deleted_at IS NULL
         AND i.due_date < CURRENT_DATE
         AND i.status IN ('open', 'in_progress', 'blocked', 'waiting_on_vendor', 'waiting_internal_review', 'deferred')
@@ -488,7 +488,7 @@ export async function getAttentionItems(orgId: string): Promise<AttentionItem[]>
       SELECT i.title, i.due_date, v.name as vendor_name, u.name as owner_name
       FROM issues i
       JOIN vendors v ON v.id = i.vendor_id
-      LEFT JOIN users u ON u.id = i.assigned_to_user_id
+      LEFT JOIN users u ON u.id = i.owner_user_id
       WHERE i.org_id = ${orgId} AND i.deleted_at IS NULL
         AND i.due_date >= CURRENT_DATE
         AND i.due_date <= CURRENT_DATE + interval '14 days'
