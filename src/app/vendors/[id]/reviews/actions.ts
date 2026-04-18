@@ -437,38 +437,66 @@ export async function approveVendorReviewAction(
 
     const now = new Date().toISOString()
 
-    // Update vendor_reviews status
-    await updateReviewStatus(vendorReviewId, decision, {
-      completed_at: now,
-      locked_at: now,
-      locked_by_user_id: user.userId,
-    })
+    if (decision === 'sent_back') {
+      // Send back → revert to in_progress
+      await updateReviewStatus(vendorReviewId, 'in_progress', {
+        submitted_at: null,
+      })
 
-    // Lock all child packs
-    const { error: packErr } = await supabase
-      .from('vendor_review_packs')
-      .update({
-        status: decision,
+      // Revert child packs to in_progress
+      const { error: packErr } = await supabase
+        .from('vendor_review_packs')
+        .update({ status: 'in_progress' })
+        .eq('vendor_review_id', vendorReviewId)
+        .eq('org_id', user.orgId)
+        .eq('is_excluded', false)
+        .is('deleted_at', null)
+      if (packErr) throw new Error(packErr.message)
+
+      await logActivity({
+        orgId: user.orgId,
+        vendorId,
+        actorUserId: user.userId,
+        entityType: 'vendor_review',
+        entityId: vendorReviewId,
+        action: 'review_sent_back',
+        title: 'Review sent back for revision',
+        description: comment,
+      })
+    } else {
+      // Approve or approve with exception → lock
+      await updateReviewStatus(vendorReviewId, decision, {
         completed_at: now,
         locked_at: now,
         locked_by_user_id: user.userId,
       })
-      .eq('vendor_review_id', vendorReviewId)
-      .eq('org_id', user.orgId)
-      .eq('is_excluded', false)
-      .is('deleted_at', null)
-    if (packErr) throw new Error(packErr.message)
 
-    await logActivity({
-      orgId: user.orgId,
-      vendorId,
-      actorUserId: user.userId,
-      entityType: 'vendor_review',
-      entityId: vendorReviewId,
-      action: 'review_approved',
-      title: `Review ${decision.replace(/_/g, ' ')}`,
-      description: comment,
-    })
+      // Lock all child packs
+      const { error: packErr } = await supabase
+        .from('vendor_review_packs')
+        .update({
+          status: decision,
+          completed_at: now,
+          locked_at: now,
+          locked_by_user_id: user.userId,
+        })
+        .eq('vendor_review_id', vendorReviewId)
+        .eq('org_id', user.orgId)
+        .eq('is_excluded', false)
+        .is('deleted_at', null)
+      if (packErr) throw new Error(packErr.message)
+
+      await logActivity({
+        orgId: user.orgId,
+        vendorId,
+        actorUserId: user.userId,
+        entityType: 'vendor_review',
+        entityId: vendorReviewId,
+        action: 'review_approved',
+        title: `Review ${decision.replace(/_/g, ' ')}`,
+        description: comment,
+      })
+    }
 
     revalidatePath(`/vendors/${vendorId}`)
     revalidatePath('/reviews')
