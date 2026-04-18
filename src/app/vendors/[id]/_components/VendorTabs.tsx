@@ -133,9 +133,9 @@ export function VendorTabs({
                   {evidenceGroups.reduce((s, g) => s + g.rows.length, 0)}
                 </span>
               )}
-              {tab.id === 'incidents' && incidents.filter(i => i.status === 'open').length > 0 && (
+              {tab.id === 'incidents' && incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed').length > 0 && (
                 <span className="text-xs bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full leading-none">
-                  {incidents.filter(i => i.status === 'open').length}
+                  {incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed').length}
                 </span>
               )}
             </button>
