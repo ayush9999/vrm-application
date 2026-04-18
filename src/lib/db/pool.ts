@@ -34,6 +34,9 @@ const sql = postgres(connectionString, {
   // pgBouncer in transaction mode doesn't support prepared statements
   prepare: false,
 
+  // Supabase requires SSL
+  ssl: 'require',
+
   // Max connections in the local pool (Vercel serverless: keep low)
   max: 5,
 
