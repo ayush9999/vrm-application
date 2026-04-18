@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CreateReviewModal } from './CreateReviewModal'
+import type { ReviewType } from '@/types/review-pack'
 
 interface Vendor { id: string; name: string; vendor_code: string | null }
 interface Pack { id: string; name: string; code: string | null }
@@ -13,11 +14,12 @@ interface Props {
   users: User[]
   createAction: (input: {
     vendorId: string
-    reviewPackId: string
+    packIds: string[]
+    reviewType?: ReviewType
     reviewerUserId: string | null
     approverUserId: string | null
     dueAt: string | null
-  }) => Promise<{ success?: boolean; vrpId?: string; message?: string }>
+  }) => Promise<{ success?: boolean; reviewId?: string; message?: string }>
 }
 
 export function CreateReviewButton({ vendors, packs, users, createAction }: Props) {
