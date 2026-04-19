@@ -1,0 +1,5 @@
+-- Add new review item decision values
+-- These are text columns, not enums, so no ALTER TYPE needed.
+-- This migration exists for documentation only.
+-- The decision column on vendor_review_items is of type text,
+-- so new values ('rejected', 'deferred') work immediately.

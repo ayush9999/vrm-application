@@ -3,7 +3,7 @@
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 export type ReviewPackCadence = 'annual' | 'biannual' | 'on_incident' | 'on_renewal'
-export type ReviewItemDecision = 'not_started' | 'pass' | 'fail' | 'na' | 'needs_follow_up' | 'exception_approved'
+export type ReviewItemDecision = 'not_started' | 'pass' | 'fail' | 'na' | 'needs_follow_up' | 'exception_approved' | 'rejected' | 'deferred'
 export type VendorReviewPackStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'approved_with_exception' | 'blocked' | 'upcoming' | 'awaiting_approval' | 'sent_back' | 'locked'
 export type EvidenceStatus = 'missing' | 'uploaded' | 'under_review' | 'approved' | 'rejected' | 'expired' | 'waived'
 export type ReviewType = 'onboarding' | 'scheduled' | 'on_demand'

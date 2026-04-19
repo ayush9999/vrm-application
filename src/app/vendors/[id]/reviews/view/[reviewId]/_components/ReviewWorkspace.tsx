@@ -38,19 +38,24 @@ const TYPE_STYLE: Record<ReviewType, { label: string; bg: string; color: string 
 }
 
 const DECISION_OPTIONS: { value: ReviewItemDecision; label: string; color: string; bg: string }[] = [
-  { value: 'pass', label: 'Pass', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-  { value: 'fail', label: 'Fail', color: '#e11d48', bg: 'rgba(225,29,72,0.1)' },
-  { value: 'needs_follow_up', label: 'Follow-up', color: '#d97706', bg: 'rgba(245,158,11,0.1)' },
-  { value: 'na', label: 'N/A', color: '#64748b', bg: 'rgba(148,163,184,0.15)' },
+  { value: 'pass',               label: 'Pass',       color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+  { value: 'fail',               label: 'Fail',       color: '#e11d48', bg: 'rgba(225,29,72,0.1)' },
+  { value: 'needs_follow_up',    label: 'Follow-up',  color: '#d97706', bg: 'rgba(245,158,11,0.1)' },
+  { value: 'exception_approved', label: 'Exception',  color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+  { value: 'rejected',           label: 'Rejected',   color: '#be123c', bg: 'rgba(190,18,60,0.1)' },
+  { value: 'deferred',           label: 'Deferred',   color: '#0284c7', bg: 'rgba(14,165,233,0.1)' },
+  { value: 'na',                 label: 'N/A',        color: '#64748b', bg: 'rgba(148,163,184,0.12)' },
 ]
 
 const DECISION_LABEL: Record<string, { label: string; color: string }> = {
-  not_started: { label: 'Pending', color: '#94a3b8' },
-  pass: { label: 'Pass', color: '#059669' },
-  fail: { label: 'Fail', color: '#e11d48' },
-  na: { label: 'N/A', color: '#64748b' },
-  needs_follow_up: { label: 'Follow-up', color: '#d97706' },
-  exception_approved: { label: 'Exception', color: '#7c3aed' },
+  not_started:        { label: 'Pending',    color: '#94a3b8' },
+  pass:               { label: 'Pass',       color: '#059669' },
+  fail:               { label: 'Fail',       color: '#e11d48' },
+  na:                 { label: 'N/A',        color: '#64748b' },
+  needs_follow_up:    { label: 'Follow-up',  color: '#d97706' },
+  exception_approved: { label: 'Exception',  color: '#7c3aed' },
+  rejected:           { label: 'Rejected',   color: '#be123c' },
+  deferred:           { label: 'Deferred',   color: '#0284c7' },
 }
 
 // ─── Props ──────────────────────────────────────────────────────────────────
@@ -86,8 +91,14 @@ export function ReviewWorkspace({
   const [activePack, setActivePack] = useState(packs[0]?.id ?? '')
   const [itemsState, setItemsState] = useState(packItemsMap)
   const [openItemId, setOpenItemId] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [showBulkMenu, setShowBulkMenu] = useState(false)
   const [showApproveForm, setShowApproveForm] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'csv' | 'pdf'>('csv')
+  const [exportSections, setExportSections] = useState({
+    items: true, decisions: true, compliance: true, evidence: true, comments: false,
+  })
   const [approverComment, setApproverComment] = useState('')
 
   const activeStep = getActiveStep(review.status)
@@ -165,6 +176,141 @@ export function ReviewWorkspace({
     })
   }
 
+  const toggleItem = (itemId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }
+
+  const toggleAllCurrentItems = () => {
+    const allIds = currentItems.map((i) => i.id)
+    const allSelected = allIds.every((id) => selectedItems.has(id))
+    if (allSelected) {
+      setSelectedItems(new Set())
+    } else {
+      setSelectedItems(new Set(allIds))
+    }
+  }
+
+  const handleBulkDecision = (decision: ReviewItemDecision) => {
+    setError(null)
+    setShowBulkMenu(false)
+    const itemIds = Array.from(selectedItems)
+    startTransition(async () => {
+      for (const itemId of itemIds) {
+        const r = await setDecisionAction(vendorId, activePack, itemId, decision, null)
+        if (!r.success) {
+          setError(r.message ?? 'Failed')
+          return
+        }
+      }
+      setItemsState((prev) => ({
+        ...prev,
+        [activePack]: prev[activePack].map((i) =>
+          selectedItems.has(i.id) ? { ...i, decision } : i,
+        ),
+      }))
+      setSelectedItems(new Set())
+    })
+  }
+
+  const handleExport = async () => {
+    const allItems: Array<{ packName: string; name: string; decision: string; comment: string | null; refs: string; evidence: string }> = []
+    for (const pack of packs) {
+      const items = itemsState[pack.id] ?? []
+      for (const item of items) {
+        allItems.push({
+          packName: pack.review_pack_name ?? '',
+          name: item.requirement_name ?? '',
+          decision: (DECISION_LABEL[item.decision] ?? DECISION_LABEL.not_started).label,
+          comment: exportSections.comments ? (item.reviewer_comment ?? '') : '',
+          refs: exportSections.compliance ? (item.compliance_references?.map((r) => `${r.standard} ${r.reference}`).join('; ') ?? '') : '',
+          evidence: exportSections.evidence ? (item.linked_evidence_name ? `${item.linked_evidence_name} (${item.linked_evidence_status ?? 'unknown'})` : '') : '',
+        })
+      }
+    }
+
+    if (exportFormat === 'csv') {
+      const esc = (s: string) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      const headers = ['Pack', 'Requirement', 'Decision']
+      if (exportSections.compliance) headers.push('Compliance Refs')
+      if (exportSections.evidence) headers.push('Evidence')
+      if (exportSections.comments) headers.push('Comment')
+
+      const lines = [
+        `# Review: ${review.review_code}`,
+        `# Type: ${review.review_type}`,
+        `# Status: ${review.status}`,
+        `# Exported: ${new Date().toISOString()}`,
+        '',
+        headers.join(','),
+        ...allItems.map((row) => {
+          const cols = [esc(row.packName), esc(row.name), esc(row.decision)]
+          if (exportSections.compliance) cols.push(esc(row.refs))
+          if (exportSections.evidence) cols.push(esc(row.evidence))
+          if (exportSections.comments) cols.push(esc(row.comment ?? ''))
+          return cols.join(',')
+        }),
+      ]
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${review.review_code}-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      const { jsPDF } = await import('jspdf')
+      const autoTable = (await import('jspdf-autotable')).default
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pw = doc.internal.pageSize.getWidth()
+
+      doc.setFontSize(16)
+      doc.setTextColor(30, 21, 80)
+      doc.text(review.review_code, 14, 16)
+      doc.setFontSize(9)
+      doc.setTextColor(139, 127, 212)
+      doc.text(`Type: ${review.review_type} · Status: ${review.status} · Exported: ${new Date().toLocaleString()}`, 14, 22)
+
+      const head = ['Pack', 'Requirement', 'Decision']
+      if (exportSections.compliance) head.push('Compliance')
+      if (exportSections.evidence) head.push('Evidence')
+      if (exportSections.comments) head.push('Comment')
+
+      const body = allItems.map((row) => {
+        const cols = [row.packName, row.name, row.decision]
+        if (exportSections.compliance) cols.push(row.refs)
+        if (exportSections.evidence) cols.push(row.evidence)
+        if (exportSections.comments) cols.push(row.comment ?? '')
+        return cols
+      })
+
+      autoTable(doc, {
+        startY: 28,
+        head: [head],
+        body,
+        theme: 'grid',
+        headStyles: { fillColor: [248, 247, 252], textColor: [108, 93, 211], fontSize: 7, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7, textColor: [30, 21, 80], cellPadding: 2 },
+        alternateRowStyles: { fillColor: [252, 251, 255] },
+        margin: { left: 14, right: 14 },
+      })
+
+      const pageCount = doc.getNumberOfPages()
+      for (let p = 1; p <= pageCount; p++) {
+        doc.setPage(p)
+        doc.setFontSize(7)
+        doc.setTextColor(169, 159, 216)
+        doc.text(`VRM · ${review.review_code} · Page ${p}/${pageCount}`, pw / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
+      }
+      doc.save(`${review.review_code}-${new Date().toISOString().split('T')[0]}.pdf`)
+    }
+    setShowExport(false)
+  }
+
   const handleDecision = (packId: string, itemId: string, decision: ReviewItemDecision) => {
     setError(null)
     startTransition(async () => {
@@ -204,36 +350,15 @@ export function ReviewWorkspace({
 
         {/* Right: readiness + export */}
         <div className="flex items-center gap-4 shrink-0">
-          {/* Export dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowExport((v) => !v)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg"
-              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
-            >
-              ↓ Export
-            </button>
-            {showExport && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
-                <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.15)', boxShadow: '0 4px 16px rgba(109,93,211,0.15)' }}>
-                  {packs.map((pack) => (
-                    <Link
-                      key={pack.id}
-                      href={`/vendors/${vendorId}/reviews/${pack.id}`}
-                      className="block px-3 py-2 text-xs hover:bg-[rgba(109,93,211,0.04)]"
-                      style={{ color: '#1e1550', borderBottom: '1px solid rgba(109,93,211,0.04)' }}
-                      onClick={() => setShowExport(false)}
-                    >
-                      <span className="font-medium">{pack.review_pack_name}</span>
-                      <span className="block text-[10px] mt-0.5" style={{ color: '#8b7fd4' }}>Export from pack detail →</span>
-                    </Link>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Export button */}
+          <button
+            type="button"
+            onClick={() => setShowExport(true)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg"
+            style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+          >
+            ↓ Export
+          </button>
 
           <div className="text-right">
             <div className="text-2xl font-bold tabular-nums" style={{ color: stats.pct >= 80 ? '#059669' : stats.pct >= 50 ? '#6c5dd3' : '#d97706' }}>
@@ -358,7 +483,7 @@ export function ReviewWorkspace({
             return (
               <button
                 key={pack.id}
-                onClick={() => { setActivePack(pack.id); setOpenItemId(null) }}
+                onClick={() => { setActivePack(pack.id); setOpenItemId(null); setSelectedItems(new Set()) }}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all shrink-0"
                 style={isActive
                   ? { background: '#6c5dd3', color: 'white' }
@@ -395,12 +520,60 @@ export function ReviewWorkspace({
         </div>
       )}
 
+      {/* ── Bulk toolbar (when items selected) ── */}
+      {isReviewing && selectedItems.size > 0 && (
+        <div
+          className="rounded-xl mb-3 px-4 py-2.5 flex items-center gap-3"
+          style={{ background: 'rgba(109,93,211,0.06)', border: '1px solid rgba(109,93,211,0.12)' }}
+        >
+          <span className="text-xs font-semibold" style={{ color: '#6c5dd3' }}>
+            {selectedItems.size} selected
+          </span>
+          <span className="text-[10px]" style={{ color: '#8b7fd4' }}>Mark as:</span>
+          {DECISION_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => handleBulkDecision(opt.value)}
+              disabled={isPending}
+              className="text-[10px] font-semibold px-2.5 py-1 rounded-full disabled:opacity-50 transition-all"
+              style={{ background: opt.bg, color: opt.color, border: `1px solid ${opt.color}25` }}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setSelectedItems(new Set())}
+            className="text-[10px] ml-auto"
+            style={{ color: '#a99fd8' }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* ── Items list ── */}
       <div
         className="rounded-xl overflow-hidden"
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
       >
-        {/* Mini progress bar at top of card */}
+        {/* Header row with select all */}
+        {isReviewing && currentItems.length > 0 && (
+          <div
+            className="flex items-center gap-2.5 px-4 py-2"
+            style={{ background: 'rgba(109,93,211,0.02)', borderBottom: '1px solid rgba(109,93,211,0.06)' }}
+          >
+            <input
+              type="checkbox"
+              checked={currentItems.length > 0 && currentItems.every((i) => selectedItems.has(i.id))}
+              onChange={toggleAllCurrentItems}
+              className="w-3.5 h-3.5 rounded"
+              style={{ accentColor: '#6c5dd3' }}
+            />
+            <span className="text-[10px] font-medium" style={{ color: '#8b7fd4' }}>Select all</span>
+          </div>
+        )}
+
+        {/* Progress bar */}
         <div className="h-1" style={{ background: 'rgba(109,93,211,0.04)' }}>
           <div
             className="h-full transition-all duration-500"
@@ -428,33 +601,46 @@ export function ReviewWorkspace({
               : item.linked_evidence_status === 'missing' || item.linked_evidence_status === 'rejected' ? '#e11d48'
               : item.linked_evidence_status === 'uploaded' || item.linked_evidence_status === 'under_review' ? '#d97706'
               : '#94a3b8'
+            const isSelected = selectedItems.has(item.id)
 
             return (
-              <div key={item.id} style={{ borderBottom: i < currentItems.length - 1 ? '1px solid rgba(109,93,211,0.06)' : 'none' }}>
+              <div key={item.id} style={{ borderBottom: i < currentItems.length - 1 ? '1px solid rgba(109,93,211,0.06)' : 'none', background: isSelected ? 'rgba(109,93,211,0.03)' : 'transparent' }}>
                 {/* Item row */}
-                <button
-                  type="button"
-                  onClick={() => setOpenItemId(isOpen ? null : item.id)}
-                  className="w-full flex items-center gap-2.5 px-5 py-3.5 text-left hover:bg-[rgba(109,93,211,0.02)] transition-colors"
-                >
+                <div className="flex items-center gap-2.5 px-4 py-3 hover:bg-[rgba(109,93,211,0.02)] transition-colors">
+                  {/* Checkbox (only when reviewing) */}
+                  {isReviewing && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleItem(item.id)}
+                      className="w-3.5 h-3.5 rounded shrink-0"
+                      style={{ accentColor: '#6c5dd3' }}
+                    />
+                  )}
+
                   {/* Decision indicator */}
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dec.color }} />
 
-                  {/* Item name */}
-                  <span className="flex-1 text-sm min-w-0 truncate" style={{ color: '#1e1550' }}>
+                  {/* Item name — clickable to expand */}
+                  <button
+                    type="button"
+                    onClick={() => setOpenItemId(isOpen ? null : item.id)}
+                    className="flex-1 text-sm text-left min-w-0 truncate"
+                    style={{ color: '#1e1550' }}
+                  >
                     {item.requirement_name}
-                  </span>
+                  </button>
 
-                  {/* Compliance refs — all of them, compact */}
+                  {/* Compliance refs */}
                   {refs.length > 0 && (
                     <span className="flex items-center gap-1 shrink-0">
-                      {refs.slice(0, 3).map((ref, ri) => (
+                      {refs.slice(0, 2).map((ref, ri) => (
                         <span key={ri} className="text-[8px] font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}>
                           {ref.standard} {ref.reference}
                         </span>
                       ))}
-                      {refs.length > 3 && (
-                        <span className="text-[8px]" style={{ color: '#a99fd8' }}>+{refs.length - 3}</span>
+                      {refs.length > 2 && (
+                        <span className="text-[8px]" style={{ color: '#a99fd8' }}>+{refs.length - 2}</span>
                       )}
                     </span>
                   )}
@@ -468,94 +654,87 @@ export function ReviewWorkspace({
                     />
                   )}
 
-                  {/* Decision badge */}
-                  <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase shrink-0"
-                    style={{ background: `${dec.color}14`, color: dec.color }}
-                  >
-                    {dec.label}
-                  </span>
+                  {/* Decision badge — clickable dropdown when reviewing */}
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (isReviewing) setOpenItemId(openItemId === item.id ? null : item.id)
+                      }}
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase transition-all"
+                      style={{
+                        background: `${dec.color}14`,
+                        color: dec.color,
+                        cursor: isReviewing ? 'pointer' : 'default',
+                        border: isReviewing ? `1px solid ${dec.color}30` : 'none',
+                      }}
+                    >
+                      {dec.label} {isReviewing && '▾'}
+                    </button>
+                  </div>
+                </div>
 
-                  {/* Chevron */}
-                  <span className="text-[10px] shrink-0 transition-transform" style={{ color: '#c4bae8', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-                    ▸
-                  </span>
-                </button>
-
-                {/* Expanded section */}
+                {/* Expanded: decision options + details */}
                 {isOpen && (
-                  <div className="px-5 pb-4 pt-2 space-y-3" style={{ background: 'rgba(109,93,211,0.015)' }}>
-
-                    {/* Decision buttons (when reviewing) */}
+                  <div className="px-4 pb-3 pt-1 space-y-2.5" style={{ background: 'rgba(109,93,211,0.015)' }}>
+                    {/* Decision grid (when reviewing) */}
                     {isReviewing && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px]" style={{ color: '#8b7fd4' }}>Decision:</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {DECISION_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
                             onClick={() => handleDecision(activePack, item.id, opt.value)}
                             disabled={isPending}
-                            className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
+                            className="text-[10px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
                             style={
                               item.decision === opt.value
                                 ? { background: opt.color, color: 'white' }
-                                : { background: opt.bg, color: opt.color, border: `1px solid ${opt.color}30` }
+                                : { background: opt.bg, color: opt.color, border: `1px solid ${opt.color}25` }
                             }
                           >
                             {opt.label}
                           </button>
                         ))}
                         {item.creates_remediation_on_fail && (
-                          <span className="text-[10px] ml-auto" style={{ color: '#d97706' }}>
+                          <span className="text-[9px] ml-auto" style={{ color: '#d97706' }}>
                             Failing creates a remediation
                           </span>
                         )}
                       </div>
                     )}
 
-                    {/* Evidence link */}
-                    {hasEvidence && (
-                      <div className="flex items-center gap-2 text-[11px]" style={{ color: '#4a4270' }}>
-                        <span style={{ color: '#8b7fd4' }}>Evidence:</span>
-                        <span className="font-medium">{item.linked_evidence_name}</span>
-                        <span
-                          className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-                          style={{ background: `${evidenceColor}18`, color: evidenceColor }}
-                        >
-                          {item.linked_evidence_status ?? 'unknown'}
+                    {/* Evidence + comment row */}
+                    <div className="flex items-center gap-4 flex-wrap text-[11px]">
+                      {hasEvidence && (
+                        <span style={{ color: '#4a4270' }}>
+                          Evidence: <strong>{item.linked_evidence_name}</strong>
+                          <span className="ml-1 text-[9px] font-bold uppercase" style={{ color: evidenceColor }}>
+                            {item.linked_evidence_status}
+                          </span>
+                          {item.linked_evidence_id && (
+                            <Link
+                              href={`/vendors/${vendorId}?tab=evidence`}
+                              className="ml-1.5 font-medium hover:opacity-70"
+                              style={{ color: '#6c5dd3' }}
+                            >
+                              View
+                            </Link>
+                          )}
                         </span>
-                        {item.linked_evidence_id && (
-                          <Link
-                            href={`/vendors/${vendorId}?tab=evidence`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-medium hover:opacity-70"
-                            style={{ color: '#6c5dd3' }}
-                          >
-                            View
-                          </Link>
-                        )}
-                      </div>
-                    )}
-                    {!hasEvidence && item.linked_evidence_requirement_id && (
-                      <div className="text-[11px]" style={{ color: '#d97706' }}>
-                        No evidence linked yet
-                      </div>
-                    )}
-
-                    {/* Reviewer comment (if any) */}
-                    {item.reviewer_comment && (
-                      <div className="text-[11px] italic" style={{ color: '#6a6860' }}>
-                        &ldquo;{item.reviewer_comment}&rdquo;
-                      </div>
-                    )}
-
-                    {/* Decision info when locked */}
-                    {isLocked && isDecided && !isReviewing && (
-                      <div className="text-[11px]" style={{ color: '#8b7fd4' }}>
-                        Decision: <strong style={{ color: dec.color }}>{dec.label}</strong>
-                        {item.decided_at && <> · {new Date(item.decided_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
-                      </div>
-                    )}
+                      )}
+                      {item.reviewer_comment && (
+                        <span className="italic" style={{ color: '#6a6860' }}>
+                          &ldquo;{item.reviewer_comment}&rdquo;
+                        </span>
+                      )}
+                      {isLocked && isDecided && (
+                        <span style={{ color: '#8b7fd4' }}>
+                          <strong style={{ color: dec.color }}>{dec.label}</strong>
+                          {item.decided_at && <> · {new Date(item.decided_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</>}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -587,6 +766,97 @@ export function ReviewWorkspace({
               Submit for Approval
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Export Modal ── */}
+      {showExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div
+            className="w-full max-w-md rounded-2xl p-5 space-y-4"
+            style={{ background: 'white', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-base font-semibold" style={{ color: '#1e1550' }}>Export Review</h3>
+              <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+                {review.review_code} · {packs.length} pack{packs.length !== 1 ? 's' : ''} · {stats.total} items
+              </p>
+            </div>
+
+            {/* Format */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Format</div>
+              <div className="flex items-center gap-2">
+                {(['csv', 'pdf'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setExportFormat(f)}
+                    className="text-xs font-medium px-4 py-1.5 rounded-full flex-1 uppercase"
+                    style={exportFormat === f ? { background: '#6c5dd3', color: 'white' } : { background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* What to include */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Include</div>
+              <div className="space-y-1">
+                {[
+                  { key: 'items' as const, label: 'Review items & decisions', locked: true },
+                  { key: 'decisions' as const, label: 'Decision status per item', locked: true },
+                  { key: 'compliance' as const, label: 'Compliance references' },
+                  { key: 'evidence' as const, label: 'Evidence status' },
+                  { key: 'comments' as const, label: 'Reviewer comments' },
+                ].map((s) => (
+                  <label key={s.key} className="flex items-center gap-2 cursor-pointer py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={exportSections[s.key]}
+                      onChange={() => {
+                        if (s.locked) return
+                        setExportSections((prev) => ({ ...prev, [s.key]: !prev[s.key] }))
+                      }}
+                      disabled={s.locked}
+                      className="w-3.5 h-3.5 rounded"
+                      style={{ accentColor: '#6c5dd3' }}
+                    />
+                    <span className="text-xs" style={{ color: s.locked ? '#a99fd8' : '#4a4270' }}>{s.label}</span>
+                    {s.locked && <span className="text-[9px]" style={{ color: '#c4bae8' }}>Required</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Packs included */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#8b7fd4' }}>Packs included</div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {packs.map((p) => (
+                  <span key={p.id} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+                    {p.review_pack_name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
+              <button onClick={() => setShowExport(false)} className="text-xs px-3 py-1.5" style={{ color: '#a99fd8' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={isPending}
+                className="text-xs font-semibold px-4 py-1.5 rounded-full text-white disabled:opacity-50"
+                style={{ background: '#6c5dd3' }}
+              >
+                {isPending ? 'Exporting…' : `↓ Download ${exportFormat.toUpperCase()}`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
