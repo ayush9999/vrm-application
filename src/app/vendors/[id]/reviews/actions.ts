@@ -398,6 +398,20 @@ export async function submitVendorReviewForApprovalAction(
 ): Promise<{ success?: boolean; message?: string }> {
   try {
     const user = await requireCurrentUser()
+    const supabase = await createServerClient()
+
+    // Validate all non-NA items across all packs have a decision
+    const { data: pendingItems } = await supabase
+      .from('vendor_review_items')
+      .select('id, decision, vendor_review_packs!inner(vendor_review_id, is_excluded)')
+      .eq('vendor_review_packs.vendor_review_id', vendorReviewId)
+      .eq('vendor_review_packs.is_excluded', false)
+      .eq('decision', 'not_started')
+
+    const pendingCount = (pendingItems ?? []).length
+    if (pendingCount > 0) {
+      return { message: `Cannot submit — ${pendingCount} item${pendingCount > 1 ? 's' : ''} still pending review` }
+    }
 
     await updateReviewStatus(vendorReviewId, 'submitted', {
       submitted_at: new Date().toISOString(),
@@ -496,6 +510,72 @@ export async function approveVendorReviewAction(
         title: `Review ${decision.replace(/_/g, ' ')}`,
         description: comment,
       })
+
+      // Auto-schedule next review based on pack cadences
+      try {
+        const { data: approvedPacks } = await supabase
+          .from('vendor_review_packs')
+          .select(`
+            review_pack_id, reviewer_user_id, approver_user_id,
+            review_packs!inner ( review_cadence )
+          `)
+          .eq('vendor_review_id', vendorReviewId)
+          .eq('is_excluded', false)
+          .is('deleted_at', null)
+
+        if (approvedPacks && approvedPacks.length > 0) {
+          // Find the longest cadence to determine next review due date
+          const cadenceMs: Record<string, number> = {
+            annual: 365 * 86_400_000,
+            biannual: 182 * 86_400_000,
+            quarterly: 91 * 86_400_000,
+          }
+          let maxMs = 0
+          const packIds: string[] = []
+
+          for (const p of approvedPacks as unknown as Array<{
+            review_pack_id: string
+            review_packs: { review_cadence: string } | { review_cadence: string }[]
+          }>) {
+            const rpData = Array.isArray(p.review_packs) ? p.review_packs[0] : p.review_packs
+            const ms = cadenceMs[rpData?.review_cadence ?? ''] ?? 0
+            if (ms > maxMs) maxMs = ms
+
+            // Only include packs still in vendor's assignments
+            const { data: assignment } = await supabase
+              .from('vendor_pack_assignments')
+              .select('id')
+              .eq('vendor_id', vendorId)
+              .eq('review_pack_id', p.review_pack_id)
+              .is('removed_at', null)
+              .maybeSingle()
+            if (assignment) packIds.push(p.review_pack_id)
+          }
+
+          // Create next scheduled review if there's a cadence and assigned packs
+          if (maxMs > 0 && packIds.length > 0) {
+            const { createVendorReview } = await import('@/lib/db/vendor-reviews')
+            await createVendorReview({
+              orgId: user.orgId,
+              vendorId,
+              reviewType: 'scheduled',
+              dueAt: new Date(Date.now() + maxMs).toISOString(),
+              packIds,
+              createdByUserId: user.userId,
+            })
+          }
+        }
+      } catch {
+        // Auto-scheduling failure shouldn't block the approval
+      }
+
+      // Capture readiness snapshot
+      try {
+        const { captureReadinessSnapshot } = await import('@/lib/db/readiness-snapshots')
+        await captureReadinessSnapshot(vendorId)
+      } catch {
+        // Snapshot failure shouldn't block the approval
+      }
     }
 
     revalidatePath(`/vendors/${vendorId}`)

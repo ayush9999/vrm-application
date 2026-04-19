@@ -10,6 +10,7 @@ import {
   startVendorReviewAction,
   submitVendorReviewForApprovalAction,
   approveVendorReviewAction,
+  reopenVendorReviewAction,
 } from '@/app/vendors/[id]/reviews/actions'
 import {
   setReviewItemDecisionAction,
@@ -69,6 +70,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
         startReviewAction={startVendorReviewAction}
         submitForApprovalAction={submitVendorReviewForApprovalAction}
         approveReviewAction={approveVendorReviewAction}
+        reopenReviewAction={reopenVendorReviewAction}
       />
     </div>
   )

@@ -52,6 +52,20 @@ export async function setReviewItemDecisionAction(
 ): Promise<{ message?: string; success?: boolean; remediationId?: string }> {
   try {
     const user = await requireCurrentUser()
+
+    // Verify the parent pack is in a reviewable state
+    const supabaseCheck = await createServerClient()
+    const { data: packRow } = await supabaseCheck
+      .from('vendor_review_packs')
+      .select('status')
+      .eq('id', packId)
+      .maybeSingle()
+    if (!packRow) return { message: 'Review pack not found' }
+    const reviewableStatuses = ['in_progress', 'sent_back']
+    if (!reviewableStatuses.includes((packRow as { status: string }).status)) {
+      return { message: 'Cannot modify decisions — review is not in progress' }
+    }
+
     await updateReviewItemDecision(itemId, decision, comment, user.userId)
 
     let remediationId: string | undefined

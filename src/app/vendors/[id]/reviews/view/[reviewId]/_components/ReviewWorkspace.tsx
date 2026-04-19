@@ -70,6 +70,7 @@ interface Props {
   startReviewAction: (vendorId: string, reviewId: string) => Promise<{ success?: boolean; message?: string }>
   submitForApprovalAction: (vendorId: string, reviewId: string) => Promise<{ success?: boolean; message?: string }>
   approveReviewAction: (vendorId: string, reviewId: string, decision: 'approved' | 'approved_with_exception' | 'sent_back', comment: string | null) => Promise<{ success?: boolean; message?: string }>
+  reopenReviewAction?: (vendorId: string, reviewId: string) => Promise<{ success?: boolean; message?: string }>
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ interface Props {
 export function ReviewWorkspace({
   vendorId, review, packs, packItemsMap, orgUsers,
   setDecisionAction, aiAssistAction, uploadEvidenceAction,
-  startReviewAction, submitForApprovalAction, approveReviewAction,
+  startReviewAction, submitForApprovalAction, approveReviewAction, reopenReviewAction,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -86,6 +87,7 @@ export function ReviewWorkspace({
   const [itemsState, setItemsState] = useState(packItemsMap)
   const [openItemId, setOpenItemId] = useState<string | null>(null)
   const [showApproveForm, setShowApproveForm] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const [approverComment, setApproverComment] = useState('')
 
   const activeStep = getActiveStep(review.status)
@@ -152,6 +154,17 @@ export function ReviewWorkspace({
     })
   }
 
+  const handleReopen = () => {
+    if (!reopenReviewAction) return
+    if (!confirm('Are you sure you want to reopen this review? It will revert to in-progress and unlock all items.')) return
+    setError(null)
+    startTransition(async () => {
+      const r = await reopenReviewAction(vendorId, review.id)
+      if (r.success) router.refresh()
+      else setError(r.message ?? 'Failed to reopen')
+    })
+  }
+
   const handleDecision = (packId: string, itemId: string, decision: ReviewItemDecision) => {
     setError(null)
     startTransition(async () => {
@@ -189,13 +202,46 @@ export function ReviewWorkspace({
           </p>
         </div>
 
-        {/* Overall readiness */}
-        <div className="text-right shrink-0">
-          <div className="text-2xl font-bold tabular-nums" style={{ color: stats.pct >= 80 ? '#059669' : stats.pct >= 50 ? '#6c5dd3' : '#d97706' }}>
-            {stats.pct}%
+        {/* Right: readiness + export */}
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Export dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExport((v) => !v)}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
+            >
+              ↓ Export
+            </button>
+            {showExport && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowExport(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.15)', boxShadow: '0 4px 16px rgba(109,93,211,0.15)' }}>
+                  {packs.map((pack) => (
+                    <Link
+                      key={pack.id}
+                      href={`/vendors/${vendorId}/reviews/${pack.id}`}
+                      className="block px-3 py-2 text-xs hover:bg-[rgba(109,93,211,0.04)]"
+                      style={{ color: '#1e1550', borderBottom: '1px solid rgba(109,93,211,0.04)' }}
+                      onClick={() => setShowExport(false)}
+                    >
+                      <span className="font-medium">{pack.review_pack_name}</span>
+                      <span className="block text-[10px] mt-0.5" style={{ color: '#8b7fd4' }}>Export from pack detail →</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>
-            {stats.passed}/{stats.total} complete
+
+          <div className="text-right">
+            <div className="text-2xl font-bold tabular-nums" style={{ color: stats.pct >= 80 ? '#059669' : stats.pct >= 50 ? '#6c5dd3' : '#d97706' }}>
+              {stats.pct}%
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>
+              {stats.passed}/{stats.total} complete
+            </div>
           </div>
         </div>
       </div>
@@ -239,56 +285,64 @@ export function ReviewWorkspace({
           <div className="text-sm flex-1" style={{ color: '#4a4270' }}>
             {review.status === 'not_started' && <>Click <strong>Start Review</strong> to begin reviewing all packs.</>}
             {review.status === 'in_progress' && <>{stats.pending > 0 ? <><strong>{stats.pending}</strong> items remaining. </> : <>All items reviewed. </>}Submit when ready.</>}
-            {review.status === 'submitted' && <>Waiting for approver decision.</>}
-            {isLocked && <>Review finalized. All items are read-only.</>}
+            {review.status === 'submitted' && <>Review submitted. Approve, send back, or approve with exception.</>}
+            {isLocked && <>Review finalized. All items are read-only.{reopenReviewAction && <> Need changes? Reopen the review.</>}</>}
           </div>
 
-          {review.status === 'not_started' && (
-            <button onClick={handleStart} disabled={isPending}
-              className="text-sm font-semibold px-6 py-2.5 rounded-full text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 4px 12px rgba(108,93,211,0.3)' }}>
-              {isPending ? 'Starting…' : 'Start Review'}
-            </button>
-          )}
-          {review.status === 'in_progress' && (
-            <button onClick={handleSubmit} disabled={isPending}
-              className="text-sm font-semibold px-6 py-2.5 rounded-full text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 4px 12px rgba(108,93,211,0.3)' }}>
-              {isPending ? 'Submitting…' : 'Submit for Approval'}
-            </button>
-          )}
-          {review.status === 'submitted' && !showApproveForm && (
-            <button onClick={() => setShowApproveForm(true)}
-              className="text-sm font-semibold px-6 py-2.5 rounded-full text-white"
-              style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', boxShadow: '0 4px 12px rgba(5,150,105,0.3)' }}>
-              Review & Approve
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {review.status === 'not_started' && (
+              <button onClick={handleStart} disabled={isPending}
+                className="text-sm font-semibold px-6 py-2.5 rounded-full text-white disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 4px 12px rgba(108,93,211,0.3)' }}>
+                {isPending ? 'Starting…' : 'Start Review'}
+              </button>
+            )}
+            {review.status === 'in_progress' && (
+              <button onClick={handleSubmit} disabled={isPending}
+                className="text-sm font-semibold px-6 py-2.5 rounded-full text-white disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 4px 12px rgba(108,93,211,0.3)' }}>
+                {isPending ? 'Submitting…' : 'Submit for Approval'}
+              </button>
+            )}
+            {review.status === 'submitted' && (
+              <>
+                <button onClick={() => handleApprove('sent_back')} disabled={isPending}
+                  className="text-sm font-semibold px-4 py-2 rounded-full disabled:opacity-50"
+                  style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48', border: '1px solid rgba(225,29,72,0.2)' }}>
+                  {isPending ? '…' : 'Send Back'}
+                </button>
+                <button onClick={() => handleApprove('approved_with_exception')} disabled={isPending}
+                  className="text-sm font-semibold px-4 py-2 rounded-full text-white disabled:opacity-50"
+                  style={{ background: '#7c3aed' }}>
+                  {isPending ? '…' : 'Approve with Exception'}
+                </button>
+                <button onClick={() => handleApprove('approved')} disabled={isPending}
+                  className="text-sm font-semibold px-5 py-2 rounded-full text-white disabled:opacity-50"
+                  style={{ background: '#059669', boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
+                  {isPending ? '…' : 'Approve'}
+                </button>
+              </>
+            )}
+            {isLocked && reopenReviewAction && (
+              <button onClick={handleReopen} disabled={isPending}
+                className="text-sm font-medium px-4 py-2 rounded-full disabled:opacity-50"
+                style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}>
+                {isPending ? 'Reopening…' : 'Reopen Review'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Approve form */}
-        {showApproveForm && (
-          <div className="px-5 pb-4 space-y-3" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
-            <textarea value={approverComment} onChange={(e) => setApproverComment(e.target.value)}
-              rows={2} placeholder="Comment (optional for approval, recommended for send-back)…"
-              className="w-full rounded-lg px-3 py-2 text-sm mt-3 focus:outline-none"
-              style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }} />
-            <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => handleApprove('approved')} disabled={isPending}
-                className="text-sm font-semibold px-5 py-2 rounded-full text-white disabled:opacity-50" style={{ background: '#059669' }}>
-                Approve
-              </button>
-              <button onClick={() => handleApprove('approved_with_exception')} disabled={isPending}
-                className="text-sm font-semibold px-5 py-2 rounded-full text-white disabled:opacity-50" style={{ background: '#7c3aed' }}>
-                Approve with Exception
-              </button>
-              <button onClick={() => handleApprove('sent_back')} disabled={isPending}
-                className="text-sm font-semibold px-5 py-2 rounded-full disabled:opacity-50"
-                style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
-                Send Back
-              </button>
-              <button onClick={() => setShowApproveForm(false)} className="text-sm px-3 py-2" style={{ color: '#a99fd8' }}>Cancel</button>
-            </div>
+        {/* Comment field for submitted state */}
+        {review.status === 'submitted' && (
+          <div className="px-5 pb-3">
+            <input
+              value={approverComment}
+              onChange={(e) => setApproverComment(e.target.value)}
+              placeholder="Add a comment (optional for approval, recommended for send-back)…"
+              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+              style={{ border: '1px solid rgba(109,93,211,0.15)', color: '#1e1550' }}
+            />
           </div>
         )}
 
