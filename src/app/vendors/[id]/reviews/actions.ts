@@ -572,7 +572,21 @@ export async function approveVendorReviewAction(
       // Capture readiness snapshot
       try {
         const { captureReadinessSnapshot } = await import('@/lib/db/readiness-snapshots')
-        await captureReadinessSnapshot(vendorId)
+        // Get vendor's current approval status for the snapshot
+        const { data: vendorRow } = await supabase
+          .from('vendors')
+          .select('approval_status')
+          .eq('id', vendorId)
+          .maybeSingle()
+        if (vendorRow) {
+          await captureReadinessSnapshot({
+            orgId: user.orgId,
+            vendorId,
+            approvalStatus: (vendorRow as { approval_status: string }).approval_status as import('@/types/vendor').VendorApprovalStatus,
+            trigger: 'review_approved',
+            triggerUserId: user.userId,
+          })
+        }
       } catch {
         // Snapshot failure shouldn't block the approval
       }
