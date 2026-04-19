@@ -62,6 +62,8 @@ const DECISION_LABEL: Record<string, { label: string; color: string }> = {
 
 interface Props {
   vendorId: string
+  vendorName: string
+  vendorCode: string | null
   review: VendorReview
   packs: VendorReviewPack[]
   packItemsMap: Record<string, VendorReviewItem[]>
@@ -81,7 +83,7 @@ interface Props {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function ReviewWorkspace({
-  vendorId, review, packs, packItemsMap, orgUsers,
+  vendorId, vendorName, vendorCode, review, packs, packItemsMap, orgUsers,
   setDecisionAction, aiAssistAction, uploadEvidenceAction,
   startReviewAction, submitForApprovalAction, approveReviewAction, reopenReviewAction,
 }: Props) {
@@ -267,46 +269,209 @@ export function ReviewWorkspace({
       const autoTable = (await import('jspdf-autotable')).default
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pw = doc.internal.pageSize.getWidth()
+      const ph = doc.internal.pageSize.getHeight()
+      const ml = 16
+      const mr = pw - 16
+      let y = 16
 
-      doc.setFontSize(16)
-      doc.setTextColor(30, 21, 80)
-      doc.text(review.review_code, 14, 16)
+      // ── Header bar ──
+      doc.setFillColor(30, 21, 80)
+      doc.rect(0, 0, pw, 32, 'F')
+      doc.setFontSize(14)
+      doc.setTextColor(255, 255, 255)
+      doc.text('Vendor Risk Management', ml, 12)
+      doc.setFontSize(8)
+      doc.setTextColor(200, 195, 230)
+      doc.text('CONFIDENTIAL', mr, 12, { align: 'right' })
       doc.setFontSize(9)
-      doc.setTextColor(139, 127, 212)
-      doc.text(`Type: ${review.review_type} · Status: ${review.status} · Exported: ${new Date().toLocaleString()}`, 14, 22)
+      doc.setTextColor(169, 159, 216)
+      doc.text(`${vendorName}${vendorCode ? ` (${vendorCode})` : ''}`, ml, 20)
+      doc.text(`Review Report · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`, ml, 26)
+      y = 40
 
-      const head = ['Pack', 'Requirement', 'Decision']
-      if (exportSections.compliance) head.push('Compliance')
-      if (exportSections.evidence) head.push('Evidence')
-      if (exportSections.comments) head.push('Comment')
+      // ── Review info section ──
+      doc.setFontSize(18)
+      doc.setTextColor(30, 21, 80)
+      doc.text(review.review_code, ml, y)
 
-      const body = allItems.map((row) => {
-        const cols = [row.packName, row.name, row.decision]
-        if (exportSections.compliance) cols.push(row.refs)
-        if (exportSections.evidence) cols.push(row.evidence)
-        if (exportSections.comments) cols.push(row.comment ?? '')
-        return cols
+      doc.setFontSize(8)
+      doc.setTextColor(108, 93, 211)
+      doc.text(review.review_type.toUpperCase(), ml + doc.getTextWidth(review.review_code) + 4, y)
+      y += 6
+
+      doc.setFontSize(9)
+      doc.setTextColor(100, 95, 140)
+      const metaItems = [
+        `Status: ${review.status.replace(/_/g, ' ')}`,
+        review.reviewer_name ? `Reviewer: ${review.reviewer_name}` : null,
+        review.approver_name ? `Approver: ${review.approver_name}` : null,
+        review.due_at ? `Due: ${new Date(review.due_at).toLocaleDateString()}` : null,
+      ].filter(Boolean)
+      doc.text(metaItems.join('  ·  '), ml, y)
+      y += 10
+
+      // ── Summary stats ──
+      doc.setDrawColor(108, 93, 211)
+      doc.setLineWidth(0.3)
+      doc.line(ml, y, mr, y)
+      y += 6
+
+      const statItems = [
+        { label: 'READINESS', value: `${stats.pct}%` },
+        { label: 'TOTAL', value: `${stats.total}` },
+        { label: 'PASSED', value: `${stats.passed}` },
+        { label: 'FAILED', value: `${stats.failed}` },
+        { label: 'PENDING', value: `${stats.pending}` },
+        { label: 'PACKS', value: `${packs.length}` },
+      ]
+      const statW = (mr - ml) / statItems.length
+      statItems.forEach((s, i) => {
+        const x = ml + i * statW + statW / 2
+        doc.setFontSize(16)
+        doc.setTextColor(30, 21, 80)
+        doc.text(s.value, x, y + 2, { align: 'center' })
+        doc.setFontSize(6)
+        doc.setTextColor(139, 127, 212)
+        doc.text(s.label, x, y + 7, { align: 'center' })
       })
+      y += 14
 
-      autoTable(doc, {
-        startY: 28,
-        head: [head],
-        body,
-        theme: 'grid',
-        headStyles: { fillColor: [248, 247, 252], textColor: [108, 93, 211], fontSize: 7, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7, textColor: [30, 21, 80], cellPadding: 2 },
-        alternateRowStyles: { fillColor: [252, 251, 255] },
-        margin: { left: 14, right: 14 },
-      })
-
-      const pageCount = doc.getNumberOfPages()
-      for (let p = 1; p <= pageCount; p++) {
-        doc.setPage(p)
-        doc.setFontSize(7)
-        doc.setTextColor(169, 159, 216)
-        doc.text(`VRM · ${review.review_code} · Page ${p}/${pageCount}`, pw / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
+      // ── Readiness bar ──
+      const barW = mr - ml
+      doc.setFillColor(241, 239, 232)
+      doc.roundedRect(ml, y, barW, 3, 1.5, 1.5, 'F')
+      if (stats.pct > 0) {
+        const fillColor = stats.pct >= 80 ? [5, 150, 105] : stats.pct >= 50 ? [108, 93, 211] : [217, 119, 6]
+        doc.setFillColor(fillColor[0], fillColor[1], fillColor[2])
+        doc.roundedRect(ml, y, barW * stats.pct / 100, 3, 1.5, 1.5, 'F')
       }
-      doc.save(`${review.review_code}-${new Date().toISOString().split('T')[0]}.pdf`)
+      y += 8
+
+      // ── Packs included ──
+      doc.setFontSize(7)
+      doc.setTextColor(139, 127, 212)
+      doc.text('PACKS INCLUDED:', ml, y)
+      doc.setTextColor(30, 21, 80)
+      doc.text(packs.map((p) => p.review_pack_name ?? '').join('  ·  '), ml + 28, y)
+      y += 8
+
+      doc.setDrawColor(230, 228, 220)
+      doc.setLineWidth(0.2)
+      doc.line(ml, y, mr, y)
+      y += 6
+
+      // ── Per-pack tables ──
+      for (const pack of packs) {
+        const packItems = itemsState[pack.id] ?? []
+        if (packItems.length === 0) continue
+
+        // Check if we need a new page
+        if (y > ph - 40) { doc.addPage(); y = 16 }
+
+        // Pack header
+        doc.setFontSize(11)
+        doc.setTextColor(108, 93, 211)
+        doc.text(pack.review_pack_name ?? 'Pack', ml, y)
+        if (pack.review_pack_code) {
+          doc.setFontSize(7)
+          doc.setTextColor(139, 127, 212)
+          doc.text(pack.review_pack_code, ml + doc.getTextWidth(pack.review_pack_name ?? '') + 3, y)
+        }
+
+        // Pack-level stats
+        const pApplicable = packItems.filter((i) => i.decision !== 'na').length
+        const pPassed = packItems.filter((i) => i.decision === 'pass' || i.decision === 'exception_approved').length
+        const pPct = pApplicable > 0 ? Math.round((pPassed / pApplicable) * 100) : 0
+        doc.setFontSize(8)
+        doc.setTextColor(100, 95, 140)
+        doc.text(`${pPassed}/${pApplicable} passed · ${pPct}%`, mr, y, { align: 'right' })
+        y += 3
+
+        const head = ['#', 'Requirement', 'Decision']
+        if (exportSections.compliance) head.push('Compliance')
+        if (exportSections.evidence) head.push('Evidence')
+        if (exportSections.comments) head.push('Comment')
+
+        const body = packItems.map((item, idx) => {
+          const decLabel = (DECISION_LABEL[item.decision] ?? DECISION_LABEL.not_started).label
+          const cols: string[] = [
+            String(idx + 1),
+            item.requirement_name ?? '',
+            decLabel,
+          ]
+          if (exportSections.compliance) {
+            cols.push(item.compliance_references?.map((r) => `${r.standard} ${r.reference}`).join(', ') ?? '')
+          }
+          if (exportSections.evidence) {
+            cols.push(item.linked_evidence_name ? `${item.linked_evidence_name} (${item.linked_evidence_status ?? '?'})` : '')
+          }
+          if (exportSections.comments) {
+            cols.push(item.reviewer_comment ?? '')
+          }
+          return cols
+        })
+
+        autoTable(doc, {
+          startY: y,
+          head: [head],
+          body,
+          theme: 'grid',
+          headStyles: { fillColor: [248, 247, 252], textColor: [108, 93, 211], fontSize: 6.5, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 7, textColor: [30, 21, 80], cellPadding: 2 },
+          columnStyles: { 0: { cellWidth: 8, halign: 'center' } },
+          alternateRowStyles: { fillColor: [252, 251, 255] },
+          margin: { left: ml, right: 16 },
+          didParseCell(hookData) {
+            if (hookData.section === 'body' && hookData.column.index === 2) {
+              const v = hookData.cell.raw as string
+              if (v === 'Pass') hookData.cell.styles.textColor = [5, 150, 105]
+              else if (v === 'Fail' || v === 'Rejected') hookData.cell.styles.textColor = [225, 29, 72]
+              else if (v === 'Follow-up' || v === 'Deferred') hookData.cell.styles.textColor = [217, 119, 6]
+              else if (v === 'Exception') hookData.cell.styles.textColor = [124, 58, 237]
+              hookData.cell.styles.fontStyle = 'bold'
+            }
+          },
+        })
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+      }
+
+      // ── Sign-off section ──
+      if (y > ph - 50) { doc.addPage(); y = 16 }
+      doc.setDrawColor(108, 93, 211)
+      doc.setLineWidth(0.3)
+      doc.line(ml, y, mr, y)
+      y += 8
+      doc.setFontSize(9)
+      doc.setTextColor(30, 21, 80)
+      doc.text('Sign-off', ml, y)
+      y += 8
+
+      doc.setFontSize(8)
+      doc.setTextColor(100, 95, 140)
+      const signRows = [
+        ['Reviewed by:', review.reviewer_name ?? '________________________', 'Date: ____________'],
+        ['Approved by:', review.approver_name ?? '________________________', 'Date: ____________'],
+      ]
+      for (const row of signRows) {
+        doc.text(row[0], ml, y)
+        doc.text(row[1], ml + 25, y)
+        doc.text(row[2], ml + 100, y)
+        y += 8
+      }
+
+      // ── Footer on all pages ──
+      const totalPages = doc.getNumberOfPages()
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p)
+        doc.setFontSize(6.5)
+        doc.setTextColor(169, 159, 216)
+        doc.text(
+          `Generated from VRM · ${review.review_code} · ${vendorName} · ${new Date().toLocaleString()} · Confidential · Page ${p} of ${totalPages}`,
+          pw / 2, ph - 6, { align: 'center' },
+        )
+      }
+
+      doc.save(`${review.review_code}-${vendorCode ?? 'vendor'}-${new Date().toISOString().split('T')[0]}.pdf`)
     }
     setShowExport(false)
   }

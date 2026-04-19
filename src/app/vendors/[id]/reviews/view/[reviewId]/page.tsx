@@ -60,6 +60,8 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
       <ReviewWorkspace
         vendorId={vendorId}
+        vendorName={vendor.name}
+        vendorCode={vendor.vendor_code ?? null}
         review={review}
         packs={packs}
         packItemsMap={packItemsMap}
