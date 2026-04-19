@@ -583,7 +583,7 @@ export async function approveVendorReviewAction(
             orgId: user.orgId,
             vendorId,
             approvalStatus: (vendorRow as { approval_status: string }).approval_status as import('@/types/vendor').VendorApprovalStatus,
-            trigger: 'review_approved',
+            trigger: 'pack_completed',
             triggerUserId: user.userId,
           })
         }
