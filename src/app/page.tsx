@@ -4,6 +4,7 @@ import { getCachedDashboardData } from '@/lib/db/cached'
 import { getProgrammeHealth, getPackReadiness, getAttentionItems } from '@/lib/db/dashboard'
 import { GaugeChart, RadarChart } from './_components/DashboardCharts'
 import { InfoPopover } from './_components/InfoPopover'
+import { DashboardTileModal } from './_components/DashboardTileModal'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -196,7 +197,8 @@ export default async function DashboardPage() {
         {/* ── Main 3-col Grid ── */}
         <div className="grid gap-2.5" style={{ gridTemplateColumns: '1fr 1fr 1.1fr' }}>
           {/* Column 1: Programme Health */}
-          <div style={cardStyle} className="flex flex-col">
+          <DashboardTileModal type="programme" health={health}>
+          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -339,9 +341,11 @@ export default async function DashboardPage() {
               )
             })()}
           </div>
+          </DashboardTileModal>
 
           {/* Column 2: Pack Readiness Radar */}
-          <div style={cardStyle} className="flex flex-col">
+          <DashboardTileModal type="radar" packReadiness={packReadiness}>
+          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -397,9 +401,11 @@ export default async function DashboardPage() {
               Each axis = a review pack &middot; distance from centre = readiness %
             </div>
           </div>
+          </DashboardTileModal>
 
           {/* Column 3: Readiness by review pack (horizontal bars) */}
-          <div style={cardStyle} className="flex flex-col">
+          <DashboardTileModal type="bars" packReadiness={packReadiness}>
+          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -470,6 +476,7 @@ export default async function DashboardPage() {
               )}
             </div>
           </div>
+          </DashboardTileModal>
         </div>
 
         {/* ── Attention Section ── */}

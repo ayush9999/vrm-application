@@ -24,7 +24,7 @@ export function AttentionBell({ items }: Props) {
   const redCount = realItems.filter((i) => i.badgeStyle === 'red').length
 
   return (
-    <div className="fixed top-4 right-5 z-40">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
@@ -193,12 +193,12 @@ export function AttentionBell({ items }: Props) {
                 style={{ borderTop: '1px solid rgba(109,93,211,0.08)', background: 'rgba(109,93,211,0.02)' }}
               >
                 <Link
-                  href="/"
+                  href="/attention"
                   onClick={() => setIsOpen(false)}
                   className="text-xs font-medium"
                   style={{ color: '#6c5dd3' }}
                 >
-                  View on dashboard →
+                  Open Attention Center →
                 </Link>
               </div>
             )}

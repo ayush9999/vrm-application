@@ -79,7 +79,7 @@ export function SidebarShell({ children, user, attentionItems = [] }: SidebarShe
 
       {/* Main content — aurora + dot grid */}
       <main
-        className="flex-1 overflow-auto relative"
+        className="flex-1 flex flex-col overflow-hidden"
         style={{
           backgroundColor: '#ecedf2',
           backgroundImage: [
@@ -89,8 +89,23 @@ export function SidebarShell({ children, user, attentionItems = [] }: SidebarShe
           backgroundSize: 'auto, 20px 20px',
         }}
       >
-        <AttentionBell items={attentionItems} />
-        {children}
+        {/* Sticky topbar */}
+        <div
+          className="flex items-center justify-end shrink-0 px-6"
+          style={{
+            height: 52,
+            background: 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(8px)',
+            borderBottom: '1px solid rgba(109,93,211,0.08)',
+          }}
+        >
+          <AttentionBell items={attentionItems} />
+        </div>
+
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
       </main>
     </div>
   )

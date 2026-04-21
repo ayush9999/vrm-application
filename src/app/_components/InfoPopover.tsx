@@ -16,11 +16,11 @@ export function InfoPopover({ title, children }: Props) {
         type="button"
         onClick={() => setIsOpen((v) => !v)}
         className="w-4 h-4 rounded-full flex items-center justify-center transition-colors hover:opacity-80"
-        style={{ background: 'rgba(109,93,211,0.1)', color: '#6c5dd3' }}
+        style={{ background: 'rgba(109,93,211,0.1)', color: '#6c5dd3', fontFamily: 'Georgia, serif' }}
         title="What is this?"
         aria-label="Information"
       >
-        <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1 }}>?</span>
+        <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1, fontStyle: 'italic' }}>i</span>
       </button>
 
       {isOpen && (
