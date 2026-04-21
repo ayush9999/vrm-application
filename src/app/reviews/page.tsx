@@ -9,18 +9,38 @@ import type { ReviewVendorRow } from '@/lib/db/reviews-by-vendor'
 import { CreateReviewButton } from './_components/CreateReviewButton'
 import { createReviewAction } from './create-actions'
 
-export default async function ReviewsPage() {
+interface PageProps {
+  searchParams: Promise<{ filter?: string }>
+}
+
+export default async function ReviewsPage({ searchParams }: PageProps) {
   const user = await requireCurrentUser()
-  const [vendors, vendorsPage, packs, orgUsers] = await Promise.all([
+  const sp = await searchParams
+  const filter = sp.filter
+
+  const [allVendors2, vendorsPage, packs, orgUsers] = await Promise.all([
     getCachedReviewsByVendor(user.orgId),
     getVendors(user.orgId, { pageSize: 500 }),
     getReviewPacks(user.orgId),
     getOrgUsers(user.orgId),
   ])
+
+  // Apply filter
+  const today = new Date()
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+  const todayStr = today.toISOString().split('T')[0]
+
+  let vendors = allVendors2
+  if (filter === 'due') {
+    // Only vendors with next_due_at within this month
+    vendors = allVendors2.filter((v) => v.next_due_at && String(v.next_due_at).split('T')[0] <= endOfMonth)
+  } else if (filter === 'overdue') {
+    vendors = allVendors2.filter((v) => v.overdue_count > 0)
+  }
+
   const allVendors = vendorsPage.rows.map((v) => ({ id: v.id, name: v.name, vendor_code: v.vendor_code }))
   const allPacks = packs.map((p) => ({ id: p.id, name: p.name, code: p.code }))
 
-  const todayStr = new Date().toISOString().split('T')[0]
   const totalActive = vendors.reduce((s, v) => s + v.active_packs, 0)
   const totalOverdue = vendors.reduce((s, v) => s + v.overdue_count, 0)
   const totalUpcoming = vendors.reduce((s, v) => s + v.upcoming_packs, 0)
@@ -42,6 +62,21 @@ export default async function ReviewsPage() {
           createAction={createReviewAction}
         />
       </div>
+
+      {/* Filter banner */}
+      {filter && (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl" style={{ background: 'rgba(109,93,211,0.06)', border: '1px solid rgba(109,93,211,0.15)' }}>
+          <div className="text-sm" style={{ color: '#4a4270' }}>
+            Filtered: <strong style={{ color: '#6c5dd3' }}>{filter === 'due' ? 'Reviews due this month' : filter === 'overdue' ? 'Overdue reviews' : filter}</strong>
+            <span className="ml-2" style={{ color: '#8b7fd4' }}>
+              ({vendors.length} vendor{vendors.length !== 1 ? 's' : ''})
+            </span>
+          </div>
+          <Link href="/reviews" className="text-xs font-medium" style={{ color: '#6c5dd3' }}>
+            Clear filter ✕
+          </Link>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

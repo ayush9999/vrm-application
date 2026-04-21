@@ -3,6 +3,7 @@ import { requireCurrentUser } from '@/lib/current-user'
 import { getCachedDashboardData } from '@/lib/db/cached'
 import { getProgrammeHealth, getPackReadiness, getAttentionItems } from '@/lib/db/dashboard'
 import { GaugeChart, RadarChart } from './_components/DashboardCharts'
+import { InfoPopover } from './_components/InfoPopover'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -188,7 +189,7 @@ export default async function DashboardPage() {
             valueColor="#185FA5"
             iconBg="#E6F1FB"
             icon={<CalendarIcon />}
-            href="/reviews"
+            href="/reviews?filter=due"
           />
         </div>
 
@@ -197,9 +198,30 @@ export default async function DashboardPage() {
           {/* Column 1: Programme Health */}
           <div style={cardStyle} className="flex flex-col">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
-                Programme health
-              </span>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                  Programme health
+                </span>
+                <InfoPopover title="Programme Health">
+                  <p style={{ marginBottom: 8 }}>
+                    A single score (0–100) measuring how healthy your vendor risk programme is.
+                  </p>
+                  <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>How it&apos;s calculated:</p>
+                  <ul style={{ paddingLeft: 16, marginBottom: 8, listStyleType: 'disc' }}>
+                    <li>35% — Evidence documents approved</li>
+                    <li>35% — Review packs completed</li>
+                    <li>30% — Vendors approved</li>
+                    <li>Minus up to 20 pts for open critical remediations</li>
+                  </ul>
+                  <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>Bands:</p>
+                  <ul style={{ paddingLeft: 16, listStyleType: 'disc' }}>
+                    <li><strong style={{ color: '#A32D2D' }}>0–30 Critical</strong></li>
+                    <li><strong style={{ color: '#BA7517' }}>31–60 High</strong></li>
+                    <li><strong style={{ color: '#a16207' }}>61–85 Medium</strong></li>
+                    <li><strong style={{ color: '#3B6D11' }}>86–100 Low</strong></li>
+                  </ul>
+                </InfoPopover>
+              </div>
               <span
                 style={{
                   fontSize: 10,
@@ -249,20 +271,100 @@ export default async function DashboardPage() {
               </div>
             </div>
 
+            {/* Band meaning + next step */}
+            {(() => {
+              const bandMeaning: Record<string, string> = {
+                critical: 'Programme needs urgent attention',
+                high: 'Significant gaps remain',
+                medium: 'Making progress, room to improve',
+                low: 'Strong programme health',
+              }
+              const nextThresholds: Record<string, { next: number; nextBand: string }> = {
+                critical: { next: 31, nextBand: 'High' },
+                high:     { next: 61, nextBand: 'Medium' },
+                medium:   { next: 86, nextBand: 'Low' },
+                low:      { next: 100, nextBand: 'perfect' },
+              }
+              const nt = nextThresholds[health.band]
+              const pointsNeeded = Math.max(0, nt.next - health.score)
+              return (
+                <div style={{ padding: '6px 18px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: '#6a6860', marginBottom: 2 }}>
+                    {bandMeaning[health.band]}
+                  </div>
+                  {pointsNeeded > 0 && health.band !== 'low' && (
+                    <div style={{ fontSize: 10, color: '#9a9890' }}>
+                      +{pointsNeeded} pts to reach <strong style={{ color: '#6c5dd3' }}>{nt.nextBand}</strong>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Breakdown rows */}
-            <div style={{ padding: '8px 18px 16px' }} className="space-y-3 mt-auto">
+            <div style={{ padding: '8px 18px 12px', borderTop: '1px solid #f0eee8' }} className="space-y-3">
               <BreakdownRow label="Evidence complete" pct={health.evidenceCompletePct} />
               <BreakdownRow label="Reviews completed" pct={health.reviewsCompletePct} />
               <BreakdownRow label="Vendors approved" pct={health.vendorsApprovedPct} />
             </div>
+
+            {/* Biggest gap callout */}
+            {(() => {
+              const gaps = [
+                { label: 'Evidence', pct: health.evidenceCompletePct, weight: 0.35 },
+                { label: 'Reviews', pct: health.reviewsCompletePct, weight: 0.35 },
+                { label: 'Vendor approvals', pct: health.vendorsApprovedPct, weight: 0.30 },
+              ]
+              // Biggest drag = lowest pct × weight (most weight loss)
+              const worst = gaps.reduce((a, b) =>
+                ((100 - a.pct) * a.weight) > ((100 - b.pct) * b.weight) ? a : b
+              )
+              if (worst.pct >= 85) return null
+              return (
+                <div style={{
+                  padding: '8px 18px 14px',
+                  margin: '0',
+                  fontSize: 11,
+                  color: '#4a4270',
+                  background: 'rgba(239,159,39,0.06)',
+                  borderTop: '1px solid #f0eee8',
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#BA7517', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+                    Biggest gap
+                  </div>
+                  <div style={{ color: '#4a4270' }}>
+                    {worst.label} at <strong>{worst.pct}%</strong> — focus here to move the score most
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 
           {/* Column 2: Pack Readiness Radar */}
           <div style={cardStyle} className="flex flex-col">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
-                Pack readiness
-              </span>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                  Pack readiness
+                </span>
+                <InfoPopover title="Pack Readiness">
+                  <p style={{ marginBottom: 8 }}>
+                    A spider chart showing how ready each review pack is across all assigned vendors.
+                  </p>
+                  <p style={{ marginBottom: 8 }}>
+                    Each axis represents one review pack (e.g. Security, Legal &amp; Contract). The further the dot is from the centre, the higher the readiness.
+                  </p>
+                  <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>Readiness per pack =</p>
+                  <p style={{ marginBottom: 8 }}>
+                    Passed items + approved evidence, divided by total applicable items across all vendors with that pack.
+                  </p>
+                  <p style={{ fontSize: 11, color: '#8b7fd4' }}>
+                    Dot colour: <strong style={{ color: '#3B6D11' }}>green</strong> ≥60%,{' '}
+                    <strong style={{ color: '#BA7517' }}>amber</strong> 30–59%,{' '}
+                    <strong style={{ color: '#A32D2D' }}>red</strong> &lt;30%
+                  </p>
+                </InfoPopover>
+              </div>
               <span style={{ fontSize: 11, color: '#9a9890' }}>
                 {packReadiness.length} pack{packReadiness.length !== 1 ? 's' : ''}
               </span>
@@ -298,10 +400,23 @@ export default async function DashboardPage() {
 
           {/* Column 3: Readiness by review pack (horizontal bars) */}
           <div style={cardStyle} className="flex flex-col">
-            <div style={{ padding: '14px 18px 0' }}>
-              <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
-                Readiness by review pack
-              </span>
+            <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                  Readiness by review pack
+                </span>
+                <InfoPopover title="Readiness by Pack">
+                  <p style={{ marginBottom: 8 }}>
+                    The same data as the spider chart, shown as horizontal bars sorted highest to lowest.
+                  </p>
+                  <p style={{ marginBottom: 8 }}>
+                    Each bar shows the <strong>average readiness</strong> of a pack across every vendor that has it assigned.
+                  </p>
+                  <p style={{ fontSize: 11, color: '#8b7fd4' }}>
+                    Use this to spot which packs need the most attention. Low bars = many vendors behind on that pack.
+                  </p>
+                </InfoPopover>
+              </div>
             </div>
 
             <div style={{ padding: '10px 0' }} className="flex-1">

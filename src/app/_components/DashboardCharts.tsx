@@ -35,22 +35,33 @@ export function GaugeChart({ score, bandColor }: { score: number; bandColor: str
   useEffect(() => {
     if (!canvasRef.current) return
 
+    // Band backdrop — shows zones: 0-30 red, 31-60 amber, 61-85 yellow, 86-100 green
+    // Overlaid by the score fill on top
     chartRef.current = new Chart(canvasRef.current, {
       type: 'doughnut',
       data: {
         datasets: [
+          // Bottom layer: band zones (always full 100%)
+          {
+            data: [30, 30, 25, 15],
+            backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'],
+            borderWidth: 0,
+            weight: 0.5,
+          },
+          // Top layer: score fill
           {
             data: [score, 100 - score],
-            backgroundColor: [bandColor, '#F1EFE8'],
+            backgroundColor: [bandColor, 'transparent'],
             borderWidth: 0,
             borderRadius: [6, 0],
+            weight: 1,
           },
         ],
       },
       options: {
         circumference: 220,
         rotation: -110,
-        cutout: '75%',
+        cutout: '72%',
         plugins: {
           legend: { display: false },
           tooltip: { enabled: false },
