@@ -76,7 +76,49 @@ export function GaugeChart({ score, bandColor }: { score: number; bandColor: str
     }
   }, [score, bandColor])
 
-  return <canvas ref={canvasRef} width={170} height={110} />
+  // Needle angle: gauge sweeps from -110° to +110° (220° total)
+  // Score 0 → -110°, score 50 → 0° (top), score 100 → +110°
+  const needleAngle = -110 + (score / 100) * 220
+
+  return (
+    <div style={{ position: 'relative', width: 170, height: 110 }}>
+      <canvas ref={canvasRef} width={170} height={110} />
+
+      {/* Needle */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          bottom: 14,
+          width: 2,
+          height: 42,
+          background: '#1e1550',
+          borderRadius: 1,
+          transformOrigin: '50% 100%',
+          transform: `translateX(-50%) rotate(${needleAngle}deg)`,
+          transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: 'none',
+          boxShadow: '0 1px 2px rgba(30,21,80,0.15)',
+        }}
+      />
+
+      {/* Needle pivot dot */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          bottom: 10,
+          width: 8,
+          height: 8,
+          background: '#1e1550',
+          borderRadius: '50%',
+          transform: 'translateX(-50%)',
+          pointerEvents: 'none',
+          boxShadow: '0 0 0 2px white, 0 1px 3px rgba(30,21,80,0.3)',
+        }}
+      />
+    </div>
+  )
 }
 
 /* ------------------------------------------------------------------ */
