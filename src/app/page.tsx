@@ -198,7 +198,7 @@ export default async function DashboardPage() {
         <div className="grid gap-2.5" style={{ gridTemplateColumns: '1fr 1fr 1.1fr' }}>
           {/* Column 1: Programme Health */}
           <DashboardTileModal type="programme" health={health}>
-          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
+          <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -290,7 +290,7 @@ export default async function DashboardPage() {
               const nt = nextThresholds[health.band]
               const pointsNeeded = Math.max(0, nt.next - health.score)
               return (
-                <div style={{ padding: '6px 18px 10px', textAlign: 'center' }}>
+                <div className="flex-1 flex flex-col justify-end" style={{ padding: '6px 18px 14px', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: '#6a6860', marginBottom: 2 }}>
                     {bandMeaning[health.band]}
                   </div>
@@ -299,43 +299,8 @@ export default async function DashboardPage() {
                       +{pointsNeeded} pts to reach <strong style={{ color: '#6c5dd3' }}>{nt.nextBand}</strong>
                     </div>
                   )}
-                </div>
-              )
-            })()}
-
-            {/* Breakdown rows */}
-            <div style={{ padding: '8px 18px 12px', borderTop: '1px solid #f0eee8' }} className="space-y-3">
-              <BreakdownRow label="Evidence complete" pct={health.evidenceCompletePct} />
-              <BreakdownRow label="Reviews completed" pct={health.reviewsCompletePct} />
-              <BreakdownRow label="Vendors approved" pct={health.vendorsApprovedPct} />
-            </div>
-
-            {/* Biggest gap callout */}
-            {(() => {
-              const gaps = [
-                { label: 'Evidence', pct: health.evidenceCompletePct, weight: 0.35 },
-                { label: 'Reviews', pct: health.reviewsCompletePct, weight: 0.35 },
-                { label: 'Vendor approvals', pct: health.vendorsApprovedPct, weight: 0.30 },
-              ]
-              // Biggest drag = lowest pct × weight (most weight loss)
-              const worst = gaps.reduce((a, b) =>
-                ((100 - a.pct) * a.weight) > ((100 - b.pct) * b.weight) ? a : b
-              )
-              if (worst.pct >= 85) return null
-              return (
-                <div style={{
-                  padding: '8px 18px 14px',
-                  margin: '0',
-                  fontSize: 11,
-                  color: '#4a4270',
-                  background: 'rgba(239,159,39,0.06)',
-                  borderTop: '1px solid #f0eee8',
-                }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#BA7517', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-                    Biggest gap
-                  </div>
-                  <div style={{ color: '#4a4270' }}>
-                    {worst.label} at <strong>{worst.pct}%</strong> — focus here to move the score most
+                  <div style={{ fontSize: 10, color: '#a99fd8', marginTop: 8 }}>
+                    Click for breakdown &rsaquo;
                   </div>
                 </div>
               )
@@ -345,7 +310,7 @@ export default async function DashboardPage() {
 
           {/* Column 2: Pack Readiness Radar */}
           <DashboardTileModal type="radar" packReadiness={packReadiness}>
-          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
+          <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -405,7 +370,7 @@ export default async function DashboardPage() {
 
           {/* Column 3: Readiness by review pack (horizontal bars) */}
           <DashboardTileModal type="bars" packReadiness={packReadiness}>
-          <div style={{ ...cardStyle, cursor: 'pointer' }} className="flex flex-col transition-shadow hover:shadow-md">
+          <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
@@ -765,19 +730,6 @@ function KpiCard({
     )
   }
   return <div style={cardStyle}>{content}</div>
-}
-
-function BreakdownRow({ label, pct }: { label: string; pct: number }) {
-  const color = barColor(pct)
-  return (
-    <div className="flex items-center gap-2">
-      <span style={{ fontSize: 12, color: '#4a4840', flex: 1 }}>{label}</span>
-      <div style={{ width: 80, height: 4, background: '#eeece6', borderRadius: 2 }}>
-        <div style={{ width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: 2, background: color }} />
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 600, color, width: 36, textAlign: 'right' }}>{pct}%</span>
-    </div>
-  )
 }
 
 /* ── Inline SVG icons ── */

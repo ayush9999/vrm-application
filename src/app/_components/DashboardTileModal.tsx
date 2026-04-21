@@ -42,8 +42,15 @@ export function DashboardTileModal({ type, health, packReadiness, children }: Pr
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="text-left w-full transition-all hover:shadow-md"
-        style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}
+        className="text-left transition-all"
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          boxSizing: 'border-box',
+        }}
       >
         {children}
       </button>
