@@ -11,6 +11,8 @@ import {
   LineElement,
   Filler,
   Tooltip,
+  type ChartConfiguration,
+  type Plugin,
 } from 'chart.js'
 
 Chart.register(
@@ -44,10 +46,10 @@ function buildGaugeOverlay({
   nextBandColor,
   labelFontSize,
   dotRadius,
-}: GaugeProps & { labelFontSize: number; dotRadius: number }) {
+}: GaugeProps & { labelFontSize: number; dotRadius: number }): Plugin<'doughnut'> {
   return {
     id: 'gaugeOverlay',
-    afterDatasetsDraw(chart: Chart) {
+    afterDatasetsDraw(chart: Chart<'doughnut'>) {
       const ctx = chart.ctx
       const meta = chart.getDatasetMeta(1)
       const scoreArc = meta.data[0] as unknown as {
@@ -122,7 +124,7 @@ export function GaugeChart(props: GaugeProps) {
   useEffect(() => {
     if (!canvasRef.current) return
 
-    chartRef.current = new Chart(canvasRef.current, {
+    const config: ChartConfiguration<'doughnut'> = {
       type: 'doughnut',
       data: {
         datasets: [
@@ -150,7 +152,8 @@ export function GaugeChart(props: GaugeProps) {
         layout: { padding: { top: 22, left: 22, right: 22, bottom: 4 } },
       },
       plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 6 })],
-    })
+    }
+    chartRef.current = new Chart(canvasRef.current, config)
 
     return () => { chartRef.current?.destroy(); chartRef.current = null }
   }, [score, bandColor, nextThreshold, nextBandName, nextBandColor])
@@ -166,7 +169,7 @@ export function GaugeChartLarge(props: GaugeProps) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    chartRef.current = new Chart(canvasRef.current, {
+    const config: ChartConfiguration<'doughnut'> = {
       type: 'doughnut',
       data: {
         datasets: [
@@ -181,7 +184,8 @@ export function GaugeChartLarge(props: GaugeProps) {
         layout: { padding: { top: 32, left: 32, right: 32, bottom: 4 } },
       },
       plugins: [buildGaugeOverlay({ ...props, labelFontSize: 13, dotRadius: 9 })],
-    })
+    }
+    chartRef.current = new Chart(canvasRef.current, config)
     return () => { chartRef.current?.destroy(); chartRef.current = null }
   }, [score, bandColor, nextThreshold, nextBandName, nextBandColor])
 
