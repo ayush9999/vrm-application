@@ -197,116 +197,116 @@ export default async function DashboardPage() {
         {/* ── Main 3-col Grid ── */}
         <div className="grid gap-2.5" style={{ gridTemplateColumns: '1fr 1fr 1.1fr' }}>
           {/* Column 1: Programme Health */}
-          <DashboardTileModal type="programme" health={health}>
-          <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
-            <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
-                  Programme health
-                </span>
-                <InfoPopover title="Programme Health">
-                  <p style={{ marginBottom: 8 }}>
-                    A single score (0–100) measuring how healthy your vendor risk programme is.
-                  </p>
-                  <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>How it&apos;s calculated:</p>
-                  <ul style={{ paddingLeft: 16, marginBottom: 8, listStyleType: 'disc' }}>
-                    <li>35% — Evidence documents approved</li>
-                    <li>35% — Review packs completed</li>
-                    <li>30% — Vendors approved</li>
-                    <li>Minus up to 20 pts for open critical remediations</li>
-                  </ul>
-                  <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>Bands:</p>
-                  <ul style={{ paddingLeft: 16, listStyleType: 'disc' }}>
-                    <li><strong style={{ color: '#A32D2D' }}>0–30 Critical</strong></li>
-                    <li><strong style={{ color: '#BA7517' }}>31–60 High</strong></li>
-                    <li><strong style={{ color: '#a16207' }}>61–85 Medium</strong></li>
-                    <li><strong style={{ color: '#3B6D11' }}>86–100 Low</strong></li>
-                  </ul>
-                </InfoPopover>
-              </div>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 500,
-                  padding: '3px 8px',
-                  borderRadius: 20,
-                  background: BAND_BADGE[health.band].bg,
-                  color: BAND_BADGE[health.band].color,
-                }}
-              >
-                {health.band}
-              </span>
-            </div>
+          {(() => {
+            const nextThresholds: Record<string, { next: number; nextBand: string; nextKey: string }> = {
+              critical: { next: 31, nextBand: 'High',   nextKey: 'high' },
+              high:     { next: 61, nextBand: 'Medium', nextKey: 'medium' },
+              medium:   { next: 86, nextBand: 'Low',    nextKey: 'low' },
+              low:      { next: 100, nextBand: 'Perfect', nextKey: 'low' },
+            }
+            const nt = nextThresholds[health.band]
+            const pointsNeeded = Math.max(0, nt.next - health.score)
+            const nextBandColor = BAND_BADGE[nt.nextKey].color
+            const currentBadge = BAND_BADGE[health.band]
 
-            {/* Gauge chart area */}
-            <div className="flex flex-col items-center" style={{ padding: '12px 18px 0', position: 'relative' }}>
-              <div style={{ position: 'relative' }}>
-                <GaugeChart score={health.score} bandColor={health.bandColor} />
-                {/* Center overlay */}
-                <div
-                  className="flex flex-col items-center"
-                  style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -30%)',
-                  }}
-                >
-                  <span style={{ fontSize: 30, fontWeight: 500, color: '#18181b', lineHeight: 1 }}>
-                    {health.score}
-                  </span>
-                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 2 }}>out of 100</span>
+            return (
+              <DashboardTileModal type="programme" health={health}>
+              <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
+                {/* Header */}
+                <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                      Programme health
+                    </span>
+                    <InfoPopover title="Programme Health">
+                      <p style={{ marginBottom: 8 }}>
+                        A single score (0–100) measuring how healthy your vendor risk programme is.
+                      </p>
+                      <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>How it&apos;s calculated:</p>
+                      <ul style={{ paddingLeft: 16, marginBottom: 8, listStyleType: 'disc' }}>
+                        <li>35% — Evidence documents approved</li>
+                        <li>35% — Review packs completed</li>
+                        <li>30% — Vendors approved</li>
+                        <li>Minus up to 20 pts for open critical remediations</li>
+                      </ul>
+                      <p style={{ fontWeight: 600, color: '#1e1550', marginBottom: 4 }}>Bands:</p>
+                      <ul style={{ paddingLeft: 16, listStyleType: 'disc' }}>
+                        <li><strong style={{ color: '#A32D2D' }}>0–30 Critical</strong></li>
+                        <li><strong style={{ color: '#BA7517' }}>31–60 High</strong></li>
+                        <li><strong style={{ color: '#a16207' }}>61–85 Medium</strong></li>
+                        <li><strong style={{ color: '#3B6D11' }}>86–100 Low</strong></li>
+                      </ul>
+                    </InfoPopover>
+                  </div>
                   <span
                     style={{
-                      fontSize: 9,
-                      fontWeight: 500,
-                      padding: '2px 7px',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      padding: '3px 10px',
                       borderRadius: 20,
-                      marginTop: 4,
-                      background: BAND_BADGE[health.band].bg,
-                      color: BAND_BADGE[health.band].color,
+                      background: currentBadge.bg,
+                      color: currentBadge.color,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
                     }}
                   >
                     {health.band}
                   </span>
                 </div>
-              </div>
-            </div>
 
-            {/* Band meaning + next step */}
-            {(() => {
-              const bandMeaning: Record<string, string> = {
-                critical: 'Programme needs urgent attention',
-                high: 'Significant gaps remain',
-                medium: 'Making progress, room to improve',
-                low: 'Strong programme health',
-              }
-              const nextThresholds: Record<string, { next: number; nextBand: string }> = {
-                critical: { next: 31, nextBand: 'High' },
-                high:     { next: 61, nextBand: 'Medium' },
-                medium:   { next: 86, nextBand: 'Low' },
-                low:      { next: 100, nextBand: 'perfect' },
-              }
-              const nt = nextThresholds[health.band]
-              const pointsNeeded = Math.max(0, nt.next - health.score)
-              return (
-                <div className="flex-1 flex flex-col justify-end" style={{ padding: '6px 18px 14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#6a6860', marginBottom: 2 }}>
-                    {bandMeaning[health.band]}
-                  </div>
-                  {pointsNeeded > 0 && health.band !== 'low' && (
-                    <div style={{ fontSize: 10, color: '#9a9890' }}>
-                      +{pointsNeeded} pts to reach <strong style={{ color: '#6c5dd3' }}>{nt.nextBand}</strong>
-                    </div>
-                  )}
-                  <div style={{ fontSize: 10, color: '#a99fd8', marginTop: 8 }}>
-                    Click for breakdown &rsaquo;
-                  </div>
+                {/* Gauge */}
+                <div className="flex justify-center" style={{ padding: '6px 8px 0' }}>
+                  <GaugeChart
+                    score={health.score}
+                    bandColor={health.bandColor}
+                    nextThreshold={health.band === 'low' ? undefined : nt.next}
+                    nextBandName={nt.nextBand}
+                    nextBandColor={nextBandColor}
+                  />
                 </div>
-              )
-            })()}
-          </div>
-          </DashboardTileModal>
+
+                {/* Score readout */}
+                <div className="flex flex-col items-center" style={{ padding: '0 18px 12px' }}>
+                  <span style={{ fontSize: 34, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                    {health.score}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 4 }}>out of 100</span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 500,
+                      padding: '2px 10px',
+                      borderRadius: 20,
+                      marginTop: 6,
+                      background: currentBadge.bg,
+                      color: currentBadge.color,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {health.band}
+                  </span>
+                </div>
+
+                {/* Breakdown rows */}
+                <div style={{ padding: '10px 18px', borderTop: '1px solid #f0eee8' }} className="space-y-2">
+                  <BreakdownRow label="Evidence" pct={health.evidenceCompletePct} />
+                  <BreakdownRow label="Reviews" pct={health.reviewsCompletePct} />
+                  <BreakdownRow label="Approved" pct={health.vendorsApprovedPct} />
+                </div>
+
+                {/* Footer */}
+                {pointsNeeded > 0 && health.band !== 'low' && (
+                  <div className="flex-1 flex items-end" style={{ padding: '10px 18px 14px', borderTop: '1px solid #f0eee8' }}>
+                    <span style={{ fontSize: 11, color: '#6a6860', width: '100%', textAlign: 'center' }}>
+                      +{pointsNeeded} pts to reach{' '}
+                      <strong style={{ color: nextBandColor }}>{nt.nextBand}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+              </DashboardTileModal>
+            )
+          })()}
 
           {/* Column 2: Pack Readiness Radar */}
           <DashboardTileModal type="radar" packReadiness={packReadiness}>
@@ -730,6 +730,19 @@ function KpiCard({
     )
   }
   return <div style={cardStyle}>{content}</div>
+}
+
+function BreakdownRow({ label, pct }: { label: string; pct: number }) {
+  const color = barColor(pct)
+  return (
+    <div className="flex items-center gap-3">
+      <span style={{ fontSize: 12, color: '#4a4840', width: 72 }}>{label}</span>
+      <div className="flex-1" style={{ height: 4, background: '#eeece6', borderRadius: 2 }}>
+        <div style={{ width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: 2, background: color }} />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color, width: 36, textAlign: 'right' }}>{pct}%</span>
+    </div>
+  )
 }
 
 /* ── Inline SVG icons ── */

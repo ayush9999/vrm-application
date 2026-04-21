@@ -28,59 +28,139 @@ Chart.register(
 /*  Gauge (doughnut)                                                  */
 /* ------------------------------------------------------------------ */
 
-export function GaugeChart({ score, bandColor }: { score: number; bandColor: string }) {
+interface GaugeProps {
+  score: number
+  bandColor: string
+  nextThreshold?: number
+  nextBandName?: string
+  nextBandColor?: string
+}
+
+function buildGaugeOverlay({
+  bandColor,
+  score,
+  nextThreshold,
+  nextBandName,
+  nextBandColor,
+  labelFontSize,
+  dotRadius,
+}: GaugeProps & { labelFontSize: number; dotRadius: number }) {
+  return {
+    id: 'gaugeOverlay',
+    afterDatasetsDraw(chart: Chart) {
+      const ctx = chart.ctx
+      const meta = chart.getDatasetMeta(1)
+      const scoreArc = meta.data[0] as unknown as {
+        x: number; y: number;
+        innerRadius: number; outerRadius: number;
+        startAngle: number; endAngle: number;
+      }
+      if (!scoreArc) return
+
+      const { x: cx, y: cy, innerRadius, outerRadius, startAngle, endAngle } = scoreArc
+      const rMid = (innerRadius + outerRadius) / 2
+
+      // Endpoint dot at the tip of the score fill
+      const dotX = cx + rMid * Math.cos(endAngle)
+      const dotY = cy + rMid * Math.sin(endAngle)
+      ctx.save()
+      ctx.fillStyle = bandColor
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 2.5
+      ctx.beginPath()
+      ctx.arc(dotX, dotY, dotRadius, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.stroke()
+      ctx.restore()
+
+      // Next-threshold tick + label
+      if (
+        nextThreshold !== undefined &&
+        nextBandName &&
+        nextThreshold > score &&
+        nextThreshold < 100
+      ) {
+        const fullSpan = Math.PI // 180° arc
+        const tickAngle = startAngle + (nextThreshold / 100) * fullSpan
+
+        const tickR1 = outerRadius + 1
+        const tickR2 = outerRadius + 8
+        const tx1 = cx + tickR1 * Math.cos(tickAngle)
+        const ty1 = cy + tickR1 * Math.sin(tickAngle)
+        const tx2 = cx + tickR2 * Math.cos(tickAngle)
+        const ty2 = cy + tickR2 * Math.sin(tickAngle)
+
+        const tickColor = nextBandColor ?? '#BA7517'
+        ctx.save()
+        ctx.strokeStyle = tickColor
+        ctx.lineWidth = 1.5
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(tx1, ty1)
+        ctx.lineTo(tx2, ty2)
+        ctx.stroke()
+
+        const labelR = outerRadius + 16
+        const lx = cx + labelR * Math.cos(tickAngle)
+        const ly = cy + labelR * Math.sin(tickAngle)
+        ctx.fillStyle = tickColor
+        ctx.font = `500 ${labelFontSize}px system-ui, -apple-system, sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(`${nextThreshold} → ${nextBandName}`, lx, ly)
+        ctx.restore()
+      }
+    },
+  }
+}
+
+export function GaugeChart(props: GaugeProps) {
+  const { score, bandColor, nextThreshold, nextBandName, nextBandColor } = props
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
   useEffect(() => {
     if (!canvasRef.current) return
 
-    // Band backdrop — shows zones: 0-30 red, 31-60 amber, 61-85 yellow, 86-100 green
-    // Overlaid by the score fill on top
     chartRef.current = new Chart(canvasRef.current, {
       type: 'doughnut',
       data: {
         datasets: [
-          // Bottom layer: band zones (always full 100%)
           {
             data: [30, 30, 25, 15],
             backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'],
             borderWidth: 0,
-            weight: 0.5,
+            weight: 0.55,
           },
-          // Top layer: score fill
           {
             data: [score, 100 - score],
             backgroundColor: [bandColor, 'transparent'],
             borderWidth: 0,
-            borderRadius: [6, 0],
+            borderRadius: [10, 0],
             weight: 1,
           },
         ],
       },
       options: {
-        circumference: 220,
-        rotation: -110,
-        cutout: '72%',
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false },
-        },
-        animation: { duration: 1000 },
+        circumference: 180,
+        rotation: -90,
+        cutout: '66%',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { duration: 900 },
+        layout: { padding: { top: 22, left: 22, right: 22, bottom: 4 } },
       },
+      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 6 })],
     })
 
-    return () => {
-      chartRef.current?.destroy()
-      chartRef.current = null
-    }
-  }, [score, bandColor])
+    return () => { chartRef.current?.destroy(); chartRef.current = null }
+  }, [score, bandColor, nextThreshold, nextBandName, nextBandColor])
 
-  return <canvas ref={canvasRef} width={170} height={110} />
+  return <canvas ref={canvasRef} width={240} height={150} />
 }
 
 // Larger version for modal/expanded views
-export function GaugeChartLarge({ score, bandColor }: { score: number; bandColor: string }) {
+export function GaugeChartLarge(props: GaugeProps) {
+  const { score, bandColor, nextThreshold, nextBandName, nextBandColor } = props
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
 
@@ -90,20 +170,22 @@ export function GaugeChartLarge({ score, bandColor }: { score: number; bandColor
       type: 'doughnut',
       data: {
         datasets: [
-          { data: [30, 30, 25, 15], backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'], borderWidth: 0, weight: 0.5 },
-          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: [8, 0], weight: 1 },
+          { data: [30, 30, 25, 15], backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'], borderWidth: 0, weight: 0.55 },
+          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: [12, 0], weight: 1 },
         ],
       },
       options: {
-        circumference: 220, rotation: -110, cutout: '70%',
+        circumference: 180, rotation: -90, cutout: '64%',
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        animation: { duration: 1000 },
+        animation: { duration: 900 },
+        layout: { padding: { top: 32, left: 32, right: 32, bottom: 4 } },
       },
+      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 13, dotRadius: 9 })],
     })
     return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [score, bandColor])
+  }, [score, bandColor, nextThreshold, nextBandName, nextBandColor])
 
-  return <canvas ref={canvasRef} width={340} height={220} />
+  return <canvas ref={canvasRef} width={420} height={250} />
 }
 
 /* ------------------------------------------------------------------ */
