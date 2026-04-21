@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { SidebarNav } from './SidebarNav'
 import { UserMenu } from './UserMenu'
+import { AttentionBell } from './AttentionBell'
+import type { AttentionItem } from '@/lib/db/dashboard'
 
 const PUBLIC_PATH_PREFIXES = [
   '/sign-in',
@@ -17,9 +19,10 @@ const PUBLIC_PATH_PREFIXES = [
 interface SidebarShellProps {
   children: React.ReactNode
   user: { email: string | null; name: string | null; orgName: string | null } | null
+  attentionItems?: AttentionItem[]
 }
 
-export function SidebarShell({ children, user }: SidebarShellProps) {
+export function SidebarShell({ children, user, attentionItems = [] }: SidebarShellProps) {
   const pathname = usePathname()
   const isPublicPage = PUBLIC_PATH_PREFIXES.some(
     (prefix) => pathname === prefix.replace(/\/$/, '') || pathname.startsWith(prefix),
@@ -76,7 +79,7 @@ export function SidebarShell({ children, user }: SidebarShellProps) {
 
       {/* Main content — aurora + dot grid */}
       <main
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto relative"
         style={{
           backgroundColor: '#ecedf2',
           backgroundImage: [
@@ -86,6 +89,7 @@ export function SidebarShell({ children, user }: SidebarShellProps) {
           backgroundSize: 'auto, 20px 20px',
         }}
       >
+        <AttentionBell items={attentionItems} />
         {children}
       </main>
     </div>

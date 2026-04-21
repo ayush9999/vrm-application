@@ -30,7 +30,7 @@ export function InfoPopover({ title, children }: Props) {
             className="absolute z-50 rounded-xl p-4 text-left"
             style={{
               top: 'calc(100% + 6px)',
-              right: 0,
+              left: 0,
               width: 280,
               background: 'white',
               border: '1px solid rgba(109,93,211,0.15)',

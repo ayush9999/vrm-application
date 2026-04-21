@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { SidebarShell } from './_components/SidebarShell'
 import { NavigationProgress } from './_components/NavigationProgress'
 import { getCurrentUser } from '@/lib/current-user'
+import { getAttentionItems } from '@/lib/db/dashboard'
+import type { AttentionItem } from '@/lib/db/dashboard'
 import sql from '@/lib/db/pool'
 import './globals.css'
 
@@ -51,14 +53,27 @@ async function getSidebarUser(): Promise<SidebarUser | null> {
   }
 }
 
+async function getAttentionForUser(): Promise<AttentionItem[]> {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+    return await getAttentionItems(currentUser.orgId)
+  } catch {
+    return []
+  }
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSidebarUser()
+  const [user, attentionItems] = await Promise.all([
+    getSidebarUser(),
+    getAttentionForUser(),
+  ])
 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
         <NavigationProgress />
-        <SidebarShell user={user}>{children}</SidebarShell>
+        <SidebarShell user={user} attentionItems={attentionItems}>{children}</SidebarShell>
       </body>
     </html>
   )
