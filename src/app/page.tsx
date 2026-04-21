@@ -164,6 +164,7 @@ export default async function DashboardPage() {
             valueColor="#18181b"
             iconBg="#F1EFE8"
             icon={<BuildingIcon />}
+            href="/vendors"
           />
           <KpiCard
             label="CRITICAL VENDORS"
@@ -171,6 +172,7 @@ export default async function DashboardPage() {
             valueColor="#BA7517"
             iconBg="#FAEEDA"
             icon={<TriangleWarningIcon />}
+            href="/vendors?critical=true"
           />
           <KpiCard
             label="OPEN REMEDIATIONS"
@@ -178,6 +180,7 @@ export default async function DashboardPage() {
             valueColor="#A32D2D"
             iconBg="#FCEBEB"
             icon={<CircleInfoIcon />}
+            href="/issues"
           />
           <KpiCard
             label="REVIEWS DUE"
@@ -185,6 +188,7 @@ export default async function DashboardPage() {
             valueColor="#185FA5"
             iconBg="#E6F1FB"
             icon={<CalendarIcon />}
+            href="/reviews"
           />
         </div>
 
@@ -601,15 +605,17 @@ function KpiCard({
   valueColor,
   iconBg,
   icon,
+  href,
 }: {
   label: string
   value: number
   valueColor: string
   iconBg: string
   icon: React.ReactNode
+  href?: string
 }) {
-  return (
-    <div style={{ background: 'white', border: '1px solid #e8e5de', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+  const content = (
+    <>
       <div className="flex items-start justify-between">
         <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#78756d' }}>
           {label}
@@ -624,8 +630,19 @@ function KpiCard({
       <div style={{ fontSize: 36, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor, marginTop: 12 }}>
         {value}
       </div>
-    </div>
+    </>
   )
+
+  const cardStyle = { background: 'white', border: '1px solid #e8e5de', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
+
+  if (href) {
+    return (
+      <Link href={href} className="block transition-all hover:shadow-md hover:-translate-y-0.5" style={cardStyle}>
+        {content}
+      </Link>
+    )
+  }
+  return <div style={cardStyle}>{content}</div>
 }
 
 function BreakdownRow({ label, pct }: { label: string; pct: number }) {
