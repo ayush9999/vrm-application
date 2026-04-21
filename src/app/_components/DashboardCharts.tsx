@@ -84,35 +84,46 @@ export function GaugeChart({ score, bandColor }: { score: number; bandColor: str
     <div style={{ position: 'relative', width: 170, height: 110 }}>
       <canvas ref={canvasRef} width={170} height={110} />
 
-      {/* Needle */}
+      {/* Needle wrapper: positions the pivot at the arc center */}
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          bottom: 14,
-          width: 2,
-          height: 42,
-          background: '#1e1550',
-          borderRadius: 1,
-          transformOrigin: '50% 100%',
-          transform: `translateX(-50%) rotate(${needleAngle}deg)`,
+          top: '75%',
+          width: 0,
+          height: 0,
+          transform: `rotate(${needleAngle}deg)`,
           transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)',
           pointerEvents: 'none',
-          boxShadow: '0 1px 2px rgba(30,21,80,0.15)',
         }}
-      />
+      >
+        {/* Needle — extends upward from the wrapper's origin (which is the pivot) */}
+        <div
+          style={{
+            position: 'absolute',
+            left: -1,
+            bottom: 0,
+            width: 2,
+            height: 48,
+            background: '#1e1550',
+            borderRadius: 1,
+            boxShadow: '0 1px 2px rgba(30,21,80,0.15)',
+          }}
+        />
+      </div>
 
-      {/* Needle pivot dot */}
+      {/* Needle pivot dot — centered on the pivot point */}
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          bottom: 10,
-          width: 8,
-          height: 8,
+          top: '75%',
+          width: 10,
+          height: 10,
+          marginLeft: -5,
+          marginTop: -5,
           background: '#1e1550',
           borderRadius: '50%',
-          transform: 'translateX(-50%)',
           pointerEvents: 'none',
           boxShadow: '0 0 0 2px white, 0 1px 3px rgba(30,21,80,0.3)',
         }}
