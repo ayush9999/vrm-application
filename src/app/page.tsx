@@ -255,40 +255,23 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Gauge */}
-                <div className="flex justify-center" style={{ padding: '6px 8px 0' }}>
+                <div className="flex justify-center" style={{ padding: '6px 0 0' }}>
                   <GaugeChart
                     score={health.score}
                     bandColor={health.bandColor}
-                    nextThreshold={health.band === 'low' ? undefined : nt.next}
-                    nextBandName={nt.nextBand}
-                    nextBandColor={nextBandColor}
                   />
                 </div>
 
                 {/* Score readout */}
-                <div className="flex flex-col items-center" style={{ padding: '0 18px 12px' }}>
-                  <span style={{ fontSize: 34, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                <div className="flex flex-col items-center" style={{ padding: '0 18px 10px' }}>
+                  <span style={{ fontSize: 28, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
                     {health.score}
                   </span>
-                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 4 }}>out of 100</span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 500,
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                      marginTop: 6,
-                      background: currentBadge.bg,
-                      color: currentBadge.color,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {health.band}
-                  </span>
+                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 3 }}>out of 100</span>
                 </div>
 
                 {/* Breakdown rows */}
-                <div style={{ padding: '10px 18px', borderTop: '1px solid #f0eee8' }} className="space-y-2">
+                <div style={{ padding: '8px 18px', borderTop: '1px solid #f0eee8' }} className="space-y-1.5">
                   <BreakdownRow label="Evidence" pct={health.evidenceCompletePct} />
                   <BreakdownRow label="Reviews" pct={health.reviewsCompletePct} />
                   <BreakdownRow label="Approved" pct={health.vendorsApprovedPct} />
@@ -296,7 +279,7 @@ export default async function DashboardPage() {
 
                 {/* Footer */}
                 {pointsNeeded > 0 && health.band !== 'low' && (
-                  <div className="flex-1 flex items-end" style={{ padding: '10px 18px 14px', borderTop: '1px solid #f0eee8' }}>
+                  <div className="flex-1 flex items-end" style={{ padding: '6px 18px 10px' }}>
                     <span style={{ fontSize: 11, color: '#6a6860', width: '100%', textAlign: 'center' }}>
                       +{pointsNeeded} pts to reach{' '}
                       <strong style={{ color: nextBandColor }}>{nt.nextBand}</strong>

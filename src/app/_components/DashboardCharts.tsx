@@ -132,26 +132,28 @@ export function GaugeChart(props: GaugeProps) {
             data: [30, 30, 25, 15],
             backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'],
             borderWidth: 0,
-            weight: 0.55,
+            weight: 1,
           },
           {
             data: [score, 100 - score],
             backgroundColor: [bandColor, 'transparent'],
             borderWidth: 0,
-            borderRadius: [10, 0],
+            borderRadius: [3, 0],
             weight: 1,
           },
         ],
       },
       options: {
+        responsive: false,
+        maintainAspectRatio: false,
         circumference: 180,
         rotation: -90,
-        cutout: '66%',
+        cutout: '72%',
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         animation: { duration: 900 },
-        layout: { padding: { top: 22, left: 22, right: 22, bottom: 4 } },
+        layout: { padding: { top: 6, left: 6, right: 6, bottom: 0 } },
       },
-      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 6 })],
+      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 5 })],
     }
     chartRef.current = new Chart(canvasRef.current, config)
 
@@ -173,17 +175,19 @@ export function GaugeChartLarge(props: GaugeProps) {
       type: 'doughnut',
       data: {
         datasets: [
-          { data: [30, 30, 25, 15], backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'], borderWidth: 0, weight: 0.55 },
-          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: [12, 0], weight: 1 },
+          { data: [30, 30, 25, 15], backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'], borderWidth: 0, weight: 1 },
+          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: [4, 0], weight: 1 },
         ],
       },
       options: {
-        circumference: 180, rotation: -90, cutout: '64%',
+        responsive: false,
+        maintainAspectRatio: false,
+        circumference: 180, rotation: -90, cutout: '70%',
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         animation: { duration: 900 },
-        layout: { padding: { top: 32, left: 32, right: 32, bottom: 4 } },
+        layout: { padding: { top: 10, left: 10, right: 10, bottom: 0 } },
       },
-      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 13, dotRadius: 9 })],
+      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 13, dotRadius: 8 })],
     }
     chartRef.current = new Chart(canvasRef.current, config)
     return () => { chartRef.current?.destroy(); chartRef.current = null }
@@ -225,6 +229,8 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
         ],
       },
       options: {
+        responsive: false,
+        maintainAspectRatio: false,
         scales: {
           r: {
             min: 0,
@@ -289,6 +295,8 @@ export function RadarChartLarge({ labels, data }: { labels: string[]; data: numb
         }],
       },
       options: {
+        responsive: false,
+        maintainAspectRatio: false,
         scales: {
           r: {
             min: 0, max: 100,
