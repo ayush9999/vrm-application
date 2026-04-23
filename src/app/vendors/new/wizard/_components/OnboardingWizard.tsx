@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { VendorCategory } from '@/types/vendor'
 import type { VendorServiceType, VendorDataAccessLevel } from '@/types/review-pack'
 import type { OrgUser } from '@/lib/db/organizations'
+import { CategoryPicker } from '@/app/vendors/_components/CategoryPicker'
 
 const STEPS = ['Basics', 'Classification', 'Review Packs', 'Evidence', 'Collect', 'Confirm'] as const
 
@@ -471,15 +472,12 @@ function Step2Classification({
 
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Categories</label>
-        {categories.length === 0 ? (
-          <p className="text-xs italic" style={{ color: '#a99fd8' }}>No categories configured yet.</p>
-        ) : (
-          <CheckGroup
-            options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            selected={data.category_ids}
-            onToggle={(v) => update('category_ids', toggleIn(data.category_ids, v))}
-          />
-        )}
+        <CategoryPicker
+          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+          selected={data.category_ids}
+          onChange={(next) => update('category_ids', next)}
+          emptyHint="No categories configured yet."
+        />
       </div>
 
       <div>

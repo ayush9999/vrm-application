@@ -8,6 +8,7 @@ import type { OrgUser } from '@/lib/db/organizations'
 import type { CustomField } from '@/lib/db/custom-fields'
 import { COUNTRIES } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
+import { CategoryPickerField } from './CategoryPicker'
 
 interface VendorFormProps {
   action: (prevState: VendorFormState, formData: FormData) => Promise<VendorFormState>
@@ -103,7 +104,7 @@ export function VendorForm({
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Categories</label>
-            <CheckboxGroup
+            <CategoryPickerField
               name="category_ids"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
               defaultSelected={defaultValues.category_ids ?? []}
