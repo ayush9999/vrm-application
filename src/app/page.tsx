@@ -133,13 +133,6 @@ export default async function DashboardPage() {
             Guided setup
           </Link>
           <Link
-            href="/issues"
-            className="inline-flex items-center"
-            style={ghostButtonStyle}
-          >
-            View remediation
-          </Link>
-          <Link
             href="/vendors/new"
             className="inline-flex items-center"
             style={{
@@ -255,19 +248,19 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Gauge */}
-                <div className="flex justify-center" style={{ padding: '6px 0 0' }}>
+                <div className="flex justify-center" style={{ padding: '10px 0 0' }}>
                   <GaugeChart
                     score={health.score}
                     bandColor={health.bandColor}
                   />
                 </div>
 
-                {/* Score readout */}
-                <div className="flex flex-col items-center" style={{ padding: '0 18px 10px' }}>
-                  <span style={{ fontSize: 28, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                {/* Score readout — sits just below the gauge arc */}
+                <div className="flex flex-col items-center" style={{ padding: '0 18px 12px', marginTop: -28 }}>
+                  <span style={{ fontSize: 32, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
                     {health.score}
                   </span>
-                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 3 }}>out of 100</span>
+                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 4 }}>out of 100</span>
                 </div>
 
                 {/* Breakdown rows */}
@@ -382,14 +375,14 @@ export default async function DashboardPage() {
                 sortedPacks.map((pack) => (
                   <div
                     key={pack.packCode ?? pack.packName}
-                    className="flex items-center gap-2"
-                    style={{ padding: '7px 16px' }}
+                    className="flex items-center gap-3"
+                    style={{ padding: '8px 18px' }}
                   >
                     <span
                       style={{
-                        fontSize: 11,
-                        color: '#6a6860',
-                        width: 80,
+                        fontSize: 12,
+                        color: '#4a4840',
+                        width: 120,
                         textAlign: 'right',
                         flexShrink: 0,
                         overflow: 'hidden',
@@ -401,7 +394,7 @@ export default async function DashboardPage() {
                     </span>
                     <div
                       className="flex-1"
-                      style={{ height: 18, background: '#F1EFE8', borderRadius: 3, overflow: 'hidden' }}
+                      style={{ height: 16, background: '#F1EFE8', borderRadius: 3, overflow: 'hidden' }}
                     >
                       <div
                         className="flex items-center justify-end"
@@ -414,7 +407,7 @@ export default async function DashboardPage() {
                           paddingRight: 6,
                         }}
                       >
-                        <span style={{ fontSize: 10, fontWeight: 500, color: 'white' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: 'white' }}>
                           {pack.readinessPct}%
                         </span>
                       </div>

@@ -70,12 +70,12 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
 
   // All tab data fetched in parallel — fast on direct Postgres connection
   const [documents, activityLog, incidents, assessmentDocRequests, evidenceGroups, benchmark] = await Promise.all([
-    getVendorDocumentsData(user.orgId, id, vendor.category_id),
+    getVendorDocumentsData(user.orgId, id, vendor.category_ids[0] ?? null),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
     getAssessmentDocRequestsForVendor(user.orgId, id),
     getVendorEvidenceGrouped(id),
-    getPeerBenchmark(user.orgId, id, vendor.category_id),
+    getPeerBenchmark(user.orgId, id, vendor.category_ids),
   ])
 
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)

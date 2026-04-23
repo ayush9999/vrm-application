@@ -8,7 +8,7 @@ export interface ReviewVendorRow {
   vendor_name: string
   vendor_code: string | null
   vendor_criticality_tier: number | null
-  vendor_service_type: string
+  vendor_service_types: string[]
   vendor_approval_status: VendorApprovalStatus
   // Aggregated across all packs
   total_packs: number
@@ -36,14 +36,14 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
     vendor_name: string
     vendor_code: string | null
     criticality_tier: number | null
-    service_type: string
+    service_types: string[]
     approval_status: VendorApprovalStatus
   }
 
   const rows = await sql<Row[]>`
     SELECT vrp.id, vrp.vendor_id, vrp.status, vrp.due_at,
       v.name AS vendor_name, v.vendor_code, v.criticality_tier,
-      v.service_type, v.approval_status
+      v.service_types, v.approval_status
     FROM vendor_review_packs vrp
     INNER JOIN vendors v ON v.id = vrp.vendor_id
     WHERE vrp.org_id = ${orgId}
@@ -55,7 +55,7 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
 
   // Group by vendor
   const byVendor = new Map<string, {
-    vendor: { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_type: string; approval_status: VendorApprovalStatus }
+    vendor: { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_types: string[]; approval_status: VendorApprovalStatus }
     packs: { status: VendorReviewPackStatus; due_at: string | null }[]
   }>()
 
@@ -65,7 +65,7 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
       name: r.vendor_name,
       vendor_code: r.vendor_code,
       criticality_tier: r.criticality_tier,
-      service_type: r.service_type,
+      service_types: r.service_types ?? [],
       approval_status: r.approval_status,
     }
     const existing = byVendor.get(r.vendor_id) ?? { vendor: v, packs: [] }
@@ -98,7 +98,7 @@ export async function getReviewsByVendor(orgId: string): Promise<ReviewVendorRow
       vendor_name: vendor.name,
       vendor_code: vendor.vendor_code,
       vendor_criticality_tier: vendor.criticality_tier,
-      vendor_service_type: vendor.service_type,
+      vendor_service_types: vendor.service_types,
       vendor_approval_status: vendor.approval_status,
       total_packs: packs.length,
       active_packs: activePacks.length,

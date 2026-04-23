@@ -367,27 +367,33 @@ export async function getOrgDocumentTypes(orgId: string) {
 export async function getVendorDocumentTypes(orgId: string, vendorId: string) {
   const supabase = await createServerClient()
 
-  // Get vendor's category_id
+  // Get vendor's category_ids (multi-select)
   const { data: vendor } = await supabase
     .from('vendors')
-    .select('category_id')
+    .select('category_ids')
     .eq('id', vendorId)
     .eq('org_id', orgId)
     .single()
 
-  const categoryId = vendor?.category_id
+  const categoryIds = ((vendor?.category_ids ?? []) as string[])
 
-  // Get doc types from category_document_templates for this vendor's category
+  // Get doc types from category_document_templates for ANY of the vendor's categories
   let categoryDocTypes: { id: string; name: string }[] = []
-  if (categoryId) {
+  if (categoryIds.length > 0) {
     const { data } = await supabase
       .from('category_document_templates')
       .select('doc_type_id, document_types(id, name)')
-      .eq('category_id', categoryId)
+      .in('category_id', categoryIds)
       .is('deleted_at', null)
-    categoryDocTypes = (data ?? [])
-      .map((r: any) => r.document_types)
-      .filter(Boolean) as { id: string; name: string }[]
+    const seen = new Set<string>()
+    categoryDocTypes = []
+    for (const r of (data ?? []) as { document_types: { id: string; name: string } | { id: string; name: string }[] | null }[]) {
+      const dt = Array.isArray(r.document_types) ? r.document_types[0] : r.document_types
+      if (dt && !seen.has(dt.id)) {
+        seen.add(dt.id)
+        categoryDocTypes.push(dt)
+      }
+    }
   }
 
   // If no category templates exist, fall back to all standard doc types

@@ -76,11 +76,19 @@ export async function getReviewPackWithRequirements(packId: string) {
 interface VendorProfile {
   id: string
   org_id: string
-  category_id: string | null
+  category_ids: string[]
   criticality_tier: number | null
-  service_type: VendorServiceType
-  data_access_level: VendorDataAccessLevel
+  service_types: VendorServiceType[]
+  data_access_levels: VendorDataAccessLevel[]
   processes_personal_data: boolean
+}
+
+/** True if the two arrays share at least one common element. */
+function hasOverlap<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
+  if (!a || !b || a.length === 0 || b.length === 0) return false
+  const set = new Set(a)
+  for (const x of b) if (set.has(x)) return true
+  return false
 }
 
 /**
@@ -88,9 +96,9 @@ interface VendorProfile {
  * Rules:
  *   - always:true → always assigned (e.g. Legal & Contract)
  *   - processes_personal_data:true → packs requiring personal data processing
- *   - data_access_levels → if vendor's level is in the list
+ *   - data_access_levels → if any of vendor's levels overlap with the rule list
  *   - min_criticality_tier → if vendor's tier ≤ threshold (tier 1 = most critical)
- *   - service_types → if vendor's service_type is in the list
+ *   - service_types → if any of vendor's service types overlap with the rule list
  *   - requires_esg_setting → only if org has ESG enabled (checked separately)
  *   - Tier 1 vendors → get ALL packs regardless
  */
@@ -113,9 +121,9 @@ export function matchReviewPacks(
 
     // Check each rule — any match means the pack applies
     if (rules.processes_personal_data && vendor.processes_personal_data) return true
-    if (rules.data_access_levels?.includes(vendor.data_access_level)) return true
+    if (hasOverlap(rules.data_access_levels, vendor.data_access_levels)) return true
     if (rules.min_criticality_tier && vendor.criticality_tier && vendor.criticality_tier <= rules.min_criticality_tier) return true
-    if (rules.service_types?.includes(vendor.service_type)) return true
+    if (hasOverlap(rules.service_types, vendor.service_types)) return true
     if (rules.requires_esg_setting && orgEsgEnabled) return true
 
     return false
@@ -273,8 +281,8 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
     review_pack_code: string | null
     applicability_rules: ApplicabilityRules
     criticality_tier: number | null
-    service_type: VendorServiceType
-    data_access_level: VendorDataAccessLevel
+    service_types: VendorServiceType[]
+    data_access_levels: VendorDataAccessLevel[]
     processes_personal_data: boolean
   }
 
@@ -282,7 +290,7 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
     SELECT vrp.*,
       rp.name AS review_pack_name, rp.code AS review_pack_code,
       rp.applicability_rules,
-      v.criticality_tier, v.service_type, v.data_access_level, v.processes_personal_data
+      v.criticality_tier, v.service_types, v.data_access_levels, v.processes_personal_data
     FROM vendor_review_packs vrp
     INNER JOIN review_packs rp ON rp.id = vrp.review_pack_id
     INNER JOIN vendors v ON v.id = vrp.vendor_id
@@ -316,8 +324,8 @@ export async function getVendorReviewPacks(vendorId: string): Promise<VendorRevi
   return rows.map((row) => {
     const v = {
       criticality_tier: row.criticality_tier,
-      service_type: row.service_type,
-      data_access_level: row.data_access_level,
+      service_types: row.service_types,
+      data_access_levels: row.data_access_levels,
       processes_personal_data: row.processes_personal_data,
     }
 
@@ -505,19 +513,25 @@ function describeMatchedRule(
   rules: ApplicabilityRules,
   vendor: {
     criticality_tier: number | null
-    service_type: VendorServiceType
-    data_access_level: VendorDataAccessLevel
+    service_types: VendorServiceType[]
+    data_access_levels: VendorDataAccessLevel[]
     processes_personal_data: boolean
   },
 ): string {
   if (vendor.criticality_tier === 1) return 'Tier 1 critical vendor — all packs apply'
   if (rules.always) return 'Always assigned'
   if (rules.processes_personal_data && vendor.processes_personal_data) return 'Vendor processes personal data'
-  if (rules.data_access_levels?.includes(vendor.data_access_level)) return `Data access level: ${vendor.data_access_level.replace(/_/g, ' ')}`
+
+  const dalMatch = vendor.data_access_levels.find((l) => rules.data_access_levels?.includes(l))
+  if (dalMatch) return `Data access level: ${dalMatch.replace(/_/g, ' ')}`
+
   if (rules.min_criticality_tier && vendor.criticality_tier && vendor.criticality_tier <= rules.min_criticality_tier) {
     return `Criticality tier ${vendor.criticality_tier} ≤ ${rules.min_criticality_tier}`
   }
-  if (rules.service_types?.includes(vendor.service_type)) return `Service type: ${vendor.service_type.replace(/_/g, ' ')}`
+
+  const stMatch = vendor.service_types.find((t) => rules.service_types?.includes(t))
+  if (stMatch) return `Service type: ${stMatch.replace(/_/g, ' ')}`
+
   if (rules.requires_esg_setting) return 'ESG enabled in org settings'
   return 'Manually assigned'
 }

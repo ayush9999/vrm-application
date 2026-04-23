@@ -221,9 +221,11 @@ export default async function VendorsPage({ searchParams }: PageProps) {
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-xs" style={{ color: '#6b5fa8' }}>
-                      <ServiceTypeChip type={v.service_type} />
-                      {v.vendor_categories?.name && (
-                        <div className="text-[10px] mt-0.5" style={{ color: '#a99fd8' }}>{v.vendor_categories.name}</div>
+                      <ServiceTypeChip types={v.service_types} />
+                      {v.vendor_categories.length > 0 && (
+                        <div className="text-[10px] mt-0.5" style={{ color: '#a99fd8' }}>
+                          {v.vendor_categories.map((c) => c.name).join(', ')}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3.5" style={{ color: '#6b5fa8' }}>
@@ -328,7 +330,7 @@ export default async function VendorsPage({ searchParams }: PageProps) {
   )
 }
 
-function ServiceTypeChip({ type }: { type: string }) {
+function ServiceTypeChip({ types }: { types: string[] }) {
   const labels: Record<string, string> = {
     saas: 'SaaS',
     contractor: 'Contractor',
@@ -337,9 +339,12 @@ function ServiceTypeChip({ type }: { type: string }) {
     professional_services: 'Prof. Services',
     other: 'Other',
   }
+  if (!types || types.length === 0) {
+    return <span className="text-xs" style={{ color: '#c4bae8' }}>—</span>
+  }
   return (
     <span className="text-xs font-medium" style={{ color: '#1e1550' }}>
-      {labels[type] ?? type}
+      {types.map((t) => labels[t] ?? t).join(', ')}
     </span>
   )
 }

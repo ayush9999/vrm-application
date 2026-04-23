@@ -60,15 +60,13 @@ const nullableStr = z
   .optional()
   .transform((v) => v?.trim() || null)
 
+const SERVICE_TYPE_VALUES = ['saas', 'contractor', 'supplier', 'logistics', 'professional_services', 'other'] as const
+const DATA_ACCESS_LEVEL_VALUES = ['none', 'internal_only', 'personal_data', 'sensitive_personal_data', 'financial_data'] as const
+
 const vendorSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   legal_name: nullableStr,
-  category_id: z
-    .string()
-    .uuid('Invalid category')
-    .optional()
-    .nullable()
-    .transform((v) => v || null),
+  category_ids: z.array(z.string().uuid('Invalid category')).default([]),
   is_critical: z.boolean().default(false),
   criticality_tier: z.preprocess(
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
@@ -91,8 +89,8 @@ const vendorSchema = z.object({
   next_review_due_at: nullableStr,
   last_reviewed_at: nullableStr,
   notes: nullableStr,
-  service_type: z.enum(['saas', 'contractor', 'supplier', 'logistics', 'professional_services', 'other']).default('other'),
-  data_access_level: z.enum(['none', 'internal_only', 'personal_data', 'sensitive_personal_data', 'financial_data']).default('none'),
+  service_types: z.array(z.enum(SERVICE_TYPE_VALUES)).default([]),
+  data_access_levels: z.array(z.enum(DATA_ACCESS_LEVEL_VALUES)).default([]),
   processes_personal_data: z.boolean().default(false),
   annual_spend: z.preprocess(
     (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
@@ -101,10 +99,13 @@ const vendorSchema = z.object({
 })
 
 function parseVendorFormData(formData: FormData) {
+  const categoryIds = formData.getAll('category_ids').map(String).filter(Boolean)
+  const serviceTypes = formData.getAll('service_types').map(String).filter(Boolean)
+  const dataAccessLevels = formData.getAll('data_access_levels').map(String).filter(Boolean)
   return {
     name: formData.get('name') as string,
     legal_name: (formData.get('legal_name') as string) ?? '',
-    category_id: (formData.get('category_id') as string) || null,
+    category_ids: categoryIds,
     is_critical: formData.get('is_critical') === 'true',
     criticality_tier: formData.get('criticality_tier') as string,
     status: formData.get('status') as string,
@@ -116,8 +117,8 @@ function parseVendorFormData(formData: FormData) {
     next_review_due_at: (formData.get('next_review_due_at') as string) ?? '',
     last_reviewed_at: (formData.get('last_reviewed_at') as string) ?? '',
     notes: (formData.get('notes') as string) ?? '',
-    service_type: (formData.get('service_type') as string) ?? 'other',
-    data_access_level: (formData.get('data_access_level') as string) ?? 'none',
+    service_types: serviceTypes,
+    data_access_levels: dataAccessLevels,
     processes_personal_data: formData.get('processes_personal_data') === 'true',
     annual_spend: (formData.get('annual_spend') as string) ?? '',
   }
@@ -143,10 +144,10 @@ export async function createVendorAction(
     await autoAssignReviewPacks({
       id: vendor.id,
       org_id: user.orgId,
-      category_id: parsed.data.category_id,
+      category_ids: parsed.data.category_ids,
       criticality_tier: parsed.data.criticality_tier ?? null,
-      service_type: parsed.data.service_type,
-      data_access_level: parsed.data.data_access_level,
+      service_types: parsed.data.service_types,
+      data_access_levels: parsed.data.data_access_levels,
       processes_personal_data: parsed.data.processes_personal_data,
     })
 
@@ -167,10 +168,10 @@ export async function createVendorAction(
 // ─── Preview matched Review Packs (for the onboarding wizard) ────────────────
 
 export async function previewMatchedReviewPacksAction(input: {
-  category_id?: string | null
+  category_ids?: string[]
   criticality_tier?: number | null
-  service_type: import('@/types/vendor').VendorServiceType
-  data_access_level: import('@/types/vendor').VendorDataAccessLevel
+  service_types: import('@/types/vendor').VendorServiceType[]
+  data_access_levels: import('@/types/vendor').VendorDataAccessLevel[]
   processes_personal_data: boolean
 }): Promise<{ packs?: Array<{ id: string; name: string; code: string | null; description: string | null; matched_rule: string }>; message?: string }> {
   try {
@@ -188,10 +189,10 @@ export async function previewMatchedReviewPacksAction(input: {
     const fakeVendor = {
       id: 'preview',
       org_id: user.orgId,
-      category_id: input.category_id ?? null,
+      category_ids: input.category_ids ?? [],
       criticality_tier: input.criticality_tier ?? null,
-      service_type: input.service_type,
-      data_access_level: input.data_access_level,
+      service_types: input.service_types,
+      data_access_levels: input.data_access_levels,
       processes_personal_data: input.processes_personal_data,
     }
     const matched = matchReviewPacks((data ?? []) as import('@/types/review-pack').ReviewPack[], fakeVendor, false)
@@ -212,16 +213,27 @@ export async function previewMatchedReviewPacksAction(input: {
 
 function describeRule(
   rules: import('@/types/review-pack').ApplicabilityRules,
-  v: { criticality_tier: number | null; service_type: string; data_access_level: string; processes_personal_data: boolean },
+  v: {
+    criticality_tier: number | null
+    service_types: import('@/types/vendor').VendorServiceType[]
+    data_access_levels: import('@/types/vendor').VendorDataAccessLevel[]
+    processes_personal_data: boolean
+  },
 ): string {
   if (v.criticality_tier === 1) return 'Tier 1 critical → all packs apply'
   if (rules.always) return 'Always assigned'
   if (rules.processes_personal_data && v.processes_personal_data) return 'Processes personal data'
-  if (rules.data_access_levels?.includes(v.data_access_level as never)) return `Data access: ${v.data_access_level.replace(/_/g, ' ')}`
+
+  const dalMatch = v.data_access_levels.find((l) => rules.data_access_levels?.includes(l))
+  if (dalMatch) return `Data access: ${dalMatch.replace(/_/g, ' ')}`
+
   if (rules.min_criticality_tier && v.criticality_tier && v.criticality_tier <= rules.min_criticality_tier) {
     return `Criticality tier ${v.criticality_tier} ≤ ${rules.min_criticality_tier}`
   }
-  if (rules.service_types?.includes(v.service_type as never)) return `Service type: ${v.service_type.replace(/_/g, ' ')}`
+
+  const stMatch = v.service_types.find((t) => rules.service_types?.includes(t))
+  if (stMatch) return `Service type: ${stMatch.replace(/_/g, ' ')}`
+
   return 'Manually included'
 }
 
@@ -310,7 +322,7 @@ export async function updateApprovalStatusAction(
 export async function createVendorFromWizardAction(input: {
   name: string
   legal_name?: string | null
-  category_id?: string | null
+  category_ids?: string[]
   is_critical: boolean
   criticality_tier?: number | null
   status: 'active' | 'under_review' | 'suspended'
@@ -322,8 +334,8 @@ export async function createVendorFromWizardAction(input: {
   next_review_due_at?: string | null
   last_reviewed_at?: string | null
   notes?: string | null
-  service_type: import('@/types/vendor').VendorServiceType
-  data_access_level: import('@/types/vendor').VendorDataAccessLevel
+  service_types: import('@/types/vendor').VendorServiceType[]
+  data_access_levels: import('@/types/vendor').VendorDataAccessLevel[]
   processes_personal_data: boolean
   annual_spend?: number | null
 }): Promise<{ vendorId?: string; message?: string }> {
@@ -333,10 +345,10 @@ export async function createVendorFromWizardAction(input: {
     await autoAssignReviewPacks({
       id: vendor.id,
       org_id: user.orgId,
-      category_id: input.category_id ?? null,
+      category_ids: input.category_ids ?? [],
       criticality_tier: input.criticality_tier ?? null,
-      service_type: input.service_type,
-      data_access_level: input.data_access_level,
+      service_types: input.service_types,
+      data_access_levels: input.data_access_levels,
       processes_personal_data: input.processes_personal_data,
     })
     return { vendorId: vendor.id }
@@ -428,10 +440,10 @@ export async function reapplyReviewPacksAction(
     await autoAssignReviewPacks({
       id: vendor.id,
       org_id: user.orgId,
-      category_id: vendor.category_id,
+      category_ids: vendor.category_ids,
       criticality_tier: vendor.criticality_tier,
-      service_type: vendor.service_type,
-      data_access_level: vendor.data_access_level,
+      service_types: vendor.service_types,
+      data_access_levels: vendor.data_access_levels,
       processes_personal_data: vendor.processes_personal_data,
     })
 

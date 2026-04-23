@@ -220,7 +220,7 @@ function OverviewTab({
       ) : '—',
     },
     { label: 'Status', value: <VendorStatusBadge status={vendor.status} /> },
-    { label: 'Category', value: vendor.vendor_categories?.name ?? '—' },
+    { label: 'Categories', value: vendor.vendor_categories.length > 0 ? vendor.vendor_categories.map((c) => c.name).join(', ') : '—' },
     { label: 'Internal Owner', value: vendor.internal_owner?.name ?? vendor.internal_owner?.email ?? '—' },
     {
       label: 'Critical',
@@ -262,7 +262,7 @@ function OverviewTab({
   // Key summary fields shown inline always
   const summaryFields = [
     { label: 'Status', value: <VendorStatusBadge status={vendor.status} /> },
-    { label: 'Category', value: vendor.vendor_categories?.name ?? '—' },
+    { label: 'Categories', value: vendor.vendor_categories.length > 0 ? vendor.vendor_categories.map((c) => c.name).join(', ') : '—' },
     { label: 'Owner', value: vendor.internal_owner?.name ?? vendor.internal_owner?.email ?? '—' },
     { label: 'Criticality', value: vendor.criticality_tier != null ? `Tier ${vendor.criticality_tier}` : '—' },
     { label: 'Next Review', value: vendor.next_review_due_at ? new Date(vendor.next_review_due_at).toLocaleDateString() : '—' },

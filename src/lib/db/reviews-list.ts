@@ -7,7 +7,7 @@ export interface ReviewListRow {
   vendor_name: string
   vendor_code: string | null
   vendor_criticality_tier: number | null
-  vendor_service_type: string
+  vendor_service_types: string[]
   pack_id: string
   pack_name: string
   pack_code: string | null
@@ -38,7 +38,7 @@ export async function getOrgReviewsList(orgId: string): Promise<ReviewListRow[]>
     .select(`
       id, vendor_id, review_pack_id, status, due_at,
       reviewer_user_id, approver_user_id,
-      vendors!inner ( id, name, vendor_code, criticality_tier, service_type ),
+      vendors!inner ( id, name, vendor_code, criticality_tier, service_types ),
       review_packs!inner ( id, name, code ),
       reviewer:users!vendor_review_packs_reviewer_user_id_fkey ( id, name, email ),
       approver:users!vendor_review_packs_approver_user_id_fkey ( id, name, email )
@@ -55,7 +55,7 @@ export async function getOrgReviewsList(orgId: string): Promise<ReviewListRow[]>
     due_at: string | null
     reviewer_user_id: string | null
     approver_user_id: string | null
-    vendors: { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_type: string } | { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_type: string }[] | null
+    vendors: { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_types: string[] } | { id: string; name: string; vendor_code: string | null; criticality_tier: number | null; service_types: string[] }[] | null
     review_packs: { id: string; name: string; code: string | null } | { id: string; name: string; code: string | null }[] | null
     reviewer: { id: string; name: string | null; email: string | null } | { id: string; name: string | null; email: string | null }[] | null
     approver: { id: string; name: string | null; email: string | null } | { id: string; name: string | null; email: string | null }[] | null
@@ -147,7 +147,7 @@ export async function getOrgReviewsList(orgId: string): Promise<ReviewListRow[]>
       vendor_name: v?.name ?? 'Unknown',
       vendor_code: v?.vendor_code ?? null,
       vendor_criticality_tier: v?.criticality_tier ?? null,
-      vendor_service_type: v?.service_type ?? 'other',
+      vendor_service_types: v?.service_types ?? [],
       pack_id: p?.id ?? '',
       pack_name: p?.name ?? 'Unknown Pack',
       pack_code: p?.code ?? null,

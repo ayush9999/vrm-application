@@ -25,7 +25,7 @@ export interface VendorRow {
   vendor_code: string | null
   name: string
   legal_name: string | null
-  category_id: string | null
+  category_ids: string[]
   is_critical: boolean
   criticality_tier: number | null
   status: VendorStatus
@@ -44,10 +44,10 @@ export interface VendorRow {
   updated_at: string
   archived_at: string | null
   deleted_at: string | null
-  // New classification + approval columns (migration 018)
-  data_access_level: import('./review-pack').VendorDataAccessLevel
+  // Multi-select classification + approval columns (migration 028)
+  data_access_levels: import('./review-pack').VendorDataAccessLevel[]
   annual_spend: number | null
-  service_type: import('./review-pack').VendorServiceType
+  service_types: import('./review-pack').VendorServiceType[]
   processes_personal_data: boolean
   approval_status: import('./review-pack').VendorApprovalStatus
   approved_by_user_id: string | null
@@ -57,7 +57,7 @@ export interface VendorRow {
 
 /** vendors row with joined relations used in the list and detail views */
 export interface Vendor extends VendorRow {
-  vendor_categories: { name: string } | null
+  vendor_categories: { id: string; name: string }[]
   internal_owner: { name: string | null; email: string | null } | null
 }
 
@@ -66,7 +66,7 @@ export interface Vendor extends VendorRow {
 export interface CreateVendorInput {
   name: string
   legal_name?: string | null
-  category_id?: string | null
+  category_ids?: string[]
   is_critical: boolean
   criticality_tier?: number | null
   status: VendorStatus
@@ -78,9 +78,9 @@ export interface CreateVendorInput {
   next_review_due_at?: string | null
   last_reviewed_at?: string | null
   notes?: string | null
-  data_access_level?: import('./review-pack').VendorDataAccessLevel
+  data_access_levels?: import('./review-pack').VendorDataAccessLevel[]
   annual_spend?: number | null
-  service_type?: import('./review-pack').VendorServiceType
+  service_types?: import('./review-pack').VendorServiceType[]
   processes_personal_data?: boolean
 }
 

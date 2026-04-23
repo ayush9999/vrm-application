@@ -89,24 +89,14 @@ export function SidebarShell({ children, user, attentionItems = [] }: SidebarShe
           backgroundSize: 'auto, 20px 20px',
         }}
       >
-        {/* Sticky topbar */}
-        <div
-          className="flex items-center justify-end shrink-0 px-6"
-          style={{
-            height: 52,
-            background: 'rgba(255,255,255,0.7)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(109,93,211,0.08)',
-          }}
-        >
-          <AttentionBell items={attentionItems} />
-        </div>
-
         {/* Scrollable content area */}
         <div className="flex-1 overflow-auto">
           {children}
         </div>
       </main>
+
+      {/* Draggable attention bell — fixed to viewport, defaults to top-right */}
+      <AttentionBell items={attentionItems} />
     </div>
   )
 }

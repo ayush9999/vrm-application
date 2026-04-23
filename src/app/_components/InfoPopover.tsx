@@ -14,7 +14,10 @@ export function InfoPopover({ title, children }: Props) {
     <div className="relative inline-block">
       <button
         type="button"
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen((v) => !v)
+        }}
         className="w-4 h-4 rounded-full flex items-center justify-center transition-colors hover:opacity-80"
         style={{ background: 'rgba(109,93,211,0.1)', color: '#6c5dd3', fontFamily: 'Georgia, serif' }}
         title="What is this?"
@@ -25,7 +28,13 @@ export function InfoPopover({ title, children }: Props) {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div
+            className="fixed inset-0 z-40"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsOpen(false)
+            }}
+          />
           <div
             className="absolute z-50 rounded-xl p-4 text-left"
             style={{

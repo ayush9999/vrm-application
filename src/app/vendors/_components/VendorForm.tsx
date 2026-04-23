@@ -101,22 +101,15 @@ export function VendorForm({
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Classification</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Category</label>
-            <select
-              name="category_id"
-              defaultValue={defaultValues.category_id ?? ''}
-              className={inputCls}
-              style={inputStyle}
-            >
-              <option value="">— None —</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            {err.category_id && <p className={fieldErrorCls}>{err.category_id[0]}</p>}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Categories</label>
+            <CheckboxGroup
+              name="category_ids"
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              defaultSelected={defaultValues.category_ids ?? []}
+              emptyHint="No categories configured yet."
+            />
+            {err.category_ids && <p className={fieldErrorCls}>{err.category_ids[0]}</p>}
           </div>
 
           <div>
@@ -182,40 +175,25 @@ export function VendorForm({
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Risk Profile</p>
         <p className="text-xs mb-4 -mt-2" style={{ color: '#a99fd8' }}>
-          These fields drive auto-assignment of Review Packs.
+          Select all that apply. Review Packs are auto-assigned based on any match.
         </p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Service Type</label>
-            <select
-              name="service_type"
-              defaultValue={defaultValues.service_type ?? 'other'}
-              className={inputCls}
-              style={inputStyle}
-            >
-              <option value="saas">SaaS</option>
-              <option value="contractor">Contractor</option>
-              <option value="supplier">Supplier</option>
-              <option value="logistics">Logistics</option>
-              <option value="professional_services">Professional Services</option>
-              <option value="other">Other</option>
-            </select>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Service Types</label>
+            <CheckboxGroup
+              name="service_types"
+              options={SERVICE_TYPE_OPTIONS}
+              defaultSelected={defaultValues.service_types ?? []}
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Data Access Level</label>
-            <select
-              name="data_access_level"
-              defaultValue={defaultValues.data_access_level ?? 'none'}
-              className={inputCls}
-              style={inputStyle}
-            >
-              <option value="none">None</option>
-              <option value="internal_only">Internal Only</option>
-              <option value="personal_data">Personal Data</option>
-              <option value="sensitive_personal_data">Sensitive Personal Data</option>
-              <option value="financial_data">Financial Data</option>
-            </select>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Data Access Levels</label>
+            <CheckboxGroup
+              name="data_access_levels"
+              options={DATA_ACCESS_LEVEL_OPTIONS}
+              defaultSelected={defaultValues.data_access_levels ?? []}
+            />
           </div>
 
           <div>
@@ -435,6 +413,61 @@ export function VendorForm({
         </Link>
       </div>
     </form>
+  )
+}
+
+// ─── Checkbox group for multi-select fields ──────────────────────────────
+
+const SERVICE_TYPE_OPTIONS = [
+  { value: 'saas', label: 'SaaS' },
+  { value: 'contractor', label: 'Contractor' },
+  { value: 'supplier', label: 'Supplier' },
+  { value: 'logistics', label: 'Logistics' },
+  { value: 'professional_services', label: 'Professional Services' },
+  { value: 'other', label: 'Other' },
+]
+
+const DATA_ACCESS_LEVEL_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'internal_only', label: 'Internal Only' },
+  { value: 'personal_data', label: 'Personal Data' },
+  { value: 'sensitive_personal_data', label: 'Sensitive Personal Data' },
+  { value: 'financial_data', label: 'Financial Data' },
+]
+
+function CheckboxGroup({
+  name,
+  options,
+  defaultSelected,
+  emptyHint,
+}: {
+  name: string
+  options: { value: string; label: string }[]
+  defaultSelected: string[]
+  emptyHint?: string
+}) {
+  if (options.length === 0 && emptyHint) {
+    return <p className="text-xs italic" style={{ color: '#a99fd8' }}>{emptyHint}</p>
+  }
+  return (
+    <div
+      className="flex flex-wrap gap-x-4 gap-y-2 p-3 rounded-xl"
+      style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.12)' }}
+    >
+      {options.map((o) => (
+        <label key={o.value} className="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            name={name}
+            value={o.value}
+            defaultChecked={defaultSelected.includes(o.value)}
+            className="h-4 w-4 rounded"
+            style={{ accentColor: '#6c5dd3' }}
+          />
+          <span style={{ color: '#1e1550' }}>{o.label}</span>
+        </label>
+      ))}
+    </div>
   )
 }
 

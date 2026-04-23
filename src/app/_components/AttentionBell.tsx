@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import type { AttentionItem } from '@/lib/db/dashboard'
 
@@ -14,30 +14,145 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   blue: { bg: '#E6F1FB', color: '#185FA5' },
 }
 
+const STORAGE_KEY = 'vrm.attentionBell.pos'
+const BELL_SIZE = 38
+const EDGE_PAD = 6
+const DRAG_THRESHOLD = 3
+const POPUP_WIDTH = 380
+
+function defaultPosition(): { x: number; y: number } {
+  if (typeof window === 'undefined') return { x: 0, y: 16 }
+  return { x: window.innerWidth - BELL_SIZE - 20, y: 16 }
+}
+
 export function AttentionBell({ items }: Props) {
   const [isOpen, setIsOpen] = useState(false)
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+  const draggingRef = useRef(false)
+  const hasMovedRef = useRef(false)
+  const dragStartRef = useRef({ mx: 0, my: 0, bx: 0, by: 0 })
 
   // Real items only — filter out the 'empty' placeholder
   const realItems = items.filter((i) => i.type !== 'empty')
   const count = realItems.length
-
   const redCount = realItems.filter((i) => i.badgeStyle === 'red').length
 
+  // Hydrate position on mount (after client-side to avoid SSR mismatch)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+          setPosition(clampToViewport(parsed))
+          return
+        }
+      }
+    } catch {}
+    setPosition(defaultPosition())
+  }, [])
+
+  // Reclamp on window resize so bell never strands off-screen
+  useEffect(() => {
+    const onResize = () => {
+      setPosition((p) => (p ? clampToViewport(p) : p))
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // Global mouse handlers for drag lifecycle
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return
+      const dx = e.clientX - dragStartRef.current.mx
+      const dy = e.clientY - dragStartRef.current.my
+      if (!hasMovedRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        hasMovedRef.current = true
+        setIsOpen(false) // close popup on drag start
+      }
+      if (!hasMovedRef.current) return
+      setPosition(
+        clampToViewport({
+          x: dragStartRef.current.bx + dx,
+          y: dragStartRef.current.by + dy,
+        }),
+      )
+    }
+    const onUp = () => {
+      if (!draggingRef.current) return
+      draggingRef.current = false
+      if (hasMovedRef.current) {
+        // Persist latest position
+        setPosition((p) => {
+          if (p) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)) } catch {}
+          }
+          return p
+        })
+      }
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+  }, [])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!position) return
+    draggingRef.current = true
+    hasMovedRef.current = false
+    dragStartRef.current = {
+      mx: e.clientX,
+      my: e.clientY,
+      bx: position.x,
+      by: position.y,
+    }
+    e.preventDefault()
+  }
+
+  const handleClick = () => {
+    if (hasMovedRef.current) {
+      // Was a drag, not a click — swallow
+      hasMovedRef.current = false
+      return
+    }
+    setIsOpen((v) => !v)
+  }
+
+  // SSR and first client paint: render nothing (position unknown).
+  // useEffect fills position on mount and the bell flashes in.
+  if (!position) return null
+
+  // Popup anchor: extend rightward if bell is on the left half, leftward otherwise
+  const isBellOnLeftHalf = position.x + BELL_SIZE / 2 < window.innerWidth / 2
+
   return (
-    <div className="relative">
+    <div
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        zIndex: 60,
+      }}
+    >
       <button
         type="button"
-        onClick={() => setIsOpen((v) => !v)}
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
         className="relative flex items-center justify-center rounded-full transition-all hover:shadow-md"
         style={{
-          width: 38,
-          height: 38,
+          width: BELL_SIZE,
+          height: BELL_SIZE,
           background: 'white',
           border: '1px solid rgba(109,93,211,0.12)',
           boxShadow: '0 2px 8px rgba(30,21,80,0.06)',
+          cursor: draggingRef.current && hasMovedRef.current ? 'grabbing' : 'grab',
         }}
-        aria-label="Attention center"
-        title="Attention center"
+        aria-label="Attention center (drag to move)"
+        title="Drag to move · click to open"
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#4a4270" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 2a6 6 0 016 6v4l2 2H2l2-2V8a6 6 0 016-6z" />
@@ -64,13 +179,19 @@ export function AttentionBell({ items }: Props) {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div
+            className="fixed inset-0 z-40"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsOpen(false)
+            }}
+          />
           <div
             className="absolute rounded-2xl overflow-hidden z-50"
             style={{
-              top: 46,
-              right: 0,
-              width: 380,
+              top: BELL_SIZE + 8,
+              ...(isBellOnLeftHalf ? { left: 0 } : { right: 0 }),
+              width: POPUP_WIDTH,
               maxHeight: 'calc(100vh - 80px)',
               background: 'white',
               border: '1px solid rgba(109,93,211,0.15)',
@@ -207,4 +328,14 @@ export function AttentionBell({ items }: Props) {
       )}
     </div>
   )
+}
+
+function clampToViewport(p: { x: number; y: number }): { x: number; y: number } {
+  if (typeof window === 'undefined') return p
+  const maxX = window.innerWidth - BELL_SIZE - EDGE_PAD
+  const maxY = window.innerHeight - BELL_SIZE - EDGE_PAD
+  return {
+    x: Math.max(EDGE_PAD, Math.min(maxX, p.x)),
+    y: Math.max(EDGE_PAD, Math.min(maxY, p.y)),
+  }
 }

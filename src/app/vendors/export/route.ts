@@ -7,8 +7,8 @@ import { getCountryName } from '@/lib/countries'
 export const dynamic = 'force-dynamic'
 
 const HEADERS = [
-  'vendor_code', 'name', 'legal_name', 'category', 'service_type', 'criticality_tier',
-  'is_critical', 'data_access_level', 'processes_personal_data', 'annual_spend',
+  'vendor_code', 'name', 'legal_name', 'categories', 'service_types', 'criticality_tier',
+  'is_critical', 'data_access_levels', 'processes_personal_data', 'annual_spend',
   'status', 'approval_status', 'approved_at', 'exception_reason',
   'internal_owner_name', 'internal_owner_email', 'primary_email', 'phone', 'website_url', 'country',
   'last_reviewed_at', 'next_review_due_at',
@@ -40,11 +40,11 @@ export async function GET() {
       v.vendor_code,
       v.name,
       v.legal_name,
-      v.vendor_categories?.name ?? '',
-      v.service_type,
+      v.vendor_categories.map((c) => c.name).join('; '),
+      v.service_types.join('; '),
       v.criticality_tier,
       v.is_critical,
-      v.data_access_level,
+      v.data_access_levels.join('; '),
       v.processes_personal_data,
       v.annual_spend,
       v.status,

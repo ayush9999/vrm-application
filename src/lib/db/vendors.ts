@@ -56,16 +56,17 @@ export async function getVendors(
     SELECT
       v.*,
       COUNT(*) OVER() AS _total_count,
-      CASE WHEN vc.id IS NOT NULL
-        THEN jsonb_build_object('name', vc.name)
-        ELSE NULL
-      END AS vendor_categories,
+      COALESCE(
+        (SELECT jsonb_agg(jsonb_build_object('id', vc.id, 'name', vc.name) ORDER BY vc.name)
+         FROM vendor_categories vc
+         WHERE vc.id = ANY(v.category_ids)),
+        '[]'::jsonb
+      ) AS vendor_categories,
       CASE WHEN u.id IS NOT NULL
         THEN jsonb_build_object('name', u.name, 'email', u.email)
         ELSE NULL
       END AS internal_owner
     FROM vendors v
-    LEFT JOIN vendor_categories vc ON vc.id = v.category_id
     LEFT JOIN users u ON u.id = v.internal_owner_user_id
     WHERE v.org_id = ${orgId}
       AND v.deleted_at IS NULL
@@ -96,16 +97,17 @@ export async function getVendorById(orgId: string, id: string): Promise<Vendor |
   const rows = await sql`
     SELECT
       v.*,
-      CASE WHEN vc.id IS NOT NULL
-        THEN jsonb_build_object('name', vc.name)
-        ELSE NULL
-      END AS vendor_categories,
+      COALESCE(
+        (SELECT jsonb_agg(jsonb_build_object('id', vc.id, 'name', vc.name) ORDER BY vc.name)
+         FROM vendor_categories vc
+         WHERE vc.id = ANY(v.category_ids)),
+        '[]'::jsonb
+      ) AS vendor_categories,
       CASE WHEN u.id IS NOT NULL
         THEN jsonb_build_object('name', u.name, 'email', u.email)
         ELSE NULL
       END AS internal_owner
     FROM vendors v
-    LEFT JOIN vendor_categories vc ON vc.id = v.category_id
     LEFT JOIN users u ON u.id = v.internal_owner_user_id
     WHERE v.id = ${id}
       AND v.org_id = ${orgId}

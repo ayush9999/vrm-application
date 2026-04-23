@@ -39,12 +39,18 @@ export function DashboardTileModal({ type, health, packReadiness, children }: Pr
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsOpen(true)
+          }
+        }}
         className="text-left transition-all"
         style={{
-          all: 'unset',
           cursor: 'pointer',
           display: 'block',
           width: '100%',
@@ -53,7 +59,7 @@ export function DashboardTileModal({ type, health, packReadiness, children }: Pr
         }}
       >
         {children}
-      </button>
+      </div>
 
       {isOpen && (
         <div

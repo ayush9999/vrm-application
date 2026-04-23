@@ -23,7 +23,7 @@ interface Props {
   createAction: (input: {
     name: string
     legal_name?: string | null
-    category_id?: string | null
+    category_ids?: string[]
     is_critical: boolean
     criticality_tier?: number | null
     status: 'active' | 'under_review' | 'suspended'
@@ -32,16 +32,16 @@ interface Props {
     primary_email?: string | null
     phone?: string | null
     country_code?: string | null
-    service_type: VendorServiceType
-    data_access_level: VendorDataAccessLevel
+    service_types: VendorServiceType[]
+    data_access_levels: VendorDataAccessLevel[]
     processes_personal_data: boolean
     annual_spend?: number | null
   }) => Promise<{ vendorId?: string; message?: string }>
   previewAction: (input: {
-    category_id?: string | null
+    category_ids?: string[]
     criticality_tier?: number | null
-    service_type: VendorServiceType
-    data_access_level: VendorDataAccessLevel
+    service_types: VendorServiceType[]
+    data_access_levels: VendorDataAccessLevel[]
     processes_personal_data: boolean
   }) => Promise<{ packs?: MatchedPack[]; message?: string }>
   generatePortalLinksAction: (
@@ -60,11 +60,11 @@ interface FormData {
   phone: string
   country_code: string
   internal_owner_user_id: string
-  // Step 2
-  category_id: string
-  service_type: VendorServiceType
+  // Step 2 (now multi-select)
+  category_ids: string[]
+  service_types: VendorServiceType[]
   criticality_tier: string
-  data_access_level: VendorDataAccessLevel
+  data_access_levels: VendorDataAccessLevel[]
   processes_personal_data: boolean
   is_critical: boolean
   annual_spend: string
@@ -84,10 +84,10 @@ const INITIAL: FormData = {
   phone: '',
   country_code: '',
   internal_owner_user_id: '',
-  category_id: '',
-  service_type: 'other',
+  category_ids: [],
+  service_types: [],
   criticality_tier: '',
-  data_access_level: 'none',
+  data_access_levels: [],
   processes_personal_data: false,
   is_critical: false,
   annual_spend: '',
@@ -122,10 +122,10 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
       // Fetch matching packs
       startTransition(async () => {
         const r = await previewAction({
-          category_id: data.category_id || null,
+          category_ids: data.category_ids,
           criticality_tier: data.criticality_tier ? parseInt(data.criticality_tier, 10) : null,
-          service_type: data.service_type,
-          data_access_level: data.data_access_level,
+          service_types: data.service_types,
+          data_access_levels: data.data_access_levels,
           processes_personal_data: data.processes_personal_data,
         })
         if (r.packs) {
@@ -151,7 +151,7 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
       const result = await createAction({
         name: data.name.trim(),
         legal_name: data.legal_name || null,
-        category_id: data.category_id || null,
+        category_ids: data.category_ids,
         is_critical: data.is_critical,
         criticality_tier: data.criticality_tier ? parseInt(data.criticality_tier, 10) : null,
         status: 'active',
@@ -160,8 +160,8 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
         primary_email: data.primary_email || null,
         phone: data.phone || null,
         country_code: data.country_code || null,
-        service_type: data.service_type,
-        data_access_level: data.data_access_level,
+        service_types: data.service_types,
+        data_access_levels: data.data_access_levels,
         processes_personal_data: data.processes_personal_data,
         annual_spend: data.annual_spend ? Number(data.annual_spend) : null,
       })
@@ -403,6 +403,57 @@ function Step1Basics({
   )
 }
 
+const SERVICE_TYPE_OPTIONS: { value: VendorServiceType; label: string }[] = [
+  { value: 'saas', label: 'SaaS' },
+  { value: 'contractor', label: 'Contractor' },
+  { value: 'supplier', label: 'Supplier' },
+  { value: 'logistics', label: 'Logistics' },
+  { value: 'professional_services', label: 'Professional Services' },
+  { value: 'other', label: 'Other' },
+]
+
+const DATA_ACCESS_LEVEL_OPTIONS: { value: VendorDataAccessLevel; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'internal_only', label: 'Internal Only' },
+  { value: 'personal_data', label: 'Personal Data' },
+  { value: 'sensitive_personal_data', label: 'Sensitive Personal Data' },
+  { value: 'financial_data', label: 'Financial Data' },
+]
+
+function toggleIn<T>(arr: T[], value: T): T[] {
+  return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
+}
+
+function CheckGroup<T extends string>({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: { value: T; label: string }[]
+  selected: T[]
+  onToggle: (v: T) => void
+}) {
+  return (
+    <div
+      className="flex flex-wrap gap-x-4 gap-y-2 p-3 rounded-xl"
+      style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.12)' }}
+    >
+      {options.map((o) => (
+        <label key={o.value} className="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={selected.includes(o.value)}
+            onChange={() => onToggle(o.value)}
+            className="h-4 w-4 rounded"
+            style={{ accentColor: '#6c5dd3' }}
+          />
+          <span style={{ color: '#1e1550' }}>{o.label}</span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
 function Step2Classification({
   data,
   update,
@@ -415,27 +466,41 @@ function Step2Classification({
   return (
     <div className="space-y-4">
       <p className="text-sm" style={{ color: '#4a4270' }}>
-        These fields decide which Review Packs we&apos;ll auto-assign in the next step.
+        Select all that apply — Review Packs will auto-match on any overlap.
       </p>
+
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Categories</label>
+        {categories.length === 0 ? (
+          <p className="text-xs italic" style={{ color: '#a99fd8' }}>No categories configured yet.</p>
+        ) : (
+          <CheckGroup
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            selected={data.category_ids}
+            onToggle={(v) => update('category_ids', toggleIn(data.category_ids, v))}
+          />
+        )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Service Types</label>
+        <CheckGroup
+          options={SERVICE_TYPE_OPTIONS}
+          selected={data.service_types}
+          onToggle={(v) => update('service_types', toggleIn(data.service_types, v))}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Data Access Levels</label>
+        <CheckGroup
+          options={DATA_ACCESS_LEVEL_OPTIONS}
+          selected={data.data_access_levels}
+          onToggle={(v) => update('data_access_levels', toggleIn(data.data_access_levels, v))}
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Category</label>
-          <select className={inputCls} style={inputStyle} value={data.category_id} onChange={(e) => update('category_id', e.target.value)}>
-            <option value="">— None —</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Service Type</label>
-          <select className={inputCls} style={inputStyle} value={data.service_type} onChange={(e) => update('service_type', e.target.value as VendorServiceType)}>
-            <option value="saas">SaaS</option>
-            <option value="contractor">Contractor</option>
-            <option value="supplier">Supplier</option>
-            <option value="logistics">Logistics</option>
-            <option value="professional_services">Professional Services</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Criticality Tier</label>
           <select className={inputCls} style={inputStyle} value={data.criticality_tier} onChange={(e) => update('criticality_tier', e.target.value)}>
@@ -448,24 +513,14 @@ function Step2Classification({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Data Access Level</label>
-          <select className={inputCls} style={inputStyle} value={data.data_access_level} onChange={(e) => update('data_access_level', e.target.value as VendorDataAccessLevel)}>
-            <option value="none">None</option>
-            <option value="internal_only">Internal Only</option>
-            <option value="personal_data">Personal Data</option>
-            <option value="sensitive_personal_data">Sensitive Personal Data</option>
-            <option value="financial_data">Financial Data</option>
-          </select>
-        </div>
-        <div>
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Annual Spend</label>
           <input className={inputCls} style={inputStyle} type="number" min="0" step="0.01" value={data.annual_spend} onChange={(e) => update('annual_spend', e.target.value)} placeholder="50000" />
         </div>
-        <div className="flex items-center gap-2 pt-6">
+        <div className="flex items-center gap-2">
           <input id="ppd" type="checkbox" checked={data.processes_personal_data} onChange={(e) => update('processes_personal_data', e.target.checked)} className="h-4 w-4 rounded" style={{ accentColor: '#6c5dd3' }} />
           <label htmlFor="ppd" className="text-sm font-medium" style={{ color: '#4a4270' }}>Processes personal data</label>
         </div>
-        <div className="flex items-center gap-2 pt-6">
+        <div className="flex items-center gap-2">
           <input id="critical" type="checkbox" checked={data.is_critical} onChange={(e) => update('is_critical', e.target.checked)} className="h-4 w-4 rounded" style={{ accentColor: '#6c5dd3' }} />
           <label htmlFor="critical" className="text-sm font-medium" style={{ color: '#4a4270' }}>Mark as Critical Vendor (★)</label>
         </div>
@@ -631,11 +686,21 @@ function Step6Confirm({
   categories: VendorCategory[]
   packs: MatchedPack[]
 }) {
-  const cat = categories.find((c) => c.id === data.category_id)
+  const catNames = data.category_ids
+    .map((id) => categories.find((c) => c.id === id)?.name)
+    .filter(Boolean)
+    .join(', ')
+  const serviceTypeLabels = data.service_types
+    .map((v) => SERVICE_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v)
+    .join(', ')
+  const dataAccessLabels = data.data_access_levels
+    .map((v) => DATA_ACCESS_LEVEL_OPTIONS.find((o) => o.value === v)?.label ?? v)
+    .join(', ')
+
   const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: '#a99fd8' }}>{label}</span>
-      <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{value || '—'}</span>
+      <span className="text-sm font-medium text-right ml-4" style={{ color: '#1e1550' }}>{value || '—'}</span>
     </div>
   )
   return (
@@ -644,10 +709,10 @@ function Step6Confirm({
       <div className="rounded-xl p-4 divide-y divide-[rgba(109,93,211,0.06)]" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}>
         <Row label="Name" value={data.name} />
         <Row label="Legal Name" value={data.legal_name} />
-        <Row label="Category" value={cat?.name ?? '—'} />
-        <Row label="Service Type" value={data.service_type} />
+        <Row label="Categories" value={catNames} />
+        <Row label="Service Types" value={serviceTypeLabels} />
         <Row label="Criticality" value={data.criticality_tier ? `Tier ${data.criticality_tier}` : '—'} />
-        <Row label="Data Access" value={data.data_access_level} />
+        <Row label="Data Access" value={dataAccessLabels} />
         <Row label="Personal Data" value={data.processes_personal_data ? 'Yes' : 'No'} />
         <Row label="Critical" value={data.is_critical ? 'Yes ★' : 'No'} />
         <Row label="Annual Spend" value={data.annual_spend ? `$${data.annual_spend}` : '—'} />

@@ -138,7 +138,7 @@ export function GaugeChart(props: GaugeProps) {
             data: [score, 100 - score],
             backgroundColor: [bandColor, 'transparent'],
             borderWidth: 0,
-            borderRadius: [3, 0],
+            borderRadius: 0,
             weight: 1,
           },
         ],
@@ -148,10 +148,10 @@ export function GaugeChart(props: GaugeProps) {
         maintainAspectRatio: false,
         circumference: 180,
         rotation: -90,
-        cutout: '72%',
+        cutout: '74%',
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         animation: { duration: 900 },
-        layout: { padding: { top: 6, left: 6, right: 6, bottom: 0 } },
+        layout: { padding: { top: 4, left: 4, right: 4, bottom: 0 } },
       },
       plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 5 })],
     }
@@ -160,7 +160,7 @@ export function GaugeChart(props: GaugeProps) {
     return () => { chartRef.current?.destroy(); chartRef.current = null }
   }, [score, bandColor, nextThreshold, nextBandName, nextBandColor])
 
-  return <canvas ref={canvasRef} width={240} height={150} />
+  return <canvas ref={canvasRef} width={280} height={160} />
 }
 
 // Larger version for modal/expanded views
@@ -176,7 +176,7 @@ export function GaugeChartLarge(props: GaugeProps) {
       data: {
         datasets: [
           { data: [30, 30, 25, 15], backgroundColor: ['#FCE4E4', '#FBE8CF', '#F4F0CC', '#DDE9CF'], borderWidth: 0, weight: 1 },
-          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: [4, 0], weight: 1 },
+          { data: [score, 100 - score], backgroundColor: [bandColor, 'transparent'], borderWidth: 0, borderRadius: 0, weight: 1 },
         ],
       },
       options: {
@@ -239,9 +239,9 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
             grid: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             angleLines: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             pointLabels: {
-              font: { size: 10 },
-              color: '#9a9890',
-              padding: 4,
+              font: { size: 11 },
+              color: '#6a6860',
+              padding: 6,
             },
           },
         },
@@ -270,7 +270,7 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
     }
   }, [labels, data])
 
-  return <canvas ref={canvasRef} width={180} height={160} />
+  return <canvas ref={canvasRef} width={320} height={260} />
 }
 
 // Larger version for modal
