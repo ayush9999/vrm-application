@@ -11,7 +11,7 @@ export default async function CustomFieldsSettingsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#1e1550' }}>Custom Fields — Vendors</h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Define org-specific extra fields to capture on every vendor profile.
         </p>
         <p className="text-xs mt-2 px-3 py-2 rounded-lg inline-block" style={{ background: 'rgba(5,150,105,0.06)', color: '#059669', border: '1px solid rgba(5,150,105,0.2)' }}>

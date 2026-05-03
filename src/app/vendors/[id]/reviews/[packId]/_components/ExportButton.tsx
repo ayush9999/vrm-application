@@ -45,7 +45,7 @@ async function generatePdf(data: ReviewExportData, sections: Set<SectionKey>) {
   y += 8
 
   doc.setFontSize(9)
-  doc.setTextColor(139, 127, 212) // #8b7fd4
+  doc.setTextColor(139, 127, 212) // #5d5285
   const meta = [
     `Vendor: ${data.vendorName}${data.vendorCode ? ` (${data.vendorCode})` : ''}`,
     `Status: ${data.status.replace(/_/g, ' ')}`,
@@ -261,7 +261,7 @@ export function ExportButton({ vendorId, packId, exportCsvAction, exportPdfDataA
 
             {/* Format */}
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Format</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#5d5285' }}>Format</div>
               <div className="flex items-center gap-2">
                 {(['csv', 'pdf'] as const).map((f) => (
                   <button
@@ -279,7 +279,7 @@ export function ExportButton({ vendorId, packId, exportCsvAction, exportPdfDataA
 
             {/* What to include */}
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Include</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#5d5285' }}>Include</div>
               <div className="space-y-1">
                 {SECTIONS.map((s) => (
                   <label key={s.key} className="flex items-center gap-2 cursor-pointer py-0.5">
@@ -297,7 +297,7 @@ export function ExportButton({ vendorId, packId, exportCsvAction, exportPdfDataA
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
-              <button type="button" onClick={() => setIsOpen(false)} className="text-xs px-3 py-1.5" style={{ color: '#a99fd8' }}>Cancel</button>
+              <button type="button" onClick={() => setIsOpen(false)} className="text-xs px-3 py-1.5" style={{ color: '#6b5fa8' }}>Cancel</button>
               <button
                 type="button"
                 onClick={handleExport}

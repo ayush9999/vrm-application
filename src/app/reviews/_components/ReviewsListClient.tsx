@@ -137,7 +137,7 @@ export function ReviewsListClient({ reviews, users, bulkAssignReviewerAction, bu
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Active Reviews" value={stats.active} color="#6c5dd3" />
-        <Stat label="Overdue" value={stats.overdue} color={stats.overdue > 0 ? '#e11d48' : '#a99fd8'} />
+        <Stat label="Overdue" value={stats.overdue} color={stats.overdue > 0 ? '#e11d48' : '#6b5fa8'} />
         <Stat label="Due This Month" value={stats.dueThisMonth} color="#d97706" />
         <Stat label="Awaiting Approval" value={stats.awaitingApproval} color="#6366f1" />
       </div>
@@ -258,7 +258,7 @@ export function ReviewsListClient({ reviews, users, bulkAssignReviewerAction, bu
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}>
-      <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>{label}</div>
+      <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>{label}</div>
       <div className="text-2xl font-bold tabular-nums mt-1" style={{ color }}>{value}</div>
     </div>
   )
@@ -294,7 +294,7 @@ function ReviewTable({ rows, todayStr, selectedIds, onToggleSelect }: { rows: Re
             <tr style={{ borderBottom: '1px solid rgba(109,93,211,0.08)', background: 'rgba(109,93,211,0.03)' }}>
               <th className="px-2 py-2.5 w-8" />
               {['Vendor', 'Pack', 'Status', 'Readiness', 'Missing', 'Rem.', 'Owner', 'Due', ''].map((h) => (
-                <th key={h} className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>{h}</th>
+                <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -344,18 +344,18 @@ function ReviewRow({ r, todayStr, isSelected = false, onToggle }: { r: ReviewLis
         </Link>
         <div className="flex items-center gap-1.5 mt-0.5">
           {r.vendor_criticality_tier && (
-            <span className="text-[9px] px-1 rounded font-bold" style={
+            <span className="text-xs px-1 rounded font-bold" style={
               r.vendor_criticality_tier === 1 ? { background: 'rgba(225,29,72,0.1)', color: '#e11d48' } :
               r.vendor_criticality_tier === 2 ? { background: 'rgba(245,158,11,0.1)', color: '#d97706' } :
               { background: 'rgba(109,93,211,0.05)', color: '#6c5dd3' }
             }>T{r.vendor_criticality_tier}</span>
           )}
-          {r.vendor_code && <span className="text-[10px] font-mono" style={{ color: '#a99fd8' }}>{r.vendor_code}</span>}
+          {r.vendor_code && <span className="text-xs font-mono" style={{ color: '#6b5fa8' }}>{r.vendor_code}</span>}
         </div>
       </td>
       <td className="px-3 py-3 text-xs" style={{ color: '#4a4270' }}>{r.pack_name}</td>
       <td className="px-3 py-3">
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap" style={{ background: sty.bg, color: sty.color }}>
+        <span className="text-xs px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap" style={{ background: sty.bg, color: sty.color }}>
           {sty.label}
         </span>
       </td>
@@ -365,8 +365,8 @@ function ReviewRow({ r, todayStr, isSelected = false, onToggle }: { r: ReviewLis
         ) : (
           <div>
             <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[11px] font-bold tabular-nums" style={{ color: r.readiness_pct === 100 ? '#059669' : r.readiness_pct >= 50 ? '#6c5dd3' : '#d97706' }}>{r.readiness_pct}%</span>
-              <span className="text-[10px]" style={{ color: '#a99fd8' }}>{r.completed} / {r.applicable}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: r.readiness_pct === 100 ? '#059669' : r.readiness_pct >= 50 ? '#6c5dd3' : '#d97706' }}>{r.readiness_pct}%</span>
+              <span className="text-xs" style={{ color: '#6b5fa8' }}>{r.completed} / {r.applicable}</span>
             </div>
             <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
               <div className="h-full rounded-full" style={{ width: `${r.readiness_pct}%`, background: r.readiness_pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }} />
@@ -383,7 +383,7 @@ function ReviewRow({ r, todayStr, isSelected = false, onToggle }: { r: ReviewLis
       <td className="px-3 py-3 text-xs" style={{ color: '#4a4270' }}>{r.reviewer_name ?? <span style={{ color: '#c4bae8' }}>—</span>}</td>
       <td className="px-3 py-3 text-xs" style={{ color: isOverdue ? '#e11d48' : '#4a4270', fontWeight: isOverdue ? 600 : 400 }}>
         {r.due_at ? new Date(r.due_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
-        {isOverdue && <span className="ml-1 text-[9px] font-bold uppercase">Overdue</span>}
+        {isOverdue && <span className="ml-1 text-xs font-bold uppercase">Overdue</span>}
       </td>
       <td className="px-3 py-3 text-right">
         <Link href={reviewUrl} className="text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}>
@@ -401,12 +401,12 @@ function MobileReviewRow({ r, todayStr }: { r: ReviewListRow; todayStr: string }
     <Link href={`/vendors/${r.vendor_id}/reviews/${r.vendor_review_pack_id}`} className="block px-4 py-3" style={{ borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-sm font-medium flex-1" style={{ color: '#1e1550' }}>{r.vendor_name}</span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0" style={{ background: sty.bg, color: sty.color }}>{sty.label}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full font-bold uppercase shrink-0" style={{ background: sty.bg, color: sty.color }}>{sty.label}</span>
       </div>
-      <div className="flex items-center justify-between text-xs" style={{ color: '#a99fd8' }}>
+      <div className="flex items-center justify-between text-xs" style={{ color: '#6b5fa8' }}>
         <span>{r.pack_name}</span>
         {r.due_at && (
-          <span style={{ color: isOverdue ? '#e11d48' : '#a99fd8', fontWeight: isOverdue ? 600 : 400 }}>
+          <span style={{ color: isOverdue ? '#e11d48' : '#6b5fa8', fontWeight: isOverdue ? 600 : 400 }}>
             {isOverdue ? 'Overdue · ' : 'Due '}{new Date(r.due_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </span>
         )}
@@ -436,7 +436,7 @@ function GroupedView({ rows, todayStr, selectedIds, onToggleSelect }: { rows: Re
         <section key={g.id}>
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: '#1e1550' }}>
             {g.name}
-            <span className="text-[10px] font-normal" style={{ color: '#a99fd8' }}>({g.rows.length} vendor{g.rows.length !== 1 ? 's' : ''})</span>
+            <span className="text-xs font-normal" style={{ color: '#6b5fa8' }}>({g.rows.length} vendor{g.rows.length !== 1 ? 's' : ''})</span>
           </h3>
           <ReviewTable rows={g.rows} todayStr={todayStr} selectedIds={selectedIds} onToggleSelect={onToggleSelect} />
         </section>
@@ -451,7 +451,7 @@ function EmptyState({ message, sub, children }: { message: string; sub: string; 
   return (
     <div className="rounded-2xl p-12 text-center" style={{ background: 'white', border: '1.5px dashed rgba(109,93,211,0.2)' }}>
       <p className="text-sm font-medium" style={{ color: '#6b5fa8' }}>{message}</p>
-      <p className="text-xs mt-1" style={{ color: '#a99fd8' }}>{sub}</p>
+      <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>{sub}</p>
       {children && <div className="mt-4">{children}</div>}
     </div>
   )

@@ -31,7 +31,7 @@ export default async function NewIssuePage({
     <div className="p-6 max-w-2xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Create Issue</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-0.5" style={{ color: '#6b5fa8' }}>
           Track a vendor gap, risk, or follow-up action
         </p>
       </div>

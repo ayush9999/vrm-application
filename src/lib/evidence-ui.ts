@@ -19,6 +19,8 @@ export interface EvidenceRow {
   requirement_description: string | null
   requirement_required: boolean
   requirement_expiry_applies: boolean
+  /** Soft refresh window in days. NULL = no refresh tracking. */
+  requirement_refresh_after_days: number | null
   pack_id: string | null
   pack_name: string | null
   pack_code: string | null
@@ -44,7 +46,7 @@ export interface EvidenceVersion {
 }
 
 const STATUS_MAP: Record<EvidenceStatus, { label: string; color: string; bg: string }> = {
-  missing:       { label: 'Missing',       color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' },
+  missing:       { label: 'Missing',       color: '#64748b', bg: 'rgba(148,163,184,0.15)' },
   uploaded:      { label: 'Uploaded',      color: '#0284c7', bg: 'rgba(14,165,233,0.1)' },
   under_review:  { label: 'Under Review',  color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
   approved:      { label: 'Approved',      color: '#059669', bg: 'rgba(5,150,105,0.1)' },
@@ -59,6 +61,10 @@ export function computeEvidenceUiStatus(row: EvidenceRow): {
   color: string
   bg: string
   showExpiry: boolean
+  /** True when the doc is still approved/valid but is past its soft refresh window. */
+  isStale: boolean
+  /** Days since the doc was last verified (only meaningful when isStale). */
+  staleDays: number | null
 } {
   let status: EvidenceStatus = row.evidence_status
 
@@ -68,9 +74,28 @@ export function computeEvidenceUiStatus(row: EvidenceRow): {
     if (exp < new Date()) status = 'expired'
   }
 
+  // Compute stale: approved doc whose age exceeds the requirement's refresh window
+  let isStale = false
+  let staleDays: number | null = null
+  if (
+    status === 'approved' &&
+    row.requirement_refresh_after_days != null &&
+    row.last_verified_at
+  ) {
+    const verifiedAt = new Date(row.last_verified_at).getTime()
+    const ageMs = Date.now() - verifiedAt
+    const ageDays = Math.floor(ageMs / 86_400_000)
+    if (ageDays > row.requirement_refresh_after_days) {
+      isStale = true
+      staleDays = ageDays
+    }
+  }
+
   return {
     status,
     ...STATUS_MAP[status],
     showExpiry: status === 'approved' || status === 'expired',
+    isStale,
+    staleDays,
   }
 }

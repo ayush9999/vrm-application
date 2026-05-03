@@ -90,7 +90,7 @@ export function ReviewStatusBar({
             <div key={step.key} className="flex items-center flex-1">
               <div className="flex items-center gap-1.5">
                 <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                   style={
                     isDone
                       ? { background: '#059669', color: 'white' }
@@ -98,14 +98,14 @@ export function ReviewStatusBar({
                       ? { background: '#6c5dd3', color: 'white', boxShadow: '0 0 0 3px rgba(108,93,211,0.2)' }
                       : isSentBack
                       ? { background: '#d97706', color: 'white' }
-                      : { background: 'rgba(148,163,184,0.15)', color: '#94a3b8' }
+                      : { background: 'rgba(148,163,184,0.15)', color: '#64748b' }
                   }
                 >
                   {isDone ? '✓' : i + 1}
                 </span>
                 <span
-                  className="text-[11px] font-semibold hidden sm:inline"
-                  style={{ color: isDone ? '#059669' : isCurrent ? '#6c5dd3' : '#a99fd8' }}
+                  className="text-xs font-semibold hidden sm:inline"
+                  style={{ color: isDone ? '#059669' : isCurrent ? '#6c5dd3' : '#6b5fa8' }}
                 >
                   {step.label}
                 </span>
@@ -195,7 +195,7 @@ export function ReviewStatusBar({
 
         {/* Assigned people */}
         {(reviewerName || approverName) && (
-          <div className="flex items-center gap-4 mt-2 pt-2 text-[11px]" style={{ color: '#8b7fd4', borderTop: '1px solid rgba(109,93,211,0.06)' }}>
+          <div className="flex items-center gap-4 mt-2 pt-2 text-xs" style={{ color: '#5d5285', borderTop: '1px solid rgba(109,93,211,0.06)' }}>
             {reviewerName && <span>Reviewer: <strong style={{ color: '#4a4270' }}>{reviewerName}</strong></span>}
             {approverName && <span>Approver: <strong style={{ color: '#4a4270' }}>{approverName}</strong></span>}
           </div>
@@ -222,7 +222,7 @@ export function ReviewStatusBar({
               <button type="button" onClick={() => handleApprove('sent_back')} disabled={isPending} className="text-sm font-semibold px-5 py-2 rounded-full disabled:opacity-50" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
                 ✕ Send Back
               </button>
-              <button type="button" onClick={() => setShowApproveForm(false)} className="text-sm px-3 py-2" style={{ color: '#a99fd8' }}>Cancel</button>
+              <button type="button" onClick={() => setShowApproveForm(false)} className="text-sm px-3 py-2" style={{ color: '#6b5fa8' }}>Cancel</button>
             </div>
           </div>
         )}

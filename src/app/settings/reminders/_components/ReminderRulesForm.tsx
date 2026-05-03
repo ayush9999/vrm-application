@@ -59,7 +59,7 @@ export function ReminderRulesForm({ rules: initial, canEdit, saveAction }: Props
           />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: '#1e1550' }}>{a.label}</div>
-            <div className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>{a.description}</div>
+            <div className="text-xs mt-0.5" style={{ color: '#6b5fa8' }}>{a.description}</div>
           </div>
         </label>
       ))}

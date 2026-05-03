@@ -65,7 +65,7 @@ export function InviteSignUpForm({ token, email }: { token: string; email: strin
           disabled
           className={lockedInputCls}
         />
-        <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
           Email is locked to match the invite
         </p>
       </div>

@@ -52,7 +52,7 @@ export function ExceptionModal({
       >
         <div>
           <h3 className="text-lg font-semibold" style={{ color: '#1e1550' }}>Exception Approval</h3>
-          <p className="text-xs mt-1" style={{ color: '#8b7fd4' }}>
+          <p className="text-xs mt-1" style={{ color: '#5d5285' }}>
             Approving an exception for: <span className="font-medium" style={{ color: '#1e1550' }}>{itemName}</span>
           </p>
         </div>
@@ -84,7 +84,7 @@ export function ExceptionModal({
               className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
               style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
             />
-            <p className="text-[10px] mt-1" style={{ color: '#8b7fd4' }}>How long is this exception valid?</p>
+            <p className="text-xs mt-1" style={{ color: '#5d5285' }}>How long is this exception valid?</p>
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#6c5dd3' }}>
@@ -101,7 +101,7 @@ export function ExceptionModal({
                 <option key={u.id} value={u.id}>{u.name ?? u.email ?? u.id}</option>
               ))}
             </select>
-            <p className="text-[10px] mt-1" style={{ color: '#8b7fd4' }}>Who monitors this exception?</p>
+            <p className="text-xs mt-1" style={{ color: '#5d5285' }}>Who monitors this exception?</p>
           </div>
         </div>
 
@@ -126,7 +126,7 @@ export function ExceptionModal({
             onClick={onClose}
             disabled={isPending}
             className="text-sm px-4 py-2 rounded-full"
-            style={{ color: '#8b7fd4' }}
+            style={{ color: '#5d5285' }}
           >
             Cancel
           </button>

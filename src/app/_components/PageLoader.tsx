@@ -34,7 +34,7 @@ export function PageLoader({ label }: { label?: string }) {
       {label && (
         <div className="flex items-center justify-center gap-2 mt-8">
           <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'rgba(108,93,211,0.3)', borderTopColor: 'transparent' }} />
-          <span className="text-xs font-medium" style={{ color: '#8b7fd4' }}>{label}</span>
+          <span className="text-xs font-medium" style={{ color: '#5d5285' }}>{label}</span>
         </div>
       )}
     </div>

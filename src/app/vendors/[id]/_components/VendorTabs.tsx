@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Vendor, VendorStatus } from '@/types/vendor'
 import type { VendorDocumentsData, AssessmentDocRequest } from '@/types/document'
@@ -10,6 +10,7 @@ import type { FormState } from '@/types/common'
 import type { OrgRole } from '@/types/org'
 import type { VendorIssueCounts } from '@/lib/db/issues'
 import type { VendorReviewPack, VendorReview } from '@/types/review-pack'
+import type { EvidenceRequest, EvidenceRequestSummary, EvidenceRequestItemStatus } from '@/lib/db/evidence-requests'
 import { getCountryName } from '@/lib/countries'
 import { Spinner } from '@/app/_components/Spinner'
 import { EvidenceTab } from './tabs/EvidenceTab'
@@ -69,6 +70,26 @@ export interface VendorTabsProps {
   getEvidenceDownloadAction: (
     fileKey: string,
   ) => Promise<{ url?: string; message?: string }>
+  evidenceRequests: EvidenceRequestSummary[]
+  activeRequestByDoc: Record<string, { request_id: string; sent_at: string; status: EvidenceRequestItemStatus; replied_at: string | null }>
+  createEvidenceRequestAction: (
+    vendorId: string,
+    input: {
+      vendorDocumentIds: string[]
+      message: string | null
+      dueDate: string | null
+      recipientEmails: string[]
+      expiryDays: number
+    },
+  ) => Promise<{ url?: string; request?: EvidenceRequest; message?: string }>
+  cancelEvidenceRequestAction: (
+    vendorId: string,
+    requestId: string,
+  ) => Promise<{ success?: boolean; message?: string }>
+  deleteEvidenceRequestAction: (
+    vendorId: string,
+    requestId: string,
+  ) => Promise<{ success?: boolean; message?: string }>
   issueCounts: VendorIssueCounts
   vendorId: string
   vendorReviews: VendorReview[]
@@ -96,6 +117,11 @@ export function VendorTabs({
   requestEvidenceAction,
   getEvidenceVersionsAction,
   getEvidenceDownloadAction,
+  evidenceRequests,
+  activeRequestByDoc,
+  createEvidenceRequestAction,
+  cancelEvidenceRequestAction,
+  deleteEvidenceRequestAction,
   issueCounts,
   vendorId,
   vendorReviews,
@@ -115,7 +141,7 @@ export function VendorTabs({
               style={
                 active === tab.id
                   ? { color: '#6c5dd3', borderColor: '#6c5dd3' }
-                  : { color: '#a99fd8', borderColor: 'transparent' }
+                  : { color: '#6b5fa8', borderColor: 'transparent' }
               }
             >
               {tab.label}
@@ -170,12 +196,19 @@ export function VendorTabs({
       {active === 'evidence' && (
         <EvidenceTab
           vendorId={vendor.id}
+          vendorName={vendor.name}
+          vendorPrimaryEmail={vendor.primary_email ?? null}
           groups={evidenceGroups}
+          requests={evidenceRequests}
+          activeRequestByDoc={activeRequestByDoc}
           uploadEvidenceAction={uploadEvidenceAction}
           setEvidenceStatusAction={setEvidenceStatusAction}
           requestEvidenceAction={requestEvidenceAction}
           getVersionsAction={getEvidenceVersionsAction}
           getDownloadUrlAction={getEvidenceDownloadAction}
+          createRequestAction={createEvidenceRequestAction}
+          cancelRequestAction={cancelEvidenceRequestAction}
+          deleteRequestAction={deleteEvidenceRequestAction}
         />
       )}
       {active === 'incidents' && (
@@ -211,39 +244,32 @@ function OverviewTab({
   onSwitchTab: (tab: Tab) => void
 }) {
   const fields: { label: string; value: React.ReactNode }[] = [
-    { label: 'Name', value: vendor.name },
-    { label: 'Legal Name', value: vendor.legal_name ?? '—' },
-    {
-      label: 'Vendor Code',
-      value: vendor.vendor_code ? (
-        <code className="font-mono text-sm px-1.5 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.08)', color: '#6b5fa8' }}>{vendor.vendor_code}</code>
-      ) : '—',
-    },
     { label: 'Status', value: <VendorStatusBadge status={vendor.status} /> },
     { label: 'Categories', value: vendor.vendor_categories.length > 0 ? vendor.vendor_categories.map((c) => c.name).join(', ') : '—' },
     { label: 'Internal Owner', value: vendor.internal_owner?.name ?? vendor.internal_owner?.email ?? '—' },
+    {
+      label: 'Criticality',
+      value: vendor.criticality_tier != null ? ({
+        1: 'Tier 1 — Low',
+        2: 'Tier 2 — Medium',
+        3: 'Tier 3 — High',
+        4: 'Tier 4 — Critical',
+        5: 'Tier 5 — Very Critical',
+      } as Record<number, string>)[vendor.criticality_tier] ?? `Tier ${vendor.criticality_tier}` : '—',
+    },
     {
       label: 'Critical',
       value: vendor.is_critical ? (
         <span className="text-amber-500 font-semibold">Yes ★</span>
       ) : 'No',
     },
-    {
-      label: 'Criticality Tier',
-      value: vendor.criticality_tier != null ? ({
-        1: '1 — Low',
-        2: '2 — Medium',
-        3: '3 — High',
-        4: '4 — Critical',
-        5: '5 — Very Critical',
-      } as Record<number, string>)[vendor.criticality_tier] ?? vendor.criticality_tier : '—',
-    },
+    { label: 'Legal Name', value: vendor.legal_name ?? '—' },
     { label: 'Website', value: vendor.website_url ?? '—' },
     { label: 'Primary Email', value: vendor.primary_email ?? '—' },
     { label: 'Phone', value: vendor.phone ?? '—' },
     { label: 'Country', value: getCountryName(vendor.country_code) ?? '—' },
     {
-      label: 'Next Review Due',
+      label: 'Next Review',
       value: vendor.next_review_due_at
         ? new Date(vendor.next_review_due_at).toLocaleDateString()
         : '—',
@@ -259,76 +285,44 @@ function OverviewTab({
     { label: 'Notes', value: vendor.notes ?? '—' },
   ]
 
-  // Key summary fields shown inline always
-  const summaryFields = [
-    { label: 'Status', value: <VendorStatusBadge status={vendor.status} /> },
-    { label: 'Categories', value: vendor.vendor_categories.length > 0 ? vendor.vendor_categories.map((c) => c.name).join(', ') : '—' },
-    { label: 'Owner', value: vendor.internal_owner?.name ?? vendor.internal_owner?.email ?? '—' },
-    { label: 'Criticality', value: vendor.criticality_tier != null ? `Tier ${vendor.criticality_tier}` : '—' },
-    { label: 'Next Review', value: vendor.next_review_due_at ? new Date(vendor.next_review_due_at).toLocaleDateString() : '—' },
-  ]
-
-  const [showDetails, setShowDetails] = useState(false)
-
   return (
     <div className="space-y-4">
-      {/* Key summary — always visible */}
+      {/* Vendor details — always visible 2-col grid */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl"
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.07)' }}
       >
-        <div className="flex items-center gap-6 px-5 py-3">
-          {summaryFields.map(f => (
-            <div key={f.label} className="min-w-0">
-              <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6c5dd3' }}>{f.label}</div>
-              <div className="text-sm font-medium mt-1" style={{ color: '#1e1550' }}>{f.value}</div>
-            </div>
-          ))}
-          <div className="ml-auto flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
+          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+            Vendor Details
+          </h3>
+          <div className="flex items-center gap-1.5">
             <Link
               href={`/vendors/${vendor.id}/edit`}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
               style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
             >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 2l3 3-9 9H2v-3z" />
+              </svg>
               Edit
             </Link>
             {currentRole === 'site_admin' && (
-              <DeleteVendorButton deleteAction={deleteVendorAction} />
+              <VendorOverflowMenu deleteAction={deleteVendorAction} />
             )}
           </div>
         </div>
 
-        {/* Expandable full details */}
-        <div
-          className="flex items-center gap-2 px-5 py-2 cursor-pointer transition-colors hover:bg-[rgba(109,93,211,0.02)]"
-          style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}
-          onClick={() => setShowDetails(d => !d)}
-        >
-          <svg
-            width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"
-            className="shrink-0 transition-transform"
-            style={{ transform: showDetails ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          >
-            <path d="M4 6l4 4 4-4" />
-          </svg>
-          <span className="text-[11px] font-medium" style={{ color: '#8b7fd4' }}>
-            {showDetails ? 'Hide details' : 'All details'}
-          </span>
-        </div>
-
-        {showDetails && (
-          <div className="px-5 pb-5 pt-3" style={{ borderTop: '1px solid rgba(109,93,211,0.04)' }}>
-            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-10 gap-y-4">
-              {fields.map(({ label, value }) => (
-                <div key={label}>
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6c5dd3' }}>{label}</dt>
-                  <dd className="text-sm font-medium mt-1" style={{ color: '#1e1550' }}>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )}
+        <dl className="px-5 py-4 grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+          {fields.map(({ label, value }) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b5fa8' }}>{label}</dt>
+              <dd className="text-sm font-medium mt-1 truncate" style={{ color: '#1e1550' }} title={typeof value === 'string' ? value : undefined}>
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       {/* Document Expiry Alerts */}
@@ -439,8 +433,15 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
       </div>
 
       {total === 0 ? (
-        <div className="px-4 py-2">
-          <p className="text-xs" style={{ color: '#a99fd8' }}>No issues tracked for this vendor.</p>
+        <div className="px-4 py-3 flex items-center justify-between gap-3 bg-white">
+          <p className="text-xs" style={{ color: '#6b5fa8' }}>No issues tracked for this vendor.</p>
+          <Link
+            href={`/issues/new?vendor_id=${vendorId}`}
+            className="text-xs font-medium px-3 py-1 rounded-full transition-all hover:opacity-80 shrink-0"
+            style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.2)' }}
+          >
+            + Track issue
+          </Link>
         </div>
       ) : (
         <div className="flex items-center gap-5 px-4 py-2 bg-white">
@@ -448,13 +449,13 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
             { label: 'Total', value: total, color: '#4a4270' },
             { label: 'Open', value: open, color: '#d97706' },
             { label: 'In Progress', value: in_progress, color: '#2563eb' },
-            { label: 'Overdue', value: overdue, color: overdue > 0 ? '#e11d48' : '#a99fd8' },
-            { label: 'Critical', value: critical, color: critical > 0 ? '#e11d48' : '#a99fd8' },
-            { label: 'High', value: high, color: high > 0 ? '#ea580c' : '#a99fd8' },
+            { label: 'Overdue', value: overdue, color: overdue > 0 ? '#e11d48' : '#6b5fa8' },
+            { label: 'Critical', value: critical, color: critical > 0 ? '#e11d48' : '#6b5fa8' },
+            { label: 'High', value: high, color: high > 0 ? '#ea580c' : '#6b5fa8' },
           ].map(s => (
             <div key={s.label} className="text-center min-w-[40px]">
               <div className="text-sm font-bold" style={{ color: s.color }}>{s.value}</div>
-              <div className="text-[9px] uppercase tracking-wider font-medium" style={{ color: '#a99fd8' }}>{s.label}</div>
+              <div className="text-xs uppercase tracking-wider font-medium" style={{ color: '#6b5fa8' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -475,34 +476,80 @@ function IssuesSummaryCard({ issueCounts, vendorId }: { issueCounts: VendorIssue
   )
 }
 
-// ─── Delete vendor button ──────────────────────────────────────────────────────
+// ─── Vendor overflow menu (kebab) ─────────────────────────────────────────────
 
-function DeleteVendorButton({
+function VendorOverflowMenu({
   deleteAction,
 }: {
   deleteAction: (prevState: FormState, formData: FormData) => Promise<FormState>
 }) {
+  const [open, setOpen] = useState(false)
   const [state, formAction, isPending] = useActionState(deleteAction, {})
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
 
   return (
-    <form
-      action={formAction}
-      onSubmit={(e) => {
-        if (!confirm('Delete this vendor? This can only be undone by a database admin.')) {
-          e.preventDefault()
-        }
-      }}
-    >
-      {state.message && <p className="text-xs text-rose-600 mr-2 inline">{state.message}</p>}
+    <div ref={menuRef} className="relative">
       <button
-        type="submit"
-        disabled={isPending}
-        className="inline-flex items-center gap-2 justify-center rounded-full border border-rose-200 bg-rose-50 px-5 py-2 text-sm font-medium text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition-colors"
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="More actions"
+        className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[rgba(109,93,211,0.08)]"
+        style={{ color: '#6b5fa8' }}
       >
-        {isPending && <Spinner />}
-        {isPending ? 'Deleting…' : 'Delete Vendor'}
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="8" cy="3" r="1.5" />
+          <circle cx="8" cy="8" r="1.5" />
+          <circle cx="8" cy="13" r="1.5" />
+        </svg>
       </button>
-    </form>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 z-30 rounded-xl overflow-hidden"
+          style={{ minWidth: 200, background: 'white', border: '1px solid rgba(108,93,211,0.18)', boxShadow: '0 8px 24px rgba(30,21,80,0.12)' }}
+        >
+          <div
+            className="px-3 pt-2 pb-1 text-xs font-bold uppercase tracking-widest"
+            style={{ color: '#6b5fa8', borderBottom: '1px solid rgba(108,93,211,0.06)' }}
+          >
+            Danger zone
+          </div>
+          <form
+            action={formAction}
+            onSubmit={(e) => {
+              if (!confirm('Delete this vendor? This can only be undone by a database admin.')) {
+                e.preventDefault()
+              } else {
+                setOpen(false)
+              }
+            }}
+          >
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full text-left px-3 py-2 text-sm font-medium transition-colors hover:bg-rose-50 disabled:opacity-50 inline-flex items-center gap-2"
+              style={{ color: '#e11d48' }}
+            >
+              {isPending && <Spinner />}
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 4h10M6 4V2.5a1 1 0 011-1h2a1 1 0 011 1V4M5 4l1 9.5a1 1 0 001 .9h2a1 1 0 001-.9L11 4" />
+              </svg>
+              {isPending ? 'Deleting…' : 'Delete vendor'}
+            </button>
+            {state.message && <p className="px-3 pb-2 text-xs text-rose-600">{state.message}</p>}
+          </form>
+        </div>
+      )}
+    </div>
   )
 }
 

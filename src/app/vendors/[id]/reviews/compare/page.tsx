@@ -51,7 +51,7 @@ export default async function CompareReviewsPage({ params }: PageProps) {
 
   return (
     <div className="px-6 py-5 max-w-6xl mx-auto">
-      <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
+      <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
         <Link href="/vendors" className="hover:text-[#6c5dd3]">Vendors</Link>
         <span>/</span>
         <Link href={`/vendors/${vendorId}`} className="hover:text-[#6c5dd3]">{vendor.name}</Link>
@@ -66,7 +66,7 @@ export default async function CompareReviewsPage({ params }: PageProps) {
       {completedVrps.length < 2 ? (
         <div className="rounded-2xl p-12 text-center" style={{ background: 'white', border: '1.5px dashed rgba(109,93,211,0.2)' }}>
           <p className="text-sm font-medium" style={{ color: '#1e1550' }}>Need at least 2 completed reviews to compare.</p>
-          <p className="text-xs mt-1" style={{ color: '#a99fd8' }}>
+          <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
             Complete a review pack and come back here.
           </p>
         </div>

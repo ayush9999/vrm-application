@@ -31,7 +31,7 @@ export default async function ReviewPacksSettingsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#1e1550' }}>Review Packs</h2>
-          <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+          <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
             Review Packs define the evidence + review questions used to onboard a vendor.
             Standard packs ship with the system. Custom packs are specific to your organisation.
           </p>
@@ -47,7 +47,7 @@ export default async function ReviewPacksSettingsPage() {
 
       {/* Standard packs */}
       <section>
-        <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#a99fd8' }}>
+        <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5fa8' }}>
           Standard Packs ({standardPacks.length})
         </h3>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -60,12 +60,12 @@ export default async function ReviewPacksSettingsPage() {
       {/* Custom packs */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
             Custom Packs ({customPacks.length})
           </h3>
         </div>
         {customPacks.length === 0 ? (
-          <p className="text-sm py-4" style={{ color: '#a99fd8' }}>
+          <p className="text-sm py-4" style={{ color: '#6b5fa8' }}>
             No active custom packs. Custom pack creation UI will be added in a future release.
           </p>
         ) : (
@@ -80,7 +80,7 @@ export default async function ReviewPacksSettingsPage() {
       {/* Archived packs */}
       {archivedPacks.length > 0 && (
         <section>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#a99fd8' }}>
+          <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5fa8' }}>
             Archived ({archivedPacks.length})
           </h3>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -123,12 +123,12 @@ function PackCard({
       <div className="flex items-start justify-between mb-2 gap-2">
         <h4 className="text-sm font-semibold flex-1" style={{ color: '#1e1550' }}>{pack.name}</h4>
         {archived && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: 'rgba(148,163,184,0.2)', color: '#64748b' }}>
+          <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: 'rgba(148,163,184,0.2)', color: '#64748b' }}>
             Archived
           </span>
         )}
         {pack.code && (
-          <span className="text-[10px] font-mono shrink-0" style={{ color: '#a99fd8' }}>
+          <span className="text-xs font-mono shrink-0" style={{ color: '#6b5fa8' }}>
             {pack.code}
           </span>
         )}
@@ -142,7 +142,7 @@ function PackCard({
         <Stat label="Evidence" count={pack.evidence_count} />
         <Stat label="Review Items" count={pack.review_count} />
         <span
-          className="text-[10px] px-2 py-0.5 rounded-full font-medium ml-auto"
+          className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
           style={{ background: 'rgba(109,93,211,0.05)', color: '#6c5dd3' }}
         >
           {pack.review_cadence}
@@ -156,7 +156,7 @@ function Stat({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-sm font-bold tabular-nums" style={{ color: '#6c5dd3' }}>{count}</span>
-      <span className="text-[10px] uppercase tracking-wider" style={{ color: '#a99fd8' }}>{label}</span>
+      <span className="text-xs uppercase tracking-wider" style={{ color: '#6b5fa8' }}>{label}</span>
     </div>
   )
 }

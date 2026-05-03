@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { requireCurrentUser } from '@/lib/current-user'
 import { getIssues } from '@/lib/db/issues'
 import type { IssueStatus, IssueSeverity } from '@/types/issue'
-import { IssuesList } from './_components/IssuesList'
+import { IssuesTable } from './_components/IssuesTable'
 
 export default async function IssuesPage({
   searchParams,
@@ -41,12 +41,12 @@ export default async function IssuesPage({
   ]
 
   return (
-    <div className="px-6 py-5 max-w-6xl mx-auto space-y-5">
+    <div className="px-6 py-5 max-w-screen-2xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Issues & Remediation</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#a99fd8' }}>
+          <p className="text-sm mt-0.5" style={{ color: '#6b5fa8' }}>
             Track vendor gaps, risks, and follow-up actions
           </p>
         </div>
@@ -72,7 +72,7 @@ export default async function IssuesPage({
           ].map(s => (
             <div key={s.label} className="text-center min-w-[52px]">
               <p className="text-lg font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#a99fd8' }}>{s.label}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b5fa8' }}>{s.label}</p>
             </div>
           ))}
         </div>
@@ -82,7 +82,7 @@ export default async function IssuesPage({
             <Link
               key={f.key}
               href={f.key ? `/issues?status=${f.key}` : '/issues'}
-              className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              className="px-2.5 py-1 rounded-md text-xs font-medium transition-all"
               style={(statusFilter ?? '') === f.key
                 ? { background: '#6c5dd3', color: '#fff' }
                 : { color: '#6b5fa8' }
@@ -96,7 +96,7 @@ export default async function IssuesPage({
         {overdueCount > 0 && (
           <Link
             href="/issues?overdue=1"
-            className="px-2.5 py-1 rounded-md text-[11px] font-semibold shrink-0"
+            className="px-2.5 py-1 rounded-md text-xs font-semibold shrink-0"
             style={overdue
               ? { background: '#e11d48', color: '#fff' }
               : { background: 'rgba(225,29,72,0.08)', color: '#e11d48' }
@@ -113,13 +113,13 @@ export default async function IssuesPage({
           className="text-center py-16 rounded-2xl"
           style={{ border: '1.5px dashed rgba(109,93,211,0.2)', background: 'rgba(109,93,211,0.02)' }}
         >
-          <p className="text-sm font-medium" style={{ color: '#a99fd8' }}>No issues found</p>
+          <p className="text-sm font-medium" style={{ color: '#6b5fa8' }}>No issues found</p>
           <p className="text-xs mt-1" style={{ color: '#c4bae8' }}>
             Issues are created from assessments or manually from this page.
           </p>
         </div>
       ) : (
-        <IssuesList issues={issues} today={today} />
+        <IssuesTable issues={issues} today={today} />
       )}
     </div>
   )

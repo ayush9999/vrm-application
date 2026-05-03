@@ -87,6 +87,8 @@ export interface EvidenceRequirement {
   required: boolean
   accepted_formats: string | null
   expiry_applies: boolean
+  /** Soft freshness window in days. NULL = no refresh tracking. */
+  refresh_after_days: number | null
   reupload_cadence: string | null
   sort_order: number
   created_at: string

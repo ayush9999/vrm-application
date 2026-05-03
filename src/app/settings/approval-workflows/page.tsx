@@ -25,7 +25,7 @@ export default async function ApprovalWorkflowsSettingsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#1e1550' }}>Approval Workflows</h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Set the default approver for each criticality tier. Used as a fallback suggestion on vendor approvals — does not auto-assign yet.
         </p>
       </div>

@@ -53,7 +53,7 @@ export function FrameworkCoverage({ items, orgStandards, isCompleted }: Props) {
           </svg>
           <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>Framework Coverage</span>
         </div>
-        <span className="text-[10px]" style={{ color: '#8b7fd4' }}>
+        <span className="text-xs" style={{ color: '#5d5285' }}>
           Based on your org&apos;s selected compliance standards
         </span>
       </div>
@@ -66,7 +66,7 @@ export function FrameworkCoverage({ items, orgStandards, isCompleted }: Props) {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px]" style={{ color: '#8b7fd4' }}>
+                <span className="text-xs" style={{ color: '#5d5285' }}>
                   {c.passed} / {c.totalMapped} requirements passed
                 </span>
                 <span

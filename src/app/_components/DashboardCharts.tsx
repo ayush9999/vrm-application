@@ -153,7 +153,7 @@ export function GaugeChart(props: GaugeProps) {
         animation: { duration: 900 },
         layout: { padding: { top: 4, left: 4, right: 4, bottom: 0 } },
       },
-      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 10, dotRadius: 5 })],
+      plugins: [buildGaugeOverlay({ ...props, labelFontSize: 12, dotRadius: 5 })],
     }
     chartRef.current = new Chart(canvasRef.current, config)
 
@@ -200,6 +200,20 @@ export function GaugeChartLarge(props: GaugeProps) {
 /*  Radar                                                             */
 /* ------------------------------------------------------------------ */
 
+function pointColorFor(v: number) {
+  return v >= 60 ? '#639922' : v >= 30 ? '#EF9F27' : '#E24B4A'
+}
+
+// Auto-scale the radar axis to the data with ~30% headroom, snapped to a
+// readable step. Floor at 20 so a single small value doesn't fill the chart.
+function radarAxisMax(values: number[]): number {
+  const peak = Math.max(0, ...values)
+  if (peak >= 75) return 100
+  const padded = peak * 1.3
+  const step = padded < 25 ? 5 : 10
+  return Math.max(20, Math.ceil(padded / step) * step)
+}
+
 export function RadarChart({ labels, data }: { labels: string[]; data: number[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -207,9 +221,8 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
   useEffect(() => {
     if (!canvasRef.current) return
 
-    const pointColors = data.map((v) =>
-      v >= 60 ? '#639922' : v >= 30 ? '#EF9F27' : '#E24B4A',
-    )
+    const pointColors = data.map(pointColorFor)
+    const axisMax = radarAxisMax(data)
 
     chartRef.current = new Chart(canvasRef.current, {
       type: 'radar',
@@ -218,13 +231,14 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
         datasets: [
           {
             data,
-            backgroundColor: 'rgba(55,138,221,0.12)',
+            backgroundColor: 'rgba(55,138,221,0.22)',
             borderColor: '#378ADD',
-            borderWidth: 1.5,
-            pointRadius: 4,
-            pointHoverRadius: 6,
+            borderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 8,
             pointBackgroundColor: pointColors,
-            pointBorderColor: 'transparent',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5,
           },
         ],
       },
@@ -234,14 +248,21 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
         scales: {
           r: {
             min: 0,
-            max: 100,
-            ticks: { display: false },
+            max: axisMax,
+            ticks: {
+              display: true,
+              stepSize: axisMax / 4,
+              color: '#6b5fa8',
+              backdropColor: 'transparent',
+              font: { size: 10 },
+              callback: (v) => `${v}`,
+            },
             grid: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             angleLines: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             pointLabels: {
-              font: { size: 11 },
+              font: { size: 12 },
               color: '#6a6860',
-              padding: 6,
+              padding: 10,
             },
           },
         },
@@ -261,6 +282,7 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
           },
         },
         animation: { duration: 1000 },
+        layout: { padding: 18 },
       },
     })
 
@@ -280,18 +302,21 @@ export function RadarChartLarge({ labels, data }: { labels: string[]; data: numb
 
   useEffect(() => {
     if (!canvasRef.current) return
-    const pointColors = data.map((v) => v >= 60 ? '#639922' : v >= 30 ? '#EF9F27' : '#E24B4A')
+    const pointColors = data.map(pointColorFor)
+    const axisMax = radarAxisMax(data)
     chartRef.current = new Chart(canvasRef.current, {
       type: 'radar',
       data: {
         labels,
         datasets: [{
           data,
-          backgroundColor: 'rgba(55,138,221,0.12)',
+          backgroundColor: 'rgba(55,138,221,0.22)',
           borderColor: '#378ADD',
-          borderWidth: 1.8,
-          pointRadius: 5, pointHoverRadius: 7,
-          pointBackgroundColor: pointColors, pointBorderColor: 'transparent',
+          borderWidth: 2.2,
+          pointRadius: 7, pointHoverRadius: 10,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
         }],
       },
       options: {
@@ -299,11 +324,18 @@ export function RadarChartLarge({ labels, data }: { labels: string[]; data: numb
         maintainAspectRatio: false,
         scales: {
           r: {
-            min: 0, max: 100,
-            ticks: { display: false },
+            min: 0, max: axisMax,
+            ticks: {
+              display: true,
+              stepSize: axisMax / 4,
+              color: '#6b5fa8',
+              backdropColor: 'transparent',
+              font: { size: 11 },
+              callback: (v) => `${v}`,
+            },
             grid: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             angleLines: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
-            pointLabels: { font: { size: 12 }, color: '#4a4270', padding: 8 },
+            pointLabels: { font: { size: 12 }, color: '#4a4270', padding: 12 },
           },
         },
         plugins: {
@@ -316,6 +348,7 @@ export function RadarChartLarge({ labels, data }: { labels: string[]; data: numb
           },
         },
         animation: { duration: 1000 },
+        layout: { padding: 22 },
       },
     })
     return () => { chartRef.current?.destroy(); chartRef.current = null }

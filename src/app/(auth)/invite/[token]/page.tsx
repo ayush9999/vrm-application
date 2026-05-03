@@ -32,7 +32,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
           <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
             Invite not valid
           </h2>
-          <p className="text-sm mt-2" style={{ color: '#a99fd8' }}>
+          <p className="text-sm mt-2" style={{ color: '#6b5fa8' }}>
             This invite link has expired, been revoked, or already been accepted.
           </p>
         </div>
@@ -129,7 +129,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
           Join {orgName}
         </h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           You&apos;ve been invited. Create your account to join.
         </p>
       </div>

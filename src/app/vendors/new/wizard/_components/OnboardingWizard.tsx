@@ -1,13 +1,21 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { VendorCategory } from '@/types/vendor'
 import type { VendorServiceType, VendorDataAccessLevel } from '@/types/review-pack'
 import type { OrgUser } from '@/lib/db/organizations'
 import { CategoryPicker } from '@/app/vendors/_components/CategoryPicker'
 
-const STEPS = ['Basics', 'Classification', 'Review Packs', 'Evidence', 'Collect', 'Confirm'] as const
+const STEPS = ['Basics', 'Classification', 'Review Packs', 'Evidence', 'Confirm'] as const
+
+const CREATING_STEPS: { label: string; sub: string }[] = [
+  { label: 'Creating vendor record',     sub: 'Saving identity, classification, and contact details…' },
+  { label: 'Auto-applying review packs', sub: 'Matching applicable packs against the vendor profile…' },
+  { label: 'Generating evidence checklist', sub: 'Creating placeholder rows for each required document…' },
+  { label: 'Setting up the onboarding review', sub: 'Linking everything under a single review engagement…' },
+  { label: 'Almost done',                sub: 'Wrapping up — should be just a moment…' },
+]
 
 interface MatchedPack {
   id: string
@@ -45,11 +53,6 @@ interface Props {
     data_access_levels: VendorDataAccessLevel[]
     processes_personal_data: boolean
   }) => Promise<{ packs?: MatchedPack[]; message?: string }>
-  generatePortalLinksAction: (
-    vendorId: string,
-    recipientEmail: string | null,
-    expiryDays: number,
-  ) => Promise<{ urls?: string[]; message?: string }>
 }
 
 interface FormData {
@@ -66,15 +69,9 @@ interface FormData {
   service_types: VendorServiceType[]
   criticality_tier: string
   data_access_levels: VendorDataAccessLevel[]
-  processes_personal_data: boolean
-  is_critical: boolean
   annual_spend: string
   // Step 3
   excluded_pack_ids: Set<string>
-  // Step 5 (Collect)
-  send_portal_link: boolean
-  portal_recipient_email: string
-  portal_expiry_days: string
 }
 
 const INITIAL: FormData = {
@@ -89,16 +86,11 @@ const INITIAL: FormData = {
   service_types: [],
   criticality_tier: '',
   data_access_levels: [],
-  processes_personal_data: false,
-  is_critical: false,
   annual_spend: '',
   excluded_pack_ids: new Set(),
-  send_portal_link: false,
-  portal_recipient_email: '',
-  portal_expiry_days: '14',
 }
 
-export function OnboardingWizard({ categories, users, countries, createAction, previewAction, generatePortalLinksAction }: Props) {
+export function OnboardingWizard({ categories, users, countries, createAction, previewAction }: Props) {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [data, setData] = useState<FormData>(INITIAL)
@@ -106,7 +98,21 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [createdVendorId, setCreatedVendorId] = useState<string | null>(null)
-  const [portalUrls, setPortalUrls] = useState<string[]>([])
+  const [creatingStepIdx, setCreatingStepIdx] = useState(0)
+
+  const isCreatingFinal = isPending && step === STEPS.length - 1 && !createdVendorId
+
+  // Cycle progress messages while the final create is in flight
+  useEffect(() => {
+    if (!isCreatingFinal) {
+      setCreatingStepIdx(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setCreatingStepIdx((i) => Math.min(i + 1, CREATING_STEPS.length - 1))
+    }, 1400)
+    return () => clearInterval(interval)
+  }, [isCreatingFinal])
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setData((d) => ({ ...d, [key]: value }))
@@ -127,7 +133,7 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
           criticality_tier: data.criticality_tier ? parseInt(data.criticality_tier, 10) : null,
           service_types: data.service_types,
           data_access_levels: data.data_access_levels,
-          processes_personal_data: data.processes_personal_data,
+          processes_personal_data: data.data_access_levels.some((l) => l === 'personal_data' || l === 'sensitive_personal_data'),
         })
         if (r.packs) {
           setMatchedPacks(r.packs)
@@ -149,12 +155,16 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
   const handleSubmit = () => {
     setError(null)
     startTransition(async () => {
+      const tierNum = data.criticality_tier ? parseInt(data.criticality_tier, 10) : null
+      const processesPersonalData = data.data_access_levels.some(
+        (l) => l === 'personal_data' || l === 'sensitive_personal_data',
+      )
       const result = await createAction({
         name: data.name.trim(),
         legal_name: data.legal_name || null,
         category_ids: data.category_ids,
-        is_critical: data.is_critical,
-        criticality_tier: data.criticality_tier ? parseInt(data.criticality_tier, 10) : null,
+        is_critical: tierNum === 1,
+        criticality_tier: tierNum,
         status: 'active',
         internal_owner_user_id: data.internal_owner_user_id || null,
         website_url: data.website_url || null,
@@ -163,7 +173,7 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
         country_code: data.country_code || null,
         service_types: data.service_types,
         data_access_levels: data.data_access_levels,
-        processes_personal_data: data.processes_personal_data,
+        processes_personal_data: processesPersonalData,
         annual_spend: data.annual_spend ? Number(data.annual_spend) : null,
       })
       if (result.message || !result.vendorId) {
@@ -171,94 +181,10 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
         return
       }
       setCreatedVendorId(result.vendorId)
-
-      // Optionally generate portal links for the freshly-created vendor's packs
-      if (data.send_portal_link) {
-        const r = await generatePortalLinksAction(
-          result.vendorId,
-          data.portal_recipient_email.trim() || null,
-          parseInt(data.portal_expiry_days, 10) || 14,
-        )
-        if (r.urls) setPortalUrls(r.urls)
-        else if (r.message) setError(`Vendor created, but portal-link generation failed: ${r.message}`)
-      }
     })
   }
 
-  // Success state
-  if (createdVendorId) {
-    return (
-      <div
-        className="bg-white rounded-2xl p-8 space-y-5 text-center"
-        style={{ boxShadow: '0 2px 12px rgba(109,93,211,0.08)', border: '1px solid rgba(109,93,211,0.1)' }}
-      >
-        <div
-          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mx-auto"
-          style={{ background: 'rgba(5,150,105,0.08)' }}
-        >
-          <svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 8.5l3.5 3.5 6.5-8" />
-          </svg>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold" style={{ color: '#1e1550' }}>
-            Vendor created — {data.name}
-          </h2>
-          <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
-            Review Packs were auto-applied. You can now start the review or send the questionnaire to the vendor.
-          </p>
-        </div>
-
-        {portalUrls.length > 0 && (
-          <div
-            className="text-left rounded-xl p-4 space-y-2"
-            style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.15)' }}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
-              Portal Links Generated ({portalUrls.length})
-            </p>
-            <p className="text-xs" style={{ color: '#4a4270' }}>
-              Send these URLs to the vendor. They&apos;ll be able to upload evidence and answer review questions without logging in.
-            </p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {portalUrls.map((url, i) => (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded bg-white text-[11px]">
-                  <code className="flex-1 truncate font-mono" style={{ color: '#1e1550' }}>{url}</code>
-                  <button
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(url)}
-                    className="text-[10px] font-medium px-2 py-0.5 rounded"
-                    style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3' }}
-                  >
-                    Copy
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => router.push(`/vendors/${createdVendorId}?tab=reviews`)}
-            className="text-sm font-medium px-5 py-2 rounded-full text-white"
-            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
-          >
-            Open Vendor Profile →
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push('/vendors')}
-            className="text-sm font-medium px-4 py-2 rounded-full"
-            style={{ color: '#a99fd8' }}
-          >
-            Back to Vendors list
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const isComplete = !!createdVendorId
 
   return (
     <div
@@ -277,14 +203,14 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
                 style={
                   done || active
                     ? { background: '#6c5dd3', color: 'white' }
-                    : { background: 'rgba(109,93,211,0.08)', color: '#a99fd8' }
+                    : { background: 'rgba(109,93,211,0.08)', color: '#6b5fa8' }
                 }
               >
                 {done ? '✓' : i + 1}
               </span>
               <span
                 className="text-xs font-medium hidden sm:inline"
-                style={{ color: active ? '#1e1550' : '#a99fd8' }}
+                style={{ color: active ? '#1e1550' : '#6b5fa8' }}
               >
                 {label}
               </span>
@@ -298,19 +224,31 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
 
       {/* Step content */}
       <div className="min-h-[280px] space-y-4">
-        {step === 0 && <Step1Basics data={data} update={update} countries={countries} users={users} />}
-        {step === 1 && <Step2Classification data={data} update={update} categories={categories} />}
-        {step === 2 && <Step3Packs matched={matchedPacks} excluded={data.excluded_pack_ids} setExcluded={(s) => update('excluded_pack_ids', s)} />}
-        {step === 3 && <Step4Evidence packs={includedPacks} />}
-        {step === 4 && <Step5Collect data={data} update={update} />}
-        {step === 5 && <Step6Confirm data={data} categories={categories} packs={includedPacks} />}
+        {isCreatingFinal || isComplete ? (
+          <CreatingPanel
+            vendorName={data.name}
+            stepIdx={creatingStepIdx}
+            complete={isComplete}
+            onOpenProfile={() => router.push(`/vendors/${createdVendorId}?tab=reviews`)}
+            onBackToList={() => router.push('/vendors')}
+          />
+        ) : (
+          <>
+            {step === 0 && <Step1Basics data={data} update={update} countries={countries} users={users} />}
+            {step === 1 && <Step2Classification data={data} update={update} categories={categories} />}
+            {step === 2 && <Step3Packs matched={matchedPacks} excluded={data.excluded_pack_ids} setExcluded={(s) => update('excluded_pack_ids', s)} />}
+            {step === 3 && <Step4Evidence packs={includedPacks} />}
+            {step === 4 && <Step6Confirm data={data} categories={categories} packs={includedPacks} />}
+          </>
+        )}
       </div>
 
       {error && (
         <p className="text-xs mt-4" style={{ color: '#e11d48' }}>{error}</p>
       )}
 
-      {/* Footer nav */}
+      {/* Footer nav — hidden once the vendor is created (CTAs live inside the panel) */}
+      {!isComplete && (
       <div className="flex items-center justify-between mt-6 pt-4" style={{ borderTop: '1px solid rgba(109,93,211,0.1)' }}>
         <button
           type="button"
@@ -343,6 +281,156 @@ export function OnboardingWizard({ categories, users, countries, createAction, p
           </button>
         )}
       </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Creating-state panel ───────────────────────────────────────────────────
+
+function CreatingPanel({
+  vendorName,
+  stepIdx,
+  complete,
+  onOpenProfile,
+  onBackToList,
+}: {
+  vendorName: string
+  stepIdx: number
+  complete: boolean
+  onOpenProfile: () => void
+  onBackToList: () => void
+}) {
+  // When complete, force every step into the "done" state.
+  const effectiveStepIdx = complete ? CREATING_STEPS.length : stepIdx
+
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-10">
+      {/* Hero indicator: spinner ring while creating, green check on complete */}
+      <div className="relative mb-5" style={{ width: 64, height: 64 }}>
+        {complete ? (
+          <div
+            className="absolute inset-0 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(5,150,105,0.1)', animation: 'wizardPop 380ms cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          >
+            <svg width="30" height="30" viewBox="0 0 16 16" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 8.5l3.5 3.5 6.5-8" />
+            </svg>
+          </div>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: 'conic-gradient(from 0deg, rgba(108,93,211,0.05), #6c5dd3, rgba(108,93,211,0.05))',
+                animation: 'wizardSpin 1.2s linear infinite',
+                WebkitMaskImage: 'radial-gradient(circle, transparent 56%, black 57%)',
+                maskImage: 'radial-gradient(circle, transparent 56%, black 57%)',
+              }}
+            />
+            <div
+              className="absolute inset-0 flex items-center justify-center text-xs font-bold tracking-wide"
+              style={{ color: '#6c5dd3' }}
+            >
+              {Math.min(stepIdx + 1, CREATING_STEPS.length)}/{CREATING_STEPS.length}
+            </div>
+          </>
+        )}
+      </div>
+
+      <h3 className="text-base font-semibold mb-1" style={{ color: '#1e1550' }}>
+        {complete ? (
+          <>Vendor <span style={{ color: '#059669' }}>{vendorName.trim() || 'vendor'}</span> is ready</>
+        ) : (
+          <>Creating <span style={{ color: '#6c5dd3' }}>{vendorName.trim() || 'vendor'}</span>…</>
+        )}
+      </h3>
+      <p className="text-xs mb-6" style={{ color: '#6b5fa8' }}>
+        {complete
+          ? 'Review Packs were auto-applied. You can start the review or send the questionnaire now.'
+          : 'This usually takes a few seconds. Please don’t close the tab.'}
+      </p>
+
+      {/* Step list */}
+      <ul className="w-full max-w-md text-left space-y-2">
+        {CREATING_STEPS.map((s, i) => {
+          const done = i < effectiveStepIdx
+          const active = !complete && i === effectiveStepIdx
+          return (
+            <li key={s.label} className="flex items-start gap-2.5">
+              <span
+                className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                style={
+                  done
+                    ? { background: complete ? '#059669' : '#6c5dd3', color: 'white' }
+                    : active
+                    ? { background: 'rgba(108,93,211,0.18)', color: '#6c5dd3' }
+                    : { background: 'rgba(109,93,211,0.08)', color: '#6b5fa8' }
+                }
+              >
+                {done ? (
+                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2.5 6l2.5 2.5 4.5-5" />
+                  </svg>
+                ) : active ? (
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#6c5dd3', animation: 'wizardPulse 1.2s ease-in-out infinite' }} />
+                ) : null}
+              </span>
+              <div className="flex-1">
+                <div
+                  className="text-xs font-medium"
+                  style={{ color: done || active ? '#1e1550' : '#6b5fa8' }}
+                >
+                  {s.label}
+                </div>
+                {active && (
+                  <div className="text-xs mt-0.5" style={{ color: '#5d5285' }}>
+                    {s.sub}
+                  </div>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+
+      {/* CTAs */}
+      {complete && (
+        <div className="flex items-center justify-center gap-3 mt-6 pt-5 w-full max-w-md" style={{ borderTop: '1px solid rgba(108,93,211,0.08)' }}>
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="text-sm font-medium px-5 py-2 rounded-full text-white transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 4px 12px rgba(108,93,211,0.3)' }}
+          >
+            Open Vendor Profile →
+          </button>
+          <button
+            type="button"
+            onClick={onBackToList}
+            className="text-sm font-medium px-4 py-2 rounded-full hover:opacity-70"
+            style={{ color: '#6b5fa8' }}
+          >
+            Back to Vendors list
+          </button>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes wizardSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes wizardPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%      { transform: scale(1.6); opacity: 0.5; }
+        }
+        @keyframes wizardPop {
+          0%   { transform: scale(0.7); opacity: 0; }
+          60%  { transform: scale(1.08); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
@@ -421,40 +509,6 @@ const DATA_ACCESS_LEVEL_OPTIONS: { value: VendorDataAccessLevel; label: string }
   { value: 'financial_data', label: 'Financial Data' },
 ]
 
-function toggleIn<T>(arr: T[], value: T): T[] {
-  return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
-}
-
-function CheckGroup<T extends string>({
-  options,
-  selected,
-  onToggle,
-}: {
-  options: { value: T; label: string }[]
-  selected: T[]
-  onToggle: (v: T) => void
-}) {
-  return (
-    <div
-      className="flex flex-wrap gap-x-4 gap-y-2 p-3 rounded-xl"
-      style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.12)' }}
-    >
-      {options.map((o) => (
-        <label key={o.value} className="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={selected.includes(o.value)}
-            onChange={() => onToggle(o.value)}
-            className="h-4 w-4 rounded"
-            style={{ accentColor: '#6c5dd3' }}
-          />
-          <span style={{ color: '#1e1550' }}>{o.label}</span>
-        </label>
-      ))}
-    </div>
-  )
-}
-
 function Step2Classification({
   data,
   update,
@@ -482,19 +536,21 @@ function Step2Classification({
 
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Service Types</label>
-        <CheckGroup
+        <CategoryPicker
           options={SERVICE_TYPE_OPTIONS}
           selected={data.service_types}
-          onToggle={(v) => update('service_types', toggleIn(data.service_types, v))}
+          onChange={(next) => update('service_types', next as VendorServiceType[])}
+          placeholder="Select service types…"
         />
       </div>
 
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Data Access Levels</label>
-        <CheckGroup
+        <CategoryPicker
           options={DATA_ACCESS_LEVEL_OPTIONS}
           selected={data.data_access_levels}
-          onToggle={(v) => update('data_access_levels', toggleIn(data.data_access_levels, v))}
+          onChange={(next) => update('data_access_levels', next as VendorDataAccessLevel[])}
+          placeholder="Select data access levels…"
         />
       </div>
 
@@ -513,14 +569,6 @@ function Step2Classification({
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Annual Spend</label>
           <input className={inputCls} style={inputStyle} type="number" min="0" step="0.01" value={data.annual_spend} onChange={(e) => update('annual_spend', e.target.value)} placeholder="50000" />
-        </div>
-        <div className="flex items-center gap-2">
-          <input id="ppd" type="checkbox" checked={data.processes_personal_data} onChange={(e) => update('processes_personal_data', e.target.checked)} className="h-4 w-4 rounded" style={{ accentColor: '#6c5dd3' }} />
-          <label htmlFor="ppd" className="text-sm font-medium" style={{ color: '#4a4270' }}>Processes personal data</label>
-        </div>
-        <div className="flex items-center gap-2">
-          <input id="critical" type="checkbox" checked={data.is_critical} onChange={(e) => update('is_critical', e.target.checked)} className="h-4 w-4 rounded" style={{ accentColor: '#6c5dd3' }} />
-          <label htmlFor="critical" className="text-sm font-medium" style={{ color: '#4a4270' }}>Mark as Critical Vendor (★)</label>
         </div>
       </div>
     </div>
@@ -544,7 +592,7 @@ function Step3Packs({
   }
   if (matched.length === 0) {
     return (
-      <p className="text-sm py-8 text-center" style={{ color: '#a99fd8' }}>
+      <p className="text-sm py-8 text-center" style={{ color: '#6b5fa8' }}>
         No Review Packs match this vendor profile. You can still create the vendor and apply packs manually later.
       </p>
     )
@@ -572,15 +620,15 @@ function Step3Packs({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>{p.name}</span>
-                {p.code && <span className="text-[10px] font-mono" style={{ color: '#a99fd8' }}>{p.code}</span>}
+                {p.code && <span className="text-xs font-mono" style={{ color: '#6b5fa8' }}>{p.code}</span>}
               </div>
               {p.description && <p className="text-xs mt-0.5" style={{ color: '#4a4270' }}>{p.description}</p>}
-              <p className="text-[10px] italic mt-1" style={{ color: '#8b7fd4' }}>Why: {p.matched_rule}</p>
+              <p className="text-xs italic mt-1" style={{ color: '#5d5285' }}>Why: {p.matched_rule}</p>
             </div>
           </label>
         )
       })}
-      <p className="text-[11px] mt-3" style={{ color: '#a99fd8' }}>
+      <p className="text-xs mt-3" style={{ color: '#6b5fa8' }}>
         Note: in this version, ALL matched packs will be applied on create. To exclude a pack you can archive it in Settings → Review Packs before creating, or remove it after creation.
       </p>
     </div>
@@ -598,79 +646,10 @@ function Step4Evidence({ packs }: { packs: MatchedPack[] }) {
         {packs.map((p, i) => (
           <div key={p.id} className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: i === packs.length - 1 ? undefined : '1px solid rgba(109,93,211,0.06)' }}>
             <span className="text-sm font-medium flex-1" style={{ color: '#1e1550' }}>{p.name}</span>
-            <span className="text-[10px] uppercase tracking-wider" style={{ color: '#a99fd8' }}>Evidence checklist will generate</span>
+            <span className="text-xs uppercase tracking-wider" style={{ color: '#6b5fa8' }}>Evidence checklist will generate</span>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-function Step5Collect({
-  data,
-  update,
-}: {
-  data: FormData
-  update: <K extends keyof FormData>(key: K, value: FormData[K]) => void
-}) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm" style={{ color: '#4a4270' }}>
-        Decide how to collect evidence from this vendor. You can always send portal links later from the Reviews tab.
-      </p>
-
-      <div
-        className="rounded-xl p-4"
-        style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.15)' }}
-      >
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={data.send_portal_link}
-            onChange={(e) => update('send_portal_link', e.target.checked)}
-            className="mt-1 h-4 w-4 rounded shrink-0"
-            style={{ accentColor: '#6c5dd3' }}
-          />
-          <div className="flex-1">
-            <div className="text-sm font-semibold" style={{ color: '#1e1550' }}>
-              Generate portal links for the vendor on creation
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: '#4a4270' }}>
-              We&apos;ll create a unique URL per assigned Review Pack. Vendor opens the link to upload evidence and answer review questions — no login required.
-            </div>
-          </div>
-        </label>
-
-        {data.send_portal_link && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 pl-7">
-            <input
-              type="email"
-              value={data.portal_recipient_email}
-              onChange={(e) => update('portal_recipient_email', e.target.value)}
-              placeholder="Vendor contact email (optional)"
-              className="rounded-lg px-3 py-2 text-xs sm:col-span-2"
-              style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
-            />
-            <select
-              value={data.portal_expiry_days}
-              onChange={(e) => update('portal_expiry_days', e.target.value)}
-              className="rounded-lg px-3 py-2 text-xs"
-              style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
-            >
-              <option value="7">Expires in 7 days</option>
-              <option value="14">Expires in 14 days</option>
-              <option value="30">Expires in 30 days</option>
-              <option value="90">Expires in 90 days</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      {!data.send_portal_link && (
-        <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(108,93,211,0.04)', color: '#6c5dd3' }}>
-          You can upload evidence yourself from the vendor&apos;s Evidence tab after creation.
-        </p>
-      )}
     </div>
   )
 }
@@ -697,7 +676,7 @@ function Step6Confirm({
 
   const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-center justify-between py-1.5">
-      <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: '#a99fd8' }}>{label}</span>
+      <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: '#6b5fa8' }}>{label}</span>
       <span className="text-sm font-medium text-right ml-4" style={{ color: '#1e1550' }}>{value || '—'}</span>
     </div>
   )
@@ -709,14 +688,11 @@ function Step6Confirm({
         <Row label="Legal Name" value={data.legal_name} />
         <Row label="Categories" value={catNames} />
         <Row label="Service Types" value={serviceTypeLabels} />
-        <Row label="Criticality" value={data.criticality_tier ? `Tier ${data.criticality_tier}` : '—'} />
+        <Row label="Criticality" value={data.criticality_tier ? `Tier ${data.criticality_tier}${data.criticality_tier === '1' ? ' ★' : ''}` : '—'} />
         <Row label="Data Access" value={dataAccessLabels} />
-        <Row label="Personal Data" value={data.processes_personal_data ? 'Yes' : 'No'} />
-        <Row label="Critical" value={data.is_critical ? 'Yes ★' : 'No'} />
         <Row label="Annual Spend" value={data.annual_spend ? `$${data.annual_spend}` : '—'} />
         <Row label="Country" value={data.country_code} />
         <Row label="Review Packs" value={`${packs.length} packs will be applied`} />
-        <Row label="Send Portal Link" value={data.send_portal_link ? `Yes (${data.portal_expiry_days}d expiry${data.portal_recipient_email ? ` → ${data.portal_recipient_email}` : ''})` : 'No'} />
       </div>
     </div>
   )

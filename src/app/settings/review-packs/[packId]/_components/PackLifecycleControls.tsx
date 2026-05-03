@@ -27,7 +27,7 @@ export function PackLifecycleControls({ packId, isActive, isStandard, isSiteAdmi
     return (
       <div className="flex items-center gap-2 flex-wrap">
         <span
-          className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+          className="text-xs px-2 py-0.5 rounded-full font-bold uppercase"
           style={{ background: 'rgba(108,93,211,0.05)', color: '#6c5dd3' }}
         >
           Read-only

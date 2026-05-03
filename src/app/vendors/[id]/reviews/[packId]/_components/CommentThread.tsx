@@ -53,7 +53,7 @@ export function CommentThread({ itemId, vendorId, packId, getCommentsAction, add
       <button
         type="button"
         onClick={handleToggle}
-        className="text-[11px] font-medium flex items-center gap-1.5"
+        className="text-xs font-medium flex items-center gap-1.5"
         style={{ color: '#6c5dd3' }}
       >
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +61,7 @@ export function CommentThread({ itemId, vendorId, packId, getCommentsAction, add
         </svg>
         {isOpen ? 'Hide comments' : 'Comments'}
         {totalCount !== null && totalCount > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(108,93,211,0.1)', color: '#6c5dd3' }}>
+          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(108,93,211,0.1)', color: '#6c5dd3' }}>
             {totalCount}
           </span>
         )}
@@ -79,7 +79,7 @@ export function CommentThread({ itemId, vendorId, packId, getCommentsAction, add
             </div>
           )}
           {comments && comments.length === 0 && (
-            <p className="text-[11px] py-2" style={{ color: '#a99fd8' }}>No comments yet.</p>
+            <p className="text-xs py-2" style={{ color: '#6b5fa8' }}>No comments yet.</p>
           )}
 
           {/* New comment input */}
@@ -87,8 +87,8 @@ export function CommentThread({ itemId, vendorId, packId, getCommentsAction, add
             <div className="flex-1">
               {replyTo && (
                 <div className="flex items-center gap-1 mb-1">
-                  <span className="text-[10px]" style={{ color: '#8b7fd4' }}>Replying to comment</span>
-                  <button type="button" onClick={() => setReplyTo(null)} className="text-[10px]" style={{ color: '#e11d48' }}>× Cancel</button>
+                  <span className="text-xs" style={{ color: '#5d5285' }}>Replying to comment</span>
+                  <button type="button" onClick={() => setReplyTo(null)} className="text-xs" style={{ color: '#e11d48' }}>× Cancel</button>
                 </div>
               )}
               <textarea
@@ -135,14 +135,14 @@ function CommentNode({ comment, onReply, depth }: { comment: ReviewComment; onRe
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-semibold" style={{ color: '#1e1550' }}>{comment.user_name ?? 'Unknown'}</span>
-            <span className="text-[10px]" style={{ color: '#a99fd8' }}>
+            <span className="text-xs font-semibold" style={{ color: '#1e1550' }}>{comment.user_name ?? 'Unknown'}</span>
+            <span className="text-xs" style={{ color: '#6b5fa8' }}>
               {new Date(comment.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </span>
             <button
               type="button"
               onClick={() => onReply(comment.id)}
-              className="text-[10px] font-medium hover:underline ml-auto"
+              className="text-xs font-medium hover:underline ml-auto"
               style={{ color: '#6c5dd3' }}
             >
               Reply

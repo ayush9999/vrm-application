@@ -20,7 +20,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
   blocked:       { bg: 'rgba(225,29,72,0.1)',  color: '#e11d48', label: 'Blocked' },
   deferred:    { bg: 'rgba(148,163,184,0.12)', color: '#64748b', label: 'Deferred' },
   resolved:    { bg: 'rgba(5,150,105,0.1)',  color: '#059669', label: 'Resolved' },
-  closed:      { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', label: 'Closed' },
+  closed:      { bg: 'rgba(148,163,184,0.1)', color: '#64748b', label: 'Closed' },
 }
 
 const STATUS_OPTIONS: { value: IssueStatus; label: string }[] = [
@@ -92,7 +92,7 @@ export function IssueDetailClient({
           <div className="space-y-2">
             <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>{issue.title}</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: sev.bg, color: sev.color }}>
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: sev.bg, color: sev.color }}>
                 {issue.severity}
               </span>
               <StatusDropdown
@@ -101,16 +101,16 @@ export function IssueDetailClient({
                 changeStatusAction={changeStatusAction}
               />
               {issue.disposition === 'accepted_risk' && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-purple-50 text-purple-700">
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-purple-50 text-purple-700">
                   Accepted Risk
                 </span>
               )}
               {isOverdue && (
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
                   Overdue
                 </span>
               )}
-              <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.06)', color: '#8b7fd4' }}>
+              <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.06)', color: '#5d5285' }}>
                 {issue.source} · {issue.type.replace(/_/g, ' ')}
               </span>
             </div>
@@ -129,23 +129,23 @@ export function IssueDetailClient({
         {/* Meta grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Vendor</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Vendor</span>
             <p className="font-medium mt-0.5" style={{ color: '#1e1550' }}>
               <Link href={`/vendors/${issue.vendor_id}`} className="hover:underline">{issue.vendor_name ?? 'Unknown'}</Link>
             </p>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Owner</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Owner</span>
             <p className="font-medium mt-0.5" style={{ color: '#1e1550' }}>{issue.owner_name ?? 'Unassigned'}</p>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Due Date</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Due Date</span>
             <p className="font-medium mt-0.5" style={{ color: isOverdue ? '#e11d48' : '#1e1550' }}>
               {issue.due_date ? new Date(issue.due_date).toLocaleDateString() : '—'}
             </p>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Created</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Created</span>
             <p className="font-medium mt-0.5" style={{ color: '#1e1550' }}>
               {new Date(issue.created_at).toLocaleDateString()}
             </p>
@@ -155,7 +155,7 @@ export function IssueDetailClient({
         {/* Description */}
         {issue.description && (
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Description</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Description</span>
             <p className="text-sm mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{issue.description}</p>
           </div>
         )}
@@ -163,7 +163,7 @@ export function IssueDetailClient({
         {/* Remediation plan */}
         {issue.remediation_plan && (
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Remediation Plan</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Remediation Plan</span>
             <p className="text-sm mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{issue.remediation_plan}</p>
           </div>
         )}
@@ -171,10 +171,10 @@ export function IssueDetailClient({
         {/* Accepted risk info */}
         {issue.disposition === 'accepted_risk' && issue.accepted_reason && (
           <div className="rounded-lg p-3" style={{ background: 'rgba(109,93,211,0.04)', border: '1px solid rgba(109,93,211,0.1)' }}>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>Accepted Risk Reason</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>Accepted Risk Reason</span>
             <p className="text-sm mt-1" style={{ color: '#4a4270' }}>{issue.accepted_reason}</p>
             {issue.accepted_at && (
-              <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>
+              <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
                 Accepted on {new Date(issue.accepted_at).toLocaleDateString()}
               </p>
             )}
@@ -184,7 +184,7 @@ export function IssueDetailClient({
         {/* Resolution notes */}
         {issue.resolution_notes && (
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#059669' }}>Resolution Notes</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#059669' }}>Resolution Notes</span>
             <p className="text-sm mt-1 leading-relaxed" style={{ color: '#4a4270' }}>{issue.resolution_notes}</p>
           </div>
         )}
@@ -287,7 +287,7 @@ export function IssueDetailClient({
         className="rounded-2xl p-5 space-y-4"
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 12px rgba(109,93,211,0.08)' }}
       >
-        <h2 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Activity</h2>
+        <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Activity</h2>
 
         {/* Add note form */}
         <form action={noteFormAction} className="flex gap-2">
@@ -320,11 +320,11 @@ export function IssueDetailClient({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium" style={{ color: '#1e1550' }}>{a.user_name ?? 'System'}</span>
-                    <span style={{ color: '#a99fd8' }}>{a.action.replace(/_/g, ' ')}</span>
+                    <span style={{ color: '#6b5fa8' }}>{a.action.replace(/_/g, ' ')}</span>
                     {a.old_value && a.new_value && (
-                      <span style={{ color: '#8b7fd4' }}>{a.old_value} → {a.new_value}</span>
+                      <span style={{ color: '#5d5285' }}>{a.old_value} → {a.new_value}</span>
                     )}
-                    <span className="ml-auto text-[10px]" style={{ color: '#c4bae8' }}>
+                    <span className="ml-auto text-xs" style={{ color: '#c4bae8' }}>
                       {new Date(a.created_at).toLocaleString()}
                     </span>
                   </div>
@@ -384,7 +384,7 @@ function StatusDropdown({
         type="button"
         onClick={() => setOpen(o => !o)}
         disabled={isPending}
-        className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-semibold cursor-pointer transition-all hover:ring-2 hover:ring-offset-1 disabled:opacity-60"
+        className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold cursor-pointer transition-all hover:ring-2 hover:ring-offset-1 disabled:opacity-60"
         style={{ background: sts.bg, color: sts.color, ['--tw-ring-color' as string]: sts.color }}
       >
         {isPending ? <Spinner /> : null}
@@ -470,23 +470,23 @@ function EvidenceSection({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+          <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
             Remediation Evidence
           </h2>
           {evidence.length > 0 && (
             <div className="flex items-center gap-1.5">
               {acceptedCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(5,150,105,0.1)', color: '#059669' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(5,150,105,0.1)', color: '#059669' }}>
                   {acceptedCount} accepted
                 </span>
               )}
               {pendingCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(245,158,11,0.1)', color: '#d97706' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(245,158,11,0.1)', color: '#d97706' }}>
                   {pendingCount} pending
                 </span>
               )}
               {rejectedCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
                   {rejectedCount} rejected
                 </span>
               )}
@@ -514,7 +514,7 @@ function EvidenceSection({
               className="flex items-center gap-3 w-full cursor-pointer rounded-lg px-3 py-3 transition-colors hover:bg-[rgba(109,93,211,0.04)]"
               style={{ border: '1.5px dashed rgba(109,93,211,0.2)' }}
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#8b7fd4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5d5285" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 11V3M5 6l3-3 3 3" /><path d="M2 13h12" />
               </svg>
               <div className="flex-1 min-w-0">
@@ -525,7 +525,7 @@ function EvidenceSection({
                 )}
               </div>
               {selectedFileName && (
-                <span className="text-[10px] font-semibold shrink-0" style={{ color: '#059669' }}>Ready</span>
+                <span className="text-xs font-semibold shrink-0" style={{ color: '#059669' }}>Ready</span>
               )}
               <input
                 type="file"
@@ -616,8 +616,8 @@ function EvidenceSection({
       {/* Evidence list */}
       {evidence.length === 0 && !showUpload ? (
         <div className="text-center py-6 rounded-xl" style={{ border: '1.5px dashed rgba(109,93,211,0.15)', background: 'rgba(109,93,211,0.02)' }}>
-          <p className="text-xs font-medium" style={{ color: '#a99fd8' }}>No evidence uploaded yet</p>
-          <p className="text-[10px] mt-0.5" style={{ color: '#c4bae8' }}>
+          <p className="text-xs font-medium" style={{ color: '#6b5fa8' }}>No evidence uploaded yet</p>
+          <p className="text-xs mt-0.5" style={{ color: '#c4bae8' }}>
             Attach remediation proof to support resolution of this issue.
           </p>
         </div>
@@ -714,21 +714,21 @@ function EvidenceCard({
               {evidence.file_name}
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+              className="text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0"
               style={{ background: rvs.bg, color: rvs.color }}
             >
               {rvs.label}
             </span>
             {evidence.vendor_document_id && (
               <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+                className="text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0"
                 style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3' }}
               >
                 Vendor Doc
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5 text-[11px]" style={{ color: '#8b7fd4' }}>
+          <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: '#5d5285' }}>
             <span>Uploaded {new Date(evidence.uploaded_at).toLocaleDateString()}</span>
             {evidence.file_url && (
               <a
@@ -751,7 +751,7 @@ function EvidenceCard({
             </p>
           )}
           {evidence.reviewed_at && (
-            <p className="text-[10px] mt-0.5" style={{ color: '#c4bae8' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#c4bae8' }}>
               Reviewed {new Date(evidence.reviewed_at).toLocaleDateString()}
             </p>
           )}
@@ -762,7 +762,7 @@ function EvidenceCard({
           {evidence.review_status === 'pending' && (
             <button
               onClick={() => setShowReview(s => !s)}
-              className="text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors"
+              className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
               style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.15)' }}
             >
               Review
@@ -771,7 +771,7 @@ function EvidenceCard({
           {evidence.review_status === 'accepted' && !evidence.vendor_document_id && (
             <button
               onClick={() => setShowPromote(s => !s)}
-              className="text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors"
+              className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
               style={{ background: 'rgba(5,150,105,0.08)', color: '#059669', border: '1px solid rgba(5,150,105,0.15)' }}
             >
               {showPromote ? 'Cancel' : 'Promote'}
@@ -780,7 +780,7 @@ function EvidenceCard({
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="text-[10px] font-medium px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+            className="text-xs font-medium px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
             style={{ color: '#e11d48' }}
           >
             {deleting ? '…' : '×'}
@@ -796,7 +796,7 @@ function EvidenceCard({
             <p className="text-xs text-rose-500 mt-2">{reviewState.message}</p>
           )}
           <div className="pt-2">
-            <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#a99fd8' }}>Review Notes</label>
+            <label className="block text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#6b5fa8' }}>Review Notes</label>
             <textarea
               name="review_notes"
               rows={2}
@@ -830,7 +830,7 @@ function EvidenceCard({
               type="button"
               onClick={() => setShowReview(false)}
               className="text-xs px-2 py-1.5"
-              style={{ color: '#a99fd8' }}
+              style={{ color: '#6b5fa8' }}
             >
               Cancel
             </button>
@@ -845,7 +845,7 @@ function EvidenceCard({
             <p className="text-xs text-rose-500 mt-2">{promoteState.message}</p>
           )}
           <div className="pt-2">
-            <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#059669' }}>
+            <label className="block text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#059669' }}>
               Save as Vendor Document
             </label>
             <select
@@ -873,7 +873,7 @@ function EvidenceCard({
               type="button"
               onClick={() => setShowPromote(false)}
               className="text-xs px-2 py-1.5"
-              style={{ color: '#a99fd8' }}
+              style={{ color: '#6b5fa8' }}
             >
               Cancel
             </button>

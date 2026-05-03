@@ -41,7 +41,7 @@ export function ApproverPicker({ tier, currentApproverId, users, canEdit, setAct
         ))}
       </select>
       {message && (
-        <span className="text-[11px]" style={{ color: message === 'Saved' ? '#059669' : '#e11d48' }}>{message}</span>
+        <span className="text-xs" style={{ color: message === 'Saved' ? '#059669' : '#e11d48' }}>{message}</span>
       )}
     </div>
   )

@@ -27,7 +27,7 @@ const inputCls = 'w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none foc
 const inputStyle: React.CSSProperties = { border: '1px solid rgba(109,93,211,0.2)', background: 'white', color: '#1e1550' }
 const labelStyle: React.CSSProperties = { color: '#3d2e8a' }
 const fieldErrorCls = 'mt-1.5 text-xs text-rose-500'
-const sectionStyle: React.CSSProperties = { color: '#a99fd8' }
+const sectionStyle: React.CSSProperties = { color: '#6b5fa8' }
 
 export function VendorForm({
   action,
@@ -53,7 +53,7 @@ export function VendorForm({
 
       {/* ── Identity ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Identity</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Identity</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className={defaultValues.vendor_code ? '' : 'sm:col-span-2'}>
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>
@@ -80,7 +80,7 @@ export function VendorForm({
               >
                 {defaultValues.vendor_code}
               </p>
-              <p className="mt-1 text-xs" style={{ color: '#a99fd8' }}>Auto-generated · read-only</p>
+              <p className="mt-1 text-xs" style={{ color: '#6b5fa8' }}>Auto-generated · read-only</p>
             </div>
           )}
 
@@ -100,7 +100,7 @@ export function VendorForm({
 
       {/* ── Classification ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Classification</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Classification</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Categories</label>
@@ -174,26 +174,28 @@ export function VendorForm({
 
       {/* ── Risk Profile ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Risk Profile</p>
-        <p className="text-xs mb-4 -mt-2" style={{ color: '#a99fd8' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Risk Profile</p>
+        <p className="text-xs mb-4 -mt-2" style={{ color: '#6b5fa8' }}>
           Select all that apply. Review Packs are auto-assigned based on any match.
         </p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Service Types</label>
-            <CheckboxGroup
+            <CategoryPickerField
               name="service_types"
               options={SERVICE_TYPE_OPTIONS}
               defaultSelected={defaultValues.service_types ?? []}
+              placeholder="Select service types…"
             />
           </div>
 
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Data Access Levels</label>
-            <CheckboxGroup
+            <CategoryPickerField
               name="data_access_levels"
               options={DATA_ACCESS_LEVEL_OPTIONS}
               defaultSelected={defaultValues.data_access_levels ?? []}
+              placeholder="Select data access levels…"
             />
           </div>
 
@@ -237,7 +239,7 @@ export function VendorForm({
 
       {/* ── Contact ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Contact</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Contact</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Website URL</label>
@@ -322,7 +324,7 @@ export function VendorForm({
 
       {/* ── Review ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Review</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Review</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium mb-1.5" style={labelStyle}>Next Review Due</label>
@@ -359,7 +361,7 @@ export function VendorForm({
       {/* ── Custom Fields ── */}
       {customFields.length > 0 && (
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Custom Fields</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Custom Fields</p>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {customFields.map((cf) => {
               const inputName = `cf_${cf.id}`
@@ -370,7 +372,7 @@ export function VendorForm({
                     {cf.name} {cf.required && <span className="text-rose-500">*</span>}
                   </label>
                   {renderCustomFieldInput(cf, inputName, value)}
-                  {cf.description && <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>{cf.description}</p>}
+                  {cf.description && <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>{cf.description}</p>}
                 </div>
               )
             })}
@@ -380,7 +382,7 @@ export function VendorForm({
 
       {/* ── Notes ── */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Notes</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4 pt-2" style={sectionStyle}>Notes</p>
         <textarea
           name="notes"
           rows={4}
@@ -408,7 +410,7 @@ export function VendorForm({
         <Link
           href={cancelHref}
           className="text-sm transition-colors hover:opacity-70"
-          style={{ color: '#a99fd8' }}
+          style={{ color: '#6b5fa8' }}
         >
           Cancel
         </Link>
@@ -417,7 +419,7 @@ export function VendorForm({
   )
 }
 
-// ─── Checkbox group for multi-select fields ──────────────────────────────
+// ─── Option constants for the multi-select dropdowns ─────────────────────
 
 const SERVICE_TYPE_OPTIONS = [
   { value: 'saas', label: 'SaaS' },
@@ -435,42 +437,6 @@ const DATA_ACCESS_LEVEL_OPTIONS = [
   { value: 'sensitive_personal_data', label: 'Sensitive Personal Data' },
   { value: 'financial_data', label: 'Financial Data' },
 ]
-
-function CheckboxGroup({
-  name,
-  options,
-  defaultSelected,
-  emptyHint,
-}: {
-  name: string
-  options: { value: string; label: string }[]
-  defaultSelected: string[]
-  emptyHint?: string
-}) {
-  if (options.length === 0 && emptyHint) {
-    return <p className="text-xs italic" style={{ color: '#a99fd8' }}>{emptyHint}</p>
-  }
-  return (
-    <div
-      className="flex flex-wrap gap-x-4 gap-y-2 p-3 rounded-xl"
-      style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.12)' }}
-    >
-      {options.map((o) => (
-        <label key={o.value} className="inline-flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            name={name}
-            value={o.value}
-            defaultChecked={defaultSelected.includes(o.value)}
-            className="h-4 w-4 rounded"
-            style={{ accentColor: '#6c5dd3' }}
-          />
-          <span style={{ color: '#1e1550' }}>{o.label}</span>
-        </label>
-      ))}
-    </div>
-  )
-}
 
 // ─── Custom field input renderer ──────────────────────────────────────────
 

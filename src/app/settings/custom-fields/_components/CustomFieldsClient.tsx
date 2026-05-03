@@ -81,7 +81,7 @@ export function CustomFieldsClient({ fields, canEdit, createAction, deleteAction
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
       >
         {fields.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm" style={{ color: '#a99fd8' }}>
+          <p className="px-5 py-8 text-center text-sm" style={{ color: '#6b5fa8' }}>
             No custom fields defined yet.
           </p>
         ) : (
@@ -94,19 +94,19 @@ export function CustomFieldsClient({ fields, canEdit, createAction, deleteAction
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{f.name}</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(108,93,211,0.08)', color: '#6b5fa8' }}>{f.code}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3' }}>
+                  <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(108,93,211,0.08)', color: '#6b5fa8' }}>{f.code}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3' }}>
                     {f.field_type}
                   </span>
                   {f.required && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
                       Required
                     </span>
                   )}
                 </div>
                 {f.description && <p className="text-xs mt-1" style={{ color: '#4a4270' }}>{f.description}</p>}
                 {f.options && f.options.length > 0 && (
-                  <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>
+                  <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
                     Options: {f.options.join(', ')}
                   </p>
                 )}
@@ -200,7 +200,7 @@ export function CustomFieldsClient({ fields, canEdit, createAction, deleteAction
             >
               {isPending ? 'Creating…' : 'Create Field'}
             </button>
-            <button type="button" onClick={reset} className="text-xs px-3 py-2" style={{ color: '#a99fd8' }}>Cancel</button>
+            <button type="button" onClick={reset} className="text-xs px-3 py-2" style={{ color: '#6b5fa8' }}>Cancel</button>
           </div>
         </div>
       )}

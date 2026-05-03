@@ -48,7 +48,7 @@ const DECISION_OPTIONS: { value: ReviewItemDecision; label: string; color: strin
 ]
 
 const DECISION_LABEL: Record<string, { label: string; color: string }> = {
-  not_started:        { label: 'Pending',    color: '#94a3b8' },
+  not_started:        { label: 'Pending',    color: '#64748b' },
   pass:               { label: 'Pass',       color: '#059669' },
   fail:               { label: 'Fail',       color: '#e11d48' },
   na:                 { label: 'N/A',        color: '#64748b' },
@@ -502,11 +502,11 @@ export function ReviewWorkspace({
             <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
               {review.review_code}
             </h1>
-            <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded" style={{ background: typeSty.bg, color: typeSty.color }}>
+            <span className="text-xs font-bold uppercase px-2 py-0.5 rounded" style={{ background: typeSty.bg, color: typeSty.color }}>
               {typeSty.label}
             </span>
           </div>
-          <p className="text-xs mt-1" style={{ color: '#8b7fd4' }}>
+          <p className="text-xs mt-1" style={{ color: '#5d5285' }}>
             {review.reviewer_name && <>Reviewer: {review.reviewer_name}</>}
             {review.approver_name && <> · Approver: {review.approver_name}</>}
             {review.due_at && <> · Due: {new Date(review.due_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
@@ -529,7 +529,7 @@ export function ReviewWorkspace({
             <div className="text-2xl font-bold tabular-nums" style={{ color: stats.pct >= 80 ? '#059669' : stats.pct >= 50 ? '#6c5dd3' : '#d97706' }}>
               {stats.pct}%
             </div>
-            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>
+            <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#5d5285' }}>
               {stats.passed}/{stats.total} complete
             </div>
           </div>
@@ -549,16 +549,16 @@ export function ReviewWorkspace({
               <div key={step.key} className="flex items-center flex-1">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                     style={
                       isDone ? { background: '#059669', color: 'white' }
                       : isCurrent ? { background: '#6c5dd3', color: 'white', boxShadow: '0 0 0 3px rgba(108,93,211,0.2)' }
-                      : { background: 'rgba(148,163,184,0.12)', color: '#94a3b8' }
+                      : { background: 'rgba(148,163,184,0.12)', color: '#64748b' }
                     }
                   >
                     {isDone ? '✓' : i + 1}
                   </span>
-                  <span className="text-[11px] font-semibold hidden sm:inline" style={{ color: isDone ? '#059669' : isCurrent ? '#6c5dd3' : '#c4bae8' }}>
+                  <span className="text-xs font-semibold hidden sm:inline" style={{ color: isDone ? '#059669' : isCurrent ? '#6c5dd3' : '#c4bae8' }}>
                     {step.label}
                   </span>
                 </div>
@@ -657,7 +657,7 @@ export function ReviewWorkspace({
               >
                 {pack.review_pack_name ?? 'Pack'}
                 <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                   style={isActive
                     ? { background: 'rgba(255,255,255,0.2)', color: 'white' }
                     : { background: ps.pct === 100 ? 'rgba(5,150,105,0.1)' : 'rgba(109,93,211,0.08)', color: ps.pct === 100 ? '#059669' : '#6c5dd3' }
@@ -678,7 +678,7 @@ export function ReviewWorkspace({
             {packs[0].review_pack_name}
           </span>
           {packs[0].review_pack_code && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+            <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
               {packs[0].review_pack_code}
             </span>
           )}
@@ -694,13 +694,13 @@ export function ReviewWorkspace({
           <span className="text-xs font-semibold" style={{ color: '#6c5dd3' }}>
             {selectedItems.size} selected
           </span>
-          <span className="text-[10px]" style={{ color: '#8b7fd4' }}>Mark as:</span>
+          <span className="text-xs" style={{ color: '#5d5285' }}>Mark as:</span>
           {DECISION_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => handleBulkDecision(opt.value)}
               disabled={isPending}
-              className="text-[10px] font-semibold px-2.5 py-1 rounded-full disabled:opacity-50 transition-all"
+              className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50 transition-all"
               style={{ background: opt.bg, color: opt.color, border: `1px solid ${opt.color}25` }}
             >
               {opt.label}
@@ -708,8 +708,8 @@ export function ReviewWorkspace({
           ))}
           <button
             onClick={() => setSelectedItems(new Set())}
-            className="text-[10px] ml-auto"
-            style={{ color: '#a99fd8' }}
+            className="text-xs ml-auto"
+            style={{ color: '#6b5fa8' }}
           >
             Clear
           </button>
@@ -734,7 +734,7 @@ export function ReviewWorkspace({
               className="w-3.5 h-3.5 rounded"
               style={{ accentColor: '#6c5dd3' }}
             />
-            <span className="text-[10px] font-medium" style={{ color: '#8b7fd4' }}>Select all</span>
+            <span className="text-xs font-medium" style={{ color: '#5d5285' }}>Select all</span>
           </div>
         )}
 
@@ -752,7 +752,7 @@ export function ReviewWorkspace({
         </div>
 
         {currentItems.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm" style={{ color: '#a99fd8' }}>
+          <div className="px-5 py-12 text-center text-sm" style={{ color: '#6b5fa8' }}>
             No review items in this pack.
           </div>
         ) : (
@@ -765,7 +765,7 @@ export function ReviewWorkspace({
             const evidenceColor = item.linked_evidence_status === 'approved' ? '#059669'
               : item.linked_evidence_status === 'missing' || item.linked_evidence_status === 'rejected' ? '#e11d48'
               : item.linked_evidence_status === 'uploaded' || item.linked_evidence_status === 'under_review' ? '#d97706'
-              : '#94a3b8'
+              : '#64748b'
             const isSelected = selectedItems.has(item.id)
 
             return (
@@ -800,12 +800,12 @@ export function ReviewWorkspace({
                   {refs.length > 0 && (
                     <span className="flex items-center gap-1 shrink-0">
                       {refs.slice(0, 2).map((ref, ri) => (
-                        <span key={ri} className="text-[8px] font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}>
+                        <span key={ri} className="text-[8px] font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(109,93,211,0.05)', color: '#5d5285' }}>
                           {ref.standard} {ref.reference}
                         </span>
                       ))}
                       {refs.length > 2 && (
-                        <span className="text-[8px]" style={{ color: '#a99fd8' }}>+{refs.length - 2}</span>
+                        <span className="text-[8px]" style={{ color: '#6b5fa8' }}>+{refs.length - 2}</span>
                       )}
                     </span>
                   )}
@@ -827,7 +827,7 @@ export function ReviewWorkspace({
                         e.stopPropagation()
                         if (isReviewing) setOpenItemId(openItemId === item.id ? null : item.id)
                       }}
-                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase transition-all"
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase transition-all"
                       style={{
                         background: `${dec.color}14`,
                         color: dec.color,
@@ -851,7 +851,7 @@ export function ReviewWorkspace({
                             key={opt.value}
                             onClick={() => handleDecision(activePack, item.id, opt.value)}
                             disabled={isPending}
-                            className="text-[10px] font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
+                            className="text-xs font-semibold px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
                             style={
                               item.decision === opt.value
                                 ? { background: opt.color, color: 'white' }
@@ -862,7 +862,7 @@ export function ReviewWorkspace({
                           </button>
                         ))}
                         {item.creates_remediation_on_fail && (
-                          <span className="text-[9px] ml-auto" style={{ color: '#d97706' }}>
+                          <span className="text-xs ml-auto" style={{ color: '#d97706' }}>
                             Failing creates a remediation
                           </span>
                         )}
@@ -870,11 +870,11 @@ export function ReviewWorkspace({
                     )}
 
                     {/* Evidence + comment row */}
-                    <div className="flex items-center gap-4 flex-wrap text-[11px]">
+                    <div className="flex items-center gap-4 flex-wrap text-xs">
                       {hasEvidence && (
                         <span style={{ color: '#4a4270' }}>
                           Evidence: <strong>{item.linked_evidence_name}</strong>
-                          <span className="ml-1 text-[9px] font-bold uppercase" style={{ color: evidenceColor }}>
+                          <span className="ml-1 text-xs font-bold uppercase" style={{ color: evidenceColor }}>
                             {item.linked_evidence_status}
                           </span>
                           {item.linked_evidence_id && (
@@ -894,7 +894,7 @@ export function ReviewWorkspace({
                         </span>
                       )}
                       {isLocked && isDecided && (
-                        <span style={{ color: '#8b7fd4' }}>
+                        <span style={{ color: '#5d5285' }}>
                           <strong style={{ color: dec.color }}>{dec.label}</strong>
                           {item.decided_at && <> · {new Date(item.decided_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</>}
                         </span>
@@ -944,14 +944,14 @@ export function ReviewWorkspace({
           >
             <div>
               <h3 className="text-base font-semibold" style={{ color: '#1e1550' }}>Export Review</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+              <p className="text-xs mt-0.5" style={{ color: '#5d5285' }}>
                 {review.review_code} · {packs.length} pack{packs.length !== 1 ? 's' : ''} · {stats.total} items
               </p>
             </div>
 
             {/* Format */}
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Format</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#5d5285' }}>Format</div>
               <div className="flex items-center gap-2">
                 {(['csv', 'pdf'] as const).map((f) => (
                   <button
@@ -968,7 +968,7 @@ export function ReviewWorkspace({
 
             {/* What to include */}
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>Include</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#5d5285' }}>Include</div>
               <div className="space-y-1">
                 {[
                   { key: 'items' as const, label: 'Review items & decisions', locked: true },
@@ -989,8 +989,8 @@ export function ReviewWorkspace({
                       className="w-3.5 h-3.5 rounded"
                       style={{ accentColor: '#6c5dd3' }}
                     />
-                    <span className="text-xs" style={{ color: s.locked ? '#a99fd8' : '#4a4270' }}>{s.label}</span>
-                    {s.locked && <span className="text-[9px]" style={{ color: '#c4bae8' }}>Required</span>}
+                    <span className="text-xs" style={{ color: s.locked ? '#6b5fa8' : '#4a4270' }}>{s.label}</span>
+                    {s.locked && <span className="text-xs" style={{ color: '#c4bae8' }}>Required</span>}
                   </label>
                 ))}
               </div>
@@ -998,10 +998,10 @@ export function ReviewWorkspace({
 
             {/* Packs included */}
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#8b7fd4' }}>Packs included</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#5d5285' }}>Packs included</div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {packs.map((p) => (
-                  <span key={p.id} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+                  <span key={p.id} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
                     {p.review_pack_name}
                   </span>
                 ))}
@@ -1009,7 +1009,7 @@ export function ReviewWorkspace({
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
-              <button onClick={() => setShowExport(false)} className="text-xs px-3 py-1.5" style={{ color: '#a99fd8' }}>
+              <button onClick={() => setShowExport(false)} className="text-xs px-3 py-1.5" style={{ color: '#6b5fa8' }}>
                 Cancel
               </button>
               <button

@@ -5,7 +5,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
           Administration
         </h1>
-        <p className="text-sm mt-1" style={{ color: '#8b7fd4' }}>
+        <p className="text-sm mt-1" style={{ color: '#5d5285' }}>
           Manage your organisation&apos;s configuration, members, and compliance settings
         </p>
       </div>

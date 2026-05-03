@@ -15,7 +15,7 @@ export default async function CompanyProfileSettingsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#1e1550' }}>Company Profile</h2>
-        <p className="text-sm mt-1" style={{ color: '#8b7fd4' }}>
+        <p className="text-sm mt-1" style={{ color: '#5d5285' }}>
           Information about your organisation. Compliance standards drive reporting and review item filtering.
         </p>
       </div>

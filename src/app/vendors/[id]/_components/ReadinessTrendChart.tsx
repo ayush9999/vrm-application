@@ -49,8 +49,8 @@ export function ReadinessTrendChart({ snapshots, currentReadinessPct, captureSna
     >
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Readiness Trend</div>
-          <div className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
+          <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Readiness Trend</div>
+          <div className="text-xs mt-0.5" style={{ color: '#6b5fa8' }}>
             {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''}
             {lastSnapshot && (
               <span>
@@ -77,7 +77,7 @@ export function ReadinessTrendChart({ snapshots, currentReadinessPct, captureSna
 
       {points.length < 2 ? (
         <div className="text-center py-8">
-          <p className="text-sm" style={{ color: '#a99fd8' }}>
+          <p className="text-sm" style={{ color: '#6b5fa8' }}>
             Not enough snapshots to draw a trend yet. Capture one to start the history, or change approval status (auto-captures).
           </p>
         </div>
@@ -90,7 +90,7 @@ export function ReadinessTrendChart({ snapshots, currentReadinessPct, captureSna
       {/* Snapshot list */}
       {snapshots.length > 0 && (
         <details className="mt-3">
-          <summary className="text-[11px] cursor-pointer" style={{ color: '#6c5dd3' }}>
+          <summary className="text-xs cursor-pointer" style={{ color: '#6c5dd3' }}>
             Show snapshot history ({snapshots.length})
           </summary>
           <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
@@ -98,12 +98,12 @@ export function ReadinessTrendChart({ snapshots, currentReadinessPct, captureSna
               const risk = RISK_BAND_STYLE[s.risk_band]
               return (
                 <div key={s.id} className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs" style={{ background: 'rgba(108,93,211,0.03)' }}>
-                  <span className="w-16" style={{ color: '#a99fd8' }}>
+                  <span className="w-16" style={{ color: '#6b5fa8' }}>
                     {new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   <span className="font-bold tabular-nums w-12" style={{ color: '#1e1550' }}>{s.readiness_pct}%</span>
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    className="text-xs px-1.5 py-0.5 rounded font-bold uppercase"
                     style={{ background: risk.bg, color: risk.color }}
                   >
                     {risk.label}
@@ -170,13 +170,13 @@ function Chart({ points }: { points: { ts: number; pct: number }[] }) {
             stroke={tick === 0 ? 'rgba(109,93,211,0.15)' : 'rgba(109,93,211,0.06)'}
             strokeDasharray={tick === 0 || tick === 100 ? undefined : '4 3'}
           />
-          <text x={PAD_L - 8} y={y(tick) + 4} fontSize="10" textAnchor="end" fill="#8b7fd4" fontFamily="system-ui">{tick}%</text>
+          <text x={PAD_L - 8} y={y(tick) + 4} fontSize="10" textAnchor="end" fill="#5d5285" fontFamily="system-ui">{tick}%</text>
         </g>
       ))}
 
       {/* Date labels on X axis */}
       {dateLabels.map((p, i) => (
-        <text key={i} x={x(p.ts)} y={H - 6} fontSize="9" textAnchor="middle" fill="#a99fd8" fontFamily="system-ui">
+        <text key={i} x={x(p.ts)} y={H - 6} fontSize="9" textAnchor="middle" fill="#6b5fa8" fontFamily="system-ui">
           {new Date(p.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </text>
       ))}

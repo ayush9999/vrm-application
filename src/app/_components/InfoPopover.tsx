@@ -23,7 +23,7 @@ export function InfoPopover({ title, children }: Props) {
         title="What is this?"
         aria-label="Information"
       >
-        <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1, fontStyle: 'italic' }}>i</span>
+        <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1, fontStyle: 'italic' }}>i</span>
       </button>
 
       {isOpen && (
@@ -48,14 +48,14 @@ export function InfoPopover({ title, children }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#1e1550', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1e1550', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {title}
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="text-xs hover:opacity-70"
-                style={{ color: '#a99fd8' }}
+                style={{ color: '#6b5fa8' }}
               >
                 ✕
               </button>

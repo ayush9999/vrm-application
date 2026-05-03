@@ -44,6 +44,15 @@ function IconIssues({ className }: { className?: string }) {
   )
 }
 
+function IconAttention({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.5a5 5 0 015 5v3l1.5 1.5h-13L3 9.5v-3a5 5 0 015-5z" />
+      <path d="M6.5 13a1.5 1.5 0 003 0" />
+    </svg>
+  )
+}
+
 function IconSettings({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -63,37 +72,41 @@ const ADMIN_SUBITEMS = [
 ]
 
 const NAV_ITEMS = [
-  { href: '/',             match: '/',             label: 'Dashboard',       Icon: IconDashboard,   exact: true  },
-  { href: '/vendors',      match: '/vendors',      label: 'Vendors',         Icon: IconVendors,     exact: false },
-  { href: '/reviews',      match: '/reviews',      label: 'Reviews',         Icon: IconReviews,     exact: false },
-  { href: '/issues',       match: '/issues',       label: 'Remediation',     Icon: IconIssues,      exact: false },
+  { href: '/',             match: '/',             label: 'Dashboard',         Icon: IconDashboard,   exact: true  },
+  { href: '/vendors',      match: '/vendors',      label: 'Vendors',           Icon: IconVendors,     exact: false },
+  { href: '/reviews',      match: '/reviews',      label: 'Reviews',           Icon: IconReviews,     exact: false },
+  { href: '/issues',       match: '/issues',       label: 'Remediation',       Icon: IconIssues,      exact: false },
+  { href: '/attention',    match: '/attention',    label: 'Attention Center',  Icon: IconAttention,   exact: false },
 ]
 
-export function SidebarNav() {
+export function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname()
   const isAdminActive = pathname.startsWith('/settings')
   const [adminOpen, setAdminOpen] = useState(isAdminActive)
+
+  // When the sidebar collapses, force the admin dropdown closed so the
+  // sub-items don't try to render in the narrow rail.
+  const adminEffectivelyOpen = !collapsed && adminOpen
 
   return (
     <nav className="flex-1 px-2 py-3 space-y-0.5">
       {NAV_ITEMS.map(({ href, match, label, Icon, exact }) => {
         const isActive = exact ? pathname === match : pathname.startsWith(match)
         return (
-          <NavLink key={href} href={href} label={label} Icon={Icon} isActive={isActive} />
+          <NavLink key={href} href={href} label={label} Icon={Icon} isActive={isActive} collapsed={collapsed} />
         )
       })}
 
-      {/* Administration — expandable with sub-items */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setAdminOpen((v) => !v)}
-          className={`w-full group flex items-center gap-3 px-3 py-2 text-sm rounded-xl transition-all duration-150 ${
-            isAdminActive ? 'text-white font-medium' : 'font-normal'
-          }`}
+      {/* Administration — collapsed: behaves like a regular nav link to /settings */}
+      {collapsed ? (
+        <Link
+          href="/settings/company"
+          aria-label="Administration"
+          title="Administration"
+          className="group flex items-center justify-center px-3 py-2 rounded-xl transition-all duration-150 mt-1"
           style={
             isAdminActive
-              ? { background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 2px 8px rgba(108,93,211,0.35)' }
+              ? { background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', boxShadow: '0 2px 8px rgba(108,93,211,0.35)', color: 'white' }
               : { color: '#5b4fa8' }
           }
           onMouseEnter={isAdminActive ? undefined : (e) => {
@@ -103,60 +116,124 @@ export function SidebarNav() {
             (e.currentTarget as HTMLElement).style.background = ''
           }}
         >
-          <span style={isAdminActive ? undefined : { color: '#8b7fd4' }}>
-            <IconSettings className={`shrink-0 transition-colors ${isAdminActive ? 'text-white' : ''}`} />
+          <span style={{ color: isAdminActive ? 'white' : '#5d5285' }}>
+            <IconSettings className="shrink-0" />
+          </span>
+        </Link>
+      ) : (
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => setAdminOpen((v) => !v)}
+          aria-expanded={adminEffectivelyOpen}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-xl transition-all duration-150"
+          style={
+            isAdminActive && !adminOpen
+              ? { background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)', color: 'white', fontWeight: 500, boxShadow: '0 2px 8px rgba(108,93,211,0.35)' }
+              : adminOpen
+              ? { background: 'rgba(108,93,211,0.12)', color: 'white', fontWeight: 500 }
+              : { color: '#5b4fa8', fontWeight: 400 }
+          }
+          onMouseEnter={(e) => {
+            if (!isAdminActive && !adminOpen) {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(108,93,211,0.1)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isAdminActive && !adminOpen) {
+              (e.currentTarget as HTMLElement).style.background = ''
+            }
+          }}
+        >
+          <span style={{ color: isAdminActive || adminOpen ? 'white' : '#5d5285' }}>
+            <IconSettings className="shrink-0" />
           </span>
           <span className="flex-1 text-left">Administration</span>
           <svg
-            width="10" height="10" viewBox="0 0 16 16" fill="none"
-            stroke={isAdminActive ? 'white' : '#8b7fd4'}
+            width="11" height="11" viewBox="0 0 16 16" fill="none"
+            stroke="currentColor"
             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className="shrink-0 transition-transform"
-            style={{ transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            className="shrink-0 transition-transform duration-200"
+            style={{
+              transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              opacity: isAdminActive || adminOpen ? 0.9 : 0.55,
+            }}
           >
             <path d="M4 6l4 4 4-4" />
           </svg>
         </button>
 
-        {adminOpen && (
-          <div className="mt-0.5 ml-5 pl-3 space-y-0.5" style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+        {adminEffectivelyOpen && (
+          <div className="mt-1 ml-3 space-y-0.5" style={{ animation: 'fadeSlideIn 140ms ease-out' }}>
             {ADMIN_SUBITEMS.map((sub) => {
               const subActive = pathname === sub.href || pathname.startsWith(sub.href + '/')
               return (
                 <Link
                   key={sub.href}
                   href={sub.href}
-                  className="block px-3 py-1.5 text-xs rounded-lg transition-colors"
+                  className="relative flex items-center gap-3 pl-5 pr-3 py-2 text-[13px] rounded-lg transition-colors"
                   style={
                     subActive
-                      ? { background: 'rgba(255,255,255,0.12)', color: 'white', fontWeight: 600 }
-                      : { color: 'rgba(255,255,255,0.5)' }
+                      ? { background: 'rgba(108,93,211,0.18)', color: 'white', fontWeight: 500 }
+                      : { color: 'rgba(255,255,255,0.62)', fontWeight: 400 }
                   }
                   onMouseEnter={subActive ? undefined : (e) => {
-                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)'
-                    ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
+                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.92)'
+                    ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
                   }}
                   onMouseLeave={subActive ? undefined : (e) => {
-                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'
+                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.62)'
                     ;(e.currentTarget as HTMLElement).style.background = ''
                   }}
                 >
-                  {sub.label}
+                  {/* Active accent bar */}
+                  <span
+                    aria-hidden
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-full transition-all"
+                    style={{
+                      width: subActive ? 3 : 2,
+                      height: subActive ? 16 : 4,
+                      background: subActive ? '#a39bff' : 'rgba(255,255,255,0.18)',
+                    }}
+                  />
+                  <span className="truncate">{sub.label}</span>
                 </Link>
               )
             })}
           </div>
         )}
       </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(-2px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </nav>
   )
 }
 
-function NavLink({ href, label, Icon, isActive }: { href: string; label: string; Icon: ({ className }: { className?: string }) => React.ReactNode; isActive: boolean }) {
+function NavLink({
+  href,
+  label,
+  Icon,
+  isActive,
+  collapsed = false,
+}: {
+  href: string
+  label: string
+  Icon: ({ className }: { className?: string }) => React.ReactNode
+  isActive: boolean
+  collapsed?: boolean
+}) {
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 px-3 py-2 text-sm rounded-xl transition-all duration-150 ${
+      aria-label={collapsed ? label : undefined}
+      title={collapsed ? label : undefined}
+      className={`group flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 text-sm rounded-xl transition-all duration-150 ${
         isActive ? 'text-white font-medium' : 'font-normal'
       }`}
       style={
@@ -171,10 +248,10 @@ function NavLink({ href, label, Icon, isActive }: { href: string; label: string;
         (e.currentTarget as HTMLElement).style.background = ''
       }}
     >
-      <span style={isActive ? undefined : { color: '#8b7fd4' }}>
+      <span style={isActive ? undefined : { color: '#5d5285' }}>
         <Icon className={`shrink-0 transition-colors ${isActive ? 'text-white' : ''}`} />
       </span>
-      {label}
+      {!collapsed && label}
     </Link>
   )
 }

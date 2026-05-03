@@ -161,7 +161,7 @@ export function AttentionBell({ items }: Props) {
 
         {count > 0 && (
           <span
-            className="absolute flex items-center justify-center text-[9px] font-bold text-white rounded-full"
+            className="absolute flex items-center justify-center text-xs font-bold text-white rounded-full"
             style={{
               top: 2,
               right: 2,
@@ -207,7 +207,7 @@ export function AttentionBell({ items }: Props) {
             >
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e1550' }}>Attention Center</div>
-                <div style={{ fontSize: 10.5, color: '#8b7fd4', marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: '#5d5285', marginTop: 1 }}>
                   {count === 0 ? 'All caught up' : `${count} item${count === 1 ? '' : 's'} need${count === 1 ? 's' : ''} your attention`}
                 </div>
               </div>
@@ -215,7 +215,7 @@ export function AttentionBell({ items }: Props) {
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="text-sm hover:opacity-70"
-                style={{ color: '#a99fd8' }}
+                style={{ color: '#6b5fa8' }}
               >
                 ✕
               </button>
@@ -234,7 +234,7 @@ export function AttentionBell({ items }: Props) {
                     </svg>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 500, color: '#1e1550' }}>All caught up</div>
-                  <div style={{ fontSize: 11, color: '#8b7fd4', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: '#5d5285', marginTop: 4 }}>
                     No items need your attention right now
                   </div>
                 </div>
@@ -257,8 +257,8 @@ export function AttentionBell({ items }: Props) {
                         {item.subtitle && (
                           <div
                             style={{
-                              fontSize: 11,
-                              color: '#8b7fd4',
+                              fontSize: 12,
+                              color: '#5d5285',
                               marginTop: 3,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -272,7 +272,7 @@ export function AttentionBell({ items }: Props) {
                       {item.badgeLabel && (
                         <span
                           style={{
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: 600,
                             padding: '3px 7px',
                             borderRadius: 20,

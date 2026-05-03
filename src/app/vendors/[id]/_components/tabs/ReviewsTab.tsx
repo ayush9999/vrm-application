@@ -91,7 +91,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>Assigned Packs</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#5d5285' }}>
               Packs assigned to this vendor. Scheduled reviews pull from this list.
             </p>
           </div>
@@ -109,13 +109,13 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowAssign(false)} />
                 <div className="absolute right-0 top-full mt-1 z-50 w-64 rounded-xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(109,93,211,0.15)', boxShadow: '0 4px 16px rgba(109,93,211,0.15)' }}>
-                  <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4', borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
+                  <div className="px-3 py-2 text-xs font-bold uppercase tracking-widest" style={{ color: '#5d5285', borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
                     Assign a pack
                   </div>
                   {unassignedPacks.map((p) => (
                     <button key={p.id} type="button" onClick={() => handleAssign(p.id)} disabled={isPending} className="w-full text-left px-3 py-2 text-xs hover:bg-[rgba(109,93,211,0.04)] disabled:opacity-50" style={{ color: '#1e1550' }}>
                       <span className="font-medium">{p.name}</span>
-                      {p.code && <span className="ml-1.5 font-mono text-[10px]" style={{ color: '#a99fd8' }}>{p.code}</span>}
+                      {p.code && <span className="ml-1.5 font-mono text-xs" style={{ color: '#6b5fa8' }}>{p.code}</span>}
                     </button>
                   ))}
                 </div>
@@ -125,7 +125,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
         </div>
 
         {assignments.length === 0 ? (
-          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
+          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#5d5285' }}>
             No packs assigned. Click &quot;+ Add Pack&quot; to start.
           </p>
         ) : (
@@ -155,7 +155,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                           {a.pack_name}
                         </span>
                         {a.pack_code && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+                          <span className="text-xs font-mono px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
                             {a.pack_code}
                           </span>
                         )}
@@ -163,18 +163,18 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                       {/* Description */}
                       {a.pack_description && (
-                        <p className="text-[11px] mt-1 leading-relaxed" style={{ color: '#8b7fd4' }}>
+                        <p className="text-xs mt-1 leading-relaxed" style={{ color: '#5d5285' }}>
                           {a.pack_description.length > 100 ? a.pack_description.substring(0, 100) + '…' : a.pack_description}
                         </p>
                       )}
 
                       {/* Counts */}
                       <div className="flex items-center gap-3 mt-2.5">
-                        <span className="text-[10px] flex items-center gap-1" style={{ color: '#4a4270' }}>
+                        <span className="text-xs flex items-center gap-1" style={{ color: '#4a4270' }}>
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6c5dd3" strokeWidth="1.2" strokeLinecap="round"><path d="M3 4h10M3 8h7M3 12h5" /></svg>
                           {a.review_item_count} review item{a.review_item_count !== 1 ? 's' : ''}
                         </span>
-                        <span className="text-[10px] flex items-center gap-1" style={{ color: '#4a4270' }}>
+                        <span className="text-xs flex items-center gap-1" style={{ color: '#4a4270' }}>
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6c5dd3" strokeWidth="1.2" strokeLinecap="round"><path d="M8 2v5l3 2M14 8a6 6 0 1 1-12 0 6 6 0 0 1 12 0z" /></svg>
                           {a.evidence_item_count} evidence doc{a.evidence_item_count !== 1 ? 's' : ''}
                         </span>
@@ -217,7 +217,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
         </div>
 
         {vendorReviews.length === 0 ? (
-          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#8b7fd4' }}>
+          <p className="text-xs py-3 px-4 rounded-lg" style={{ background: 'rgba(109,93,211,0.03)', color: '#5d5285' }}>
             No reviews yet. Create one from the{' '}
             <Link href="/reviews" className="underline" style={{ color: '#6c5dd3' }}>Reviews module</Link>.
           </p>
@@ -249,7 +249,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                   >
                     {/* Chevron */}
                     <svg
-                      width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
+                      width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6b5fa8" strokeWidth="2"
                       strokeLinecap="round" strokeLinejoin="round"
                       className="shrink-0 transition-transform"
                       style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -267,7 +267,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                     {/* Review type badge */}
                     <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0"
+                      className="text-xs px-1.5 py-0.5 rounded font-bold uppercase shrink-0"
                       style={{ background: tSty.bg, color: tSty.color }}
                     >
                       {review.review_type.replace('_', ' ')}
@@ -275,7 +275,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                     {/* Status badge */}
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0${rSty.strikethrough ? ' line-through' : ''}`}
+                      className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0${rSty.strikethrough ? ' line-through' : ''}`}
                       style={{ background: rSty.bg, color: rSty.color }}
                     >
                       {rSty.label}
@@ -291,7 +291,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                     {/* Date */}
                     {dateStr && (
-                      <span className="text-[11px] shrink-0" style={{ color: '#a99fd8' }}>
+                      <span className="text-xs shrink-0" style={{ color: '#6b5fa8' }}>
                         {dateStr}
                       </span>
                     )}
@@ -300,7 +300,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                     <Link
                       href={`/vendors/${vendorId}/reviews/view/${review.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-[11px] font-medium px-2.5 py-1 rounded-lg shrink-0 transition-colors hover:opacity-80"
+                      className="text-xs font-medium px-2.5 py-1 rounded-lg shrink-0 transition-colors hover:opacity-80"
                       style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
                     >
                       Open →
@@ -311,7 +311,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                   {isExpanded && (
                     <div className="px-4 pb-3" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
                       {packs.length === 0 ? (
-                        <p className="text-xs py-3" style={{ color: '#8b7fd4' }}>No packs in this review.</p>
+                        <p className="text-xs py-3" style={{ color: '#5d5285' }}>No packs in this review.</p>
                       ) : (
                         <div className="pt-2 space-y-0">
                           {packs.map((pack, idx) => {
@@ -324,7 +324,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                             return (
                               <div key={pack.id} className="flex items-center gap-3 py-2">
                                 {/* Tree connector */}
-                                <span className="text-xs shrink-0 w-6 text-right select-none" style={{ color: '#c4bfe6', fontFamily: 'monospace' }}>
+                                <span className="text-xs shrink-0 w-6 text-right select-none" style={{ color: '#6b5fa8', fontFamily: 'monospace' }}>
                                   {isLast ? '└──' : '├──'}
                                 </span>
 
@@ -335,7 +335,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
 
                                 {/* Pack status badge (small) */}
                                 <span
-                                  className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+                                  className="text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0"
                                   style={{ background: packSty.bg, color: packSty.color }}
                                 >
                                   {packSty.label}
@@ -347,7 +347,7 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                                 {/* Item progress */}
                                 {applicable > 0 ? (
                                   <div className="flex items-center gap-2 shrink-0">
-                                    <span className="text-[11px]" style={{ color: '#8b7fd4' }}>
+                                    <span className="text-xs" style={{ color: '#5d5285' }}>
                                       {counts.passed}/{applicable} passed
                                     </span>
                                     <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(109,93,211,0.06)' }}>
@@ -356,12 +356,12 @@ export function ReviewsTab({ vendorId, assignments, reviewPacks, availablePacks,
                                         style={{ width: `${pct}%`, background: pct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }}
                                       />
                                     </div>
-                                    <span className="text-[11px] font-bold w-8 text-right" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>
+                                    <span className="text-xs font-bold w-8 text-right" style={{ color: pct === 100 ? '#059669' : '#6c5dd3' }}>
                                       {pct}%
                                     </span>
                                   </div>
                                 ) : (
-                                  <span className="text-[11px]" style={{ color: '#a99fd8' }}>
+                                  <span className="text-xs" style={{ color: '#6b5fa8' }}>
                                     {counts.total > 0 ? `0/${counts.total} started` : 'No items'}
                                   </span>
                                 )}

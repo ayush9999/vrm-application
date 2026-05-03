@@ -30,7 +30,7 @@ export function ReadinessRadarChart({ packs }: Props) {
   if (packScores.length < 3) {
     return (
       <div className="text-center py-6">
-        <p className="text-xs" style={{ color: '#a99fd8' }}>
+        <p className="text-xs" style={{ color: '#6b5fa8' }}>
           Radar chart requires at least 3 active review packs with items.
         </p>
       </div>
@@ -58,7 +58,7 @@ export function ReadinessRadarChart({ packs }: Props) {
       className="rounded-2xl p-5"
       style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
     >
-      <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#6c5dd3' }}>
+      <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6c5dd3' }}>
         Readiness by Review Pack
       </h3>
 
@@ -136,7 +136,7 @@ export function ReadinessRadarChart({ packs }: Props) {
           <div key={i} className="flex items-center gap-2 text-xs">
             <span
               className="w-2 h-2 rounded-full shrink-0"
-              style={{ background: p.pct >= 80 ? '#059669' : p.pct >= 50 ? '#6c5dd3' : p.pct > 0 ? '#d97706' : '#a99fd8' }}
+              style={{ background: p.pct >= 80 ? '#059669' : p.pct >= 50 ? '#6c5dd3' : p.pct > 0 ? '#d97706' : '#6b5fa8' }}
             />
             <span className="truncate" style={{ color: '#4a4270' }}>{p.name}</span>
             <span className="font-bold tabular-nums ml-auto" style={{ color: p.pct >= 80 ? '#059669' : p.pct >= 50 ? '#6c5dd3' : '#d97706' }}>

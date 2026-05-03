@@ -31,7 +31,7 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
   return (
     <div className="px-6 py-5 max-w-4xl mx-auto">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs mb-6" style={{ color: '#a99fd8' }}>
+      <div className="flex items-center gap-1.5 text-xs mb-6" style={{ color: '#6b5fa8' }}>
         <Link href="/reviews" className="hover:text-[#6c5dd3]">Reviews</Link>
         <span>/</span>
         <span className="font-medium" style={{ color: '#1e1550' }}>{vendor.name}</span>
@@ -54,14 +54,14 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
               </span>
             )}
           </div>
-          <p className="text-sm mt-1" style={{ color: '#8b7fd4' }}>
+          <p className="text-sm mt-1" style={{ color: '#5d5285' }}>
             {reviews.length} review{reviews.length !== 1 ? 's' : ''} — {activeCount} active, {completedCount} completed
           </p>
         </div>
         <div className="flex items-center gap-5 shrink-0">
           {m && (
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>Readiness</div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#5d5285' }}>Readiness</div>
               <div className="text-xl font-bold tabular-nums" style={{ color: m.readinessPct === 100 ? '#059669' : '#6c5dd3' }}>
                 {m.readinessPct}%
               </div>
@@ -69,7 +69,7 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
           )}
           {riskStyle && (
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8b7fd4' }}>Risk</div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#5d5285' }}>Risk</div>
               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold uppercase mt-0.5" style={{ background: riskStyle.bg, color: riskStyle.color }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: riskStyle.dot }} />
                 {riskStyle.label}
@@ -83,7 +83,7 @@ export default async function VendorReviewJourneyPage({ params }: PageProps) {
       {reviews.length === 0 ? (
         <div className="rounded-2xl p-12 text-center" style={{ background: 'white', border: '1.5px dashed rgba(109,93,211,0.2)' }}>
           <p className="text-sm font-medium" style={{ color: '#1e1550' }}>No reviews yet</p>
-          <p className="text-xs mt-1" style={{ color: '#8b7fd4' }}>
+          <p className="text-xs mt-1" style={{ color: '#5d5285' }}>
             <Link href={`/vendors/${vendorId}?tab=reviews`} className="underline" style={{ color: '#6c5dd3' }}>Apply review packs</Link> from the vendor profile.
           </p>
         </div>

@@ -46,13 +46,13 @@ export function PolarAreaChart({ data }: { data: CategoryScore[] }) {
     <div className="bg-white rounded-2xl p-5 border border-zinc-100 shadow-sm">
       <div className="flex items-start justify-between mb-1">
         <div>
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+          <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
             Compliance by Category
           </h2>
-          <p className="text-xs mt-0.5 text-slate-400">Average score per vendor category</p>
+          <p className="text-xs mt-0.5 text-slate-500">Average score per vendor category</p>
         </div>
         {/* Score scale */}
-        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+        <div className="flex items-center gap-3 text-xs text-slate-500">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />≥75%</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />50–74%</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />&lt;50%</span>
@@ -83,7 +83,7 @@ export function PolarAreaChart({ data }: { data: CategoryScore[] }) {
                 x={CX + 3}
                 y={CY - MAX_R * pct / 100 + 4}
                 fontSize="6"
-                fill="#cbd5e1"
+                fill="#64748b"
                 textAnchor="start"
               >
                 {pct}%
@@ -140,7 +140,7 @@ export function PolarAreaChart({ data }: { data: CategoryScore[] }) {
                   x={pos.x}
                   y={pos.y + 3}
                   fontSize="7.5"
-                  fill={hovered === i ? scoreStyle(d.score).stroke : '#94a3b8'}
+                  fill={hovered === i ? scoreStyle(d.score).stroke : '#64748b'}
                   textAnchor={anchor}
                   fontWeight={hovered === i ? '700' : '500'}
                   className="transition-all duration-150 select-none"
@@ -170,14 +170,14 @@ export function PolarAreaChart({ data }: { data: CategoryScore[] }) {
               >
                 <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${style.dot}`} />
                 <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">{d.label}</span>
-                <span className="text-xs text-slate-400 shrink-0">{d.count}v</span>
+                <span className="text-xs text-slate-500 shrink-0">{d.count}v</span>
                 <span className={`text-sm font-bold tabular-nums shrink-0 w-10 text-right ${style.label}`}>
                   {d.score}%
                 </span>
               </div>
             )
           })}
-          <p className="text-[10px] text-slate-300 pt-1 pl-2">
+          <p className="text-xs text-slate-500 pt-1 pl-2">
             Dummy data — replace with live scores
           </p>
         </div>

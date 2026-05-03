@@ -34,7 +34,7 @@ export default async function PortalPage({ params }: PageProps) {
           <h1 className="text-lg font-semibold mb-2" style={{ color: '#1e1550' }}>
             Link {ctx.status === 'expired' ? 'expired' : ctx.status === 'revoked' ? 'revoked' : 'already submitted'}
           </h1>
-          <p className="text-sm" style={{ color: '#a99fd8' }}>
+          <p className="text-sm" style={{ color: '#6b5fa8' }}>
             {ctx.status === 'expired'
               ? 'This portal link has passed its expiry date. Please contact your point of contact for a new link.'
               : ctx.status === 'revoked'

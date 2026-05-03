@@ -81,18 +81,18 @@ export function PortalPanel({ vendorId, vendorReviewPackId, initialLinks, create
       >
         <div>
           <div className="text-sm font-semibold" style={{ color: '#1e1550' }}>Vendor Questionnaire</div>
-          <div className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
+          <div className="text-xs mt-0.5" style={{ color: '#6b5fa8' }}>
             Send a link the vendor can use to upload evidence and answer questions — no login needed
           </div>
         </div>
         <div className="flex items-center gap-2">
           {initialLinks.length > 0 && (
-            <span className="text-[11px] font-bold" style={{ color: '#6c5dd3' }}>
+            <span className="text-xs font-bold" style={{ color: '#6c5dd3' }}>
               {initialLinks.filter((l) => l.status === 'active').length} active
             </span>
           )}
           <svg
-            width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
+            width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6b5fa8" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round"
             className="transition-transform"
             style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -140,7 +140,7 @@ export function PortalPanel({ vendorId, vendorReviewPackId, initialLinks, create
           {/* Existing links */}
           {initialLinks.length > 0 && (
             <div className="space-y-1.5 pt-3" style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
                 Existing Links
               </div>
               {initialLinks.map((link) => {
@@ -151,14 +151,14 @@ export function PortalPanel({ vendorId, vendorReviewPackId, initialLinks, create
                     className="flex items-center gap-2 p-2.5 rounded-lg"
                     style={{ background: 'rgba(108,93,211,0.03)', border: '1px solid rgba(108,93,211,0.08)' }}
                   >
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: sty.bg, color: sty.color }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: sty.bg, color: sty.color }}>
                       {sty.label}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs truncate" style={{ color: '#4a4270' }}>
-                        {link.recipient_email ?? <span style={{ color: '#a99fd8' }}>No recipient</span>}
+                        {link.recipient_email ?? <span style={{ color: '#6b5fa8' }}>No recipient</span>}
                       </div>
-                      <div className="text-[10px]" style={{ color: '#a99fd8' }}>
+                      <div className="text-xs" style={{ color: '#6b5fa8' }}>
                         Expires {new Date(link.expires_at).toLocaleDateString()} · {link.access_count} access{link.access_count !== 1 ? 'es' : ''}
                       </div>
                     </div>
@@ -167,7 +167,7 @@ export function PortalPanel({ vendorId, vendorReviewPackId, initialLinks, create
                         <button
                           type="button"
                           onClick={() => handleCopy(link)}
-                          className="text-[11px] font-medium px-2 py-1 rounded-md"
+                          className="text-xs font-medium px-2 py-1 rounded-md"
                           style={{ background: 'rgba(108,93,211,0.06)', color: '#6c5dd3' }}
                         >
                           {copiedId === link.id ? '✓ Copied' : 'Copy URL'}
@@ -176,7 +176,7 @@ export function PortalPanel({ vendorId, vendorReviewPackId, initialLinks, create
                           type="button"
                           onClick={() => handleRevoke(link.id)}
                           disabled={isPending}
-                          className="text-[11px] font-medium px-2 py-1 rounded-md disabled:opacity-50"
+                          className="text-xs font-medium px-2 py-1 rounded-md disabled:opacity-50"
                           style={{ background: 'rgba(225,29,72,0.06)', color: '#e11d48' }}
                         >
                           Revoke

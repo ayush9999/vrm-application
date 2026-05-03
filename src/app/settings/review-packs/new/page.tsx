@@ -8,8 +8,8 @@ export default async function NewReviewPackPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-        <Link href="/settings/review-packs" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
+        <Link href="/settings/review-packs" className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>
           Review Packs
         </Link>
         <span>/</span>
@@ -18,7 +18,7 @@ export default async function NewReviewPackPage() {
 
       <div>
         <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#1e1550' }}>Create Custom Review Pack</h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Define a new pack tailored to your organisation. Add evidence requirements and review questions, set the auto-apply rules, then save.
         </p>
       </div>

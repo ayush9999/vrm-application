@@ -16,7 +16,7 @@ const STATUS_STYLE: Record<string, { dot: string; color: string; label: string }
   blocked:     { dot: '#e11d48', color: '#e11d48', label: 'Blocked' },
   deferred:    { dot: '#64748b', color: '#64748b', label: 'Deferred' },
   resolved:    { dot: '#059669', color: '#059669', label: 'Resolved' },
-  closed:      { dot: '#94a3b8', color: '#94a3b8', label: 'Closed' },
+  closed:      { dot: '#64748b', color: '#64748b', label: 'Closed' },
 }
 
 export function IssuesList({ issues, today }: { issues: Issue[]; today: string }) {
@@ -27,8 +27,8 @@ export function IssuesList({ issues, today }: { issues: Issue[]; today: string }
     >
       {/* Column header */}
       <div
-        className="flex items-center gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest"
-        style={{ background: 'rgba(109,93,211,0.03)', borderBottom: '1px solid rgba(109,93,211,0.06)', color: '#a99fd8' }}
+        className="flex items-center gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-widest"
+        style={{ background: 'rgba(109,93,211,0.03)', borderBottom: '1px solid rgba(109,93,211,0.06)', color: '#6b5fa8' }}
       >
         <span className="w-5 shrink-0" />
         <span className="flex-1">Issue</span>
@@ -89,7 +89,7 @@ function IssueRow({
 
       {/* Severity */}
       <span
-        className="text-[10px] px-2 py-0.5 rounded font-semibold uppercase shrink-0 w-[56px] text-center"
+        className="text-xs px-2 py-0.5 rounded font-semibold uppercase shrink-0 w-[56px] text-center"
         style={{ background: sev.bg, color: sev.color }}
       >
         {issue.severity}
@@ -98,24 +98,24 @@ function IssueRow({
       {/* Status */}
       <span className="flex items-center gap-1 shrink-0 w-[80px]">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: sts.dot }} />
-        <span className="text-[11px] font-medium" style={{ color: sts.color }}>{sts.label}</span>
-        {isOverdue && <span className="text-[9px] font-bold" style={{ color: '#e11d48' }}>!</span>}
+        <span className="text-xs font-medium" style={{ color: sts.color }}>{sts.label}</span>
+        {isOverdue && <span className="text-xs font-bold" style={{ color: '#e11d48' }}>!</span>}
       </span>
 
       {/* Vendor */}
-      <span className="text-[11px] truncate w-[80px] shrink-0" style={{ color: '#8b7fd4' }}>
+      <span className="text-xs truncate w-[80px] shrink-0" style={{ color: '#5d5285' }}>
         {issue.vendor_name}
       </span>
 
       {/* Owner */}
-      <span className="text-[11px] truncate w-[72px] shrink-0" style={{ color: '#8b7fd4' }}>
+      <span className="text-xs truncate w-[72px] shrink-0" style={{ color: '#5d5285' }}>
         {issue.owner_name ?? '—'}
       </span>
 
       {/* Due date */}
       <span
-        className="text-[11px] w-[56px] shrink-0 text-right"
-        style={{ color: isOverdue ? '#e11d48' : '#a99fd8' }}
+        className="text-xs w-[56px] shrink-0 text-right"
+        style={{ color: isOverdue ? '#e11d48' : '#6b5fa8' }}
       >
         {dueDateStr ?? '—'}
       </span>

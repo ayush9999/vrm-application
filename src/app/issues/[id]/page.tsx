@@ -38,7 +38,7 @@ export default async function IssueDetailPage({
   return (
     <div className="px-6 py-5 max-w-5xl mx-auto space-y-5">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#8b7fd4' }}>
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#5d5285' }}>
         <Link href="/issues" className="hover:underline">Issues</Link>
         <span>›</span>
         <span style={{ color: '#1e1550' }}>{issue.title}</span>

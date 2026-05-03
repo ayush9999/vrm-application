@@ -8,7 +8,7 @@ export default function SignUpPage() {
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
           Create your account
         </h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Sign up to create your organisation and start managing vendors.
         </p>
       </div>

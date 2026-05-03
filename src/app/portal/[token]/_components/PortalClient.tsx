@@ -85,14 +85,14 @@ export function PortalClient({
       <div className="rounded-2xl p-5 bg-white" style={{ border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 12px rgba(109,93,211,0.08)' }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
               Vendor Onboarding Questionnaire
             </p>
             <h1 className="text-xl font-semibold mt-1" style={{ color: '#1e1550' }}>{pack.review_packs.name}</h1>
             <p className="text-sm mt-1" style={{ color: '#4a4270' }}>
-              <span style={{ color: '#a99fd8' }}>For: </span>
+              <span style={{ color: '#6b5fa8' }}>For: </span>
               {vendor.name}
-              {vendor.vendor_code && <span className="font-mono ml-2" style={{ color: '#a99fd8' }}>({vendor.vendor_code})</span>}
+              {vendor.vendor_code && <span className="font-mono ml-2" style={{ color: '#6b5fa8' }}>({vendor.vendor_code})</span>}
             </p>
           </div>
           <button
@@ -106,7 +106,7 @@ export function PortalClient({
           </button>
         </div>
         {pack.review_packs.description && (
-          <p className="text-xs mt-3" style={{ color: '#a99fd8' }}>{pack.review_packs.description}</p>
+          <p className="text-xs mt-3" style={{ color: '#6b5fa8' }}>{pack.review_packs.description}</p>
         )}
         {finalizeError && (
           <p className="text-xs mt-2" style={{ color: '#e11d48' }}>{finalizeError}</p>
@@ -119,7 +119,7 @@ export function PortalClient({
           type="button"
           onClick={() => setTab('evidence')}
           className="px-4 py-2 text-sm font-medium border-b-2"
-          style={tab === 'evidence' ? { color: '#6c5dd3', borderColor: '#6c5dd3' } : { color: '#a99fd8', borderColor: 'transparent' }}
+          style={tab === 'evidence' ? { color: '#6c5dd3', borderColor: '#6c5dd3' } : { color: '#6b5fa8', borderColor: 'transparent' }}
         >
           Evidence ({evidence.length})
         </button>
@@ -127,7 +127,7 @@ export function PortalClient({
           type="button"
           onClick={() => setTab('questions')}
           className="px-4 py-2 text-sm font-medium border-b-2"
-          style={tab === 'questions' ? { color: '#6c5dd3', borderColor: '#6c5dd3' } : { color: '#a99fd8', borderColor: 'transparent' }}
+          style={tab === 'questions' ? { color: '#6c5dd3', borderColor: '#6c5dd3' } : { color: '#6b5fa8', borderColor: 'transparent' }}
         >
           Questions ({items.length})
         </button>
@@ -140,7 +140,7 @@ export function PortalClient({
           </p>
           {evidence.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: 'white', border: '1px dashed rgba(109,93,211,0.2)' }}>
-              <p className="text-sm" style={{ color: '#a99fd8' }}>No evidence requirements yet.</p>
+              <p className="text-sm" style={{ color: '#6b5fa8' }}>No evidence requirements yet.</p>
             </div>
           ) : (
             evidence.map((e) => (
@@ -157,7 +157,7 @@ export function PortalClient({
           </p>
           {items.length === 0 ? (
             <div className="rounded-xl p-6 text-center" style={{ background: 'white', border: '1px dashed rgba(109,93,211,0.2)' }}>
-              <p className="text-sm" style={{ color: '#a99fd8' }}>No review questions for this pack.</p>
+              <p className="text-sm" style={{ color: '#6b5fa8' }}>No review questions for this pack.</p>
             </div>
           ) : (
             items.map((it) => (
@@ -167,7 +167,7 @@ export function PortalClient({
         </section>
       )}
 
-      <p className="text-[11px] text-center pt-4" style={{ color: '#a99fd8' }}>
+      <p className="text-xs text-center pt-4" style={{ color: '#6b5fa8' }}>
         Powered by VRM · This link is private — do not share
       </p>
     </div>
@@ -213,12 +213,12 @@ function PortalEvidenceRow({
               {row.evidence_requirements.name}
             </span>
             {row.evidence_requirements.required && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
+              <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
                 Required
               </span>
             )}
             {isUploaded && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
+              <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
                 ✓ Uploaded
               </span>
             )}
@@ -241,7 +241,7 @@ function PortalEvidenceRow({
           {isPending ? 'Uploading…' : isUploaded ? 'Replace' : 'Upload'}
         </button>
       </form>
-      {message && <p className="text-[10px] mt-1" style={{ color: message === 'Uploaded' ? '#059669' : '#e11d48' }}>{message}</p>}
+      {message && <p className="text-xs mt-1" style={{ color: message === 'Uploaded' ? '#059669' : '#e11d48' }}>{message}</p>}
     </div>
   )
 }
@@ -286,12 +286,12 @@ function PortalQuestionRow({
           {item.review_requirements.name}
         </span>
         {item.review_requirements.required && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
+          <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase" style={{ background: 'rgba(225,29,72,0.08)', color: '#e11d48' }}>
             Required
           </span>
         )}
         {submitted && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ml-auto" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
+          <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase ml-auto" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
             ✓ {existingPrefix![1]}
           </span>
         )}
@@ -334,7 +334,7 @@ function PortalQuestionRow({
         >
           {isPending ? 'Saving…' : 'Submit response'}
         </button>
-        {message && <p className="text-[10px]" style={{ color: message === 'Submitted' ? '#059669' : '#e11d48' }}>{message}</p>}
+        {message && <p className="text-xs" style={{ color: message === 'Submitted' ? '#059669' : '#e11d48' }}>{message}</p>}
       </div>
     </div>
   )

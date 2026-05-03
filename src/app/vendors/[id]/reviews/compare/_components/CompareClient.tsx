@@ -16,7 +16,7 @@ const CHANGE_STYLE: Record<string, { bg: string; color: string; label: string }>
   improved:  { bg: 'rgba(5,150,105,0.08)',    color: '#059669', label: 'Improved' },
   regressed: { bg: 'rgba(225,29,72,0.08)',    color: '#e11d48', label: 'Regressed' },
   changed:   { bg: 'rgba(245,158,11,0.08)',   color: '#d97706', label: 'Changed' },
-  unchanged: { bg: 'rgba(148,163,184,0.06)',  color: '#94a3b8', label: 'Unchanged' },
+  unchanged: { bg: 'rgba(148,163,184,0.06)',  color: '#64748b', label: 'Unchanged' },
 }
 
 interface VrpOption {
@@ -139,19 +139,19 @@ export function CompareClient({ vendorId, completedVrps }: Props) {
           {/* Delta summary */}
           <div className="flex items-center gap-6 flex-wrap">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Older Readiness</div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Older Readiness</div>
               <div className="text-2xl font-bold tabular-nums" style={{ color: '#4a4270' }}>{result.olderPct}%</div>
             </div>
-            <div className="text-xl font-bold" style={{ color: '#a99fd8' }}>→</div>
+            <div className="text-xl font-bold" style={{ color: '#6b5fa8' }}>→</div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Newer Readiness</div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Newer Readiness</div>
               <div className="text-2xl font-bold tabular-nums" style={{ color: '#1e1550' }}>{result.newerPct}%</div>
             </div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Delta</div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Delta</div>
               <div
                 className="text-2xl font-bold tabular-nums"
-                style={{ color: result.deltaPct > 0 ? '#059669' : result.deltaPct < 0 ? '#e11d48' : '#94a3b8' }}
+                style={{ color: result.deltaPct > 0 ? '#059669' : result.deltaPct < 0 ? '#e11d48' : '#64748b' }}
               >
                 {result.deltaPct > 0 ? '↑' : result.deltaPct < 0 ? '↓' : '—'} {Math.abs(result.deltaPct)} pts
               </div>
@@ -184,10 +184,10 @@ export function CompareClient({ vendorId, completedVrps }: Props) {
               <table className="min-w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(109,93,211,0.08)', background: 'rgba(109,93,211,0.03)' }}>
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Requirement</th>
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Older</th>
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Newer</th>
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Change</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Requirement</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Older</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Newer</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Change</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -216,7 +216,7 @@ function DiffRow({ item }: { item: CompareItem }) {
         {DECISION_LABEL[item.newerDecision] ?? item.newerDecision}
       </td>
       <td className="px-4 py-2.5">
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: cs.bg, color: cs.color }}>
+        <span className="text-xs px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: cs.bg, color: cs.color }}>
           {cs.label}
         </span>
       </td>

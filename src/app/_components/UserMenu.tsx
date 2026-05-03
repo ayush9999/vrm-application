@@ -8,9 +8,10 @@ interface UserMenuProps {
   email: string | null
   name: string | null
   orgName: string | null
+  collapsed?: boolean
 }
 
-export function UserMenu({ email, name, orgName }: UserMenuProps) {
+export function UserMenu({ email, name, orgName, collapsed = false }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -35,35 +36,47 @@ export function UserMenu({ email, name, orgName }: UserMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all"
+        aria-label={collapsed ? `${displayName} menu` : undefined}
+        title={collapsed ? displayName : undefined}
+        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} px-2 py-2 rounded-xl transition-all`}
         style={{
           background: open ? 'rgba(108,93,211,0.18)' : 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.07)',
         }}
       >
         <span
-          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
           style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
         >
           {initials}
         </span>
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-          {orgName && <p className="text-[10px] text-white/50 truncate">{orgName}</p>}
-        </div>
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/50 shrink-0">
-          <path d="M4 6l4 4 4-4" />
-        </svg>
+        {!collapsed && (
+          <>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-semibold text-white truncate">{displayName}</p>
+              {orgName && <p className="text-xs text-white/50 truncate">{orgName}</p>}
+            </div>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/50 shrink-0">
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </>
+        )}
       </button>
 
       {open && (
         <div
-          className="absolute left-0 right-0 bottom-full mb-2 rounded-xl overflow-hidden shadow-xl"
-          style={{ background: '#1c1c2e', border: '1px solid rgba(255,255,255,0.1)' }}
+          className="absolute bottom-full mb-2 rounded-xl overflow-hidden shadow-xl"
+          style={{
+            background: '#1c1c2e',
+            border: '1px solid rgba(255,255,255,0.1)',
+            ...(collapsed
+              ? { left: 0, width: 220 }
+              : { left: 0, right: 0 }),
+          }}
         >
           <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-            {email && <p className="text-[10px] text-white/50 truncate mt-0.5">{email}</p>}
+            {email && <p className="text-xs text-white/50 truncate mt-0.5">{email}</p>}
           </div>
 
           <div className="py-1">

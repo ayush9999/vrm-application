@@ -9,7 +9,7 @@ interface Props {
 }
 
 const DECISION_LABEL: Record<string, { label: string; color: string }> = {
-  not_started: { label: 'Pending', color: '#94a3b8' },
+  not_started: { label: 'Pending', color: '#64748b' },
   pass: { label: 'Pass', color: '#059669' },
   fail: { label: 'Fail', color: '#e11d48' },
   na: { label: 'N/A', color: '#64748b' },
@@ -46,12 +46,12 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
           <span className="text-sm font-semibold" style={{ color: '#1e1550' }}>
             Framework Controls & Compliance References
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}>
             {items.length} controls · {totalRefs} refs
           </span>
         </div>
         <svg
-          width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
+          width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6b5fa8" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round"
           className="shrink-0 transition-transform"
           style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -63,7 +63,7 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
       {isOpen && (
         <div style={{ borderTop: '1px solid rgba(109,93,211,0.06)' }}>
           {items.map((item, idx) => {
-            const dec = DECISION_LABEL[item.decision] ?? { label: item.decision, color: '#94a3b8' }
+            const dec = DECISION_LABEL[item.decision] ?? { label: item.decision, color: '#64748b' }
             return (
               <div
                 key={item.id}
@@ -78,7 +78,7 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
                     <span className="text-sm font-medium" style={{ color: '#1e1550' }}>
                       {item.requirement_name ?? 'Unnamed control'}
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase" style={{ color: dec.color, background: `${dec.color}15` }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold uppercase" style={{ color: dec.color, background: `${dec.color}15` }}>
                       {dec.label}
                     </span>
                   </div>
@@ -96,7 +96,7 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
                         {matched.map((ref, i) => (
                           <span
                             key={`m${i}`}
-                            className="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
+                            className="text-xs px-2 py-0.5 rounded font-mono font-bold"
                             style={{ background: 'rgba(5,150,105,0.1)', color: '#059669', border: '1px solid rgba(5,150,105,0.2)' }}
                           >
                             ✓ {ref.standard} — {ref.reference}
@@ -105,8 +105,8 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
                         {other.map((ref, i) => (
                           <span
                             key={`o${i}`}
-                            className="text-[10px] px-2 py-0.5 rounded font-mono"
-                            style={{ background: 'rgba(109,93,211,0.04)', color: '#a99fd8' }}
+                            className="text-xs px-2 py-0.5 rounded font-mono"
+                            style={{ background: 'rgba(109,93,211,0.04)', color: '#6b5fa8' }}
                           >
                             {ref.standard} — {ref.reference}
                           </span>
@@ -117,7 +117,7 @@ export function ComplianceControlsSection({ items, orgStandards = [] }: Props) {
 
                   {/* Comment */}
                   {item.reviewer_comment && (
-                    <p className="text-[11px] mt-1 italic" style={{ color: '#8b7fd4' }}>
+                    <p className="text-xs mt-1 italic" style={{ color: '#5d5285' }}>
                       {item.reviewer_comment}
                     </p>
                   )}

@@ -94,7 +94,7 @@ export function VendorHeaderStats(props: Props) {
         {/* Readiness */}
         <Tile label="Readiness">
           {applicable === 0 ? (
-            <span className="text-sm font-medium" style={{ color: '#a99fd8' }}>No packs</span>
+            <span className="text-sm font-medium" style={{ color: '#6b5fa8' }}>No packs</span>
           ) : (
             <div>
               <span
@@ -103,7 +103,7 @@ export function VendorHeaderStats(props: Props) {
               >
                 {readinessPct}%
               </span>
-              <span className="text-[10px] ml-1.5" style={{ color: '#a99fd8' }}>{completed} / {applicable}</span>
+              <span className="text-xs ml-1.5" style={{ color: '#6b5fa8' }}>{completed} / {applicable}</span>
               <div className="h-1 rounded-full overflow-hidden mt-1.5" style={{ background: 'rgba(109,93,211,0.06)' }}>
                 <div className="h-full rounded-full" style={{ width: `${readinessPct}%`, background: readinessPct === 100 ? '#059669' : 'linear-gradient(90deg, #6c5dd3, #7c6be0)' }} />
               </div>
@@ -118,7 +118,7 @@ export function VendorHeaderStats(props: Props) {
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: risk.dot }} />
               {risk.label}
             </span>
-            <span className="text-xs font-mono" style={{ color: '#a99fd8' }}>{riskScore}</span>
+            <span className="text-xs font-mono" style={{ color: '#6b5fa8' }}>{riskScore}</span>
           </div>
         </Tile>
 
@@ -133,7 +133,7 @@ export function VendorHeaderStats(props: Props) {
                 type="button"
                 onClick={() => setPickerOpen((v) => !v)}
                 disabled={isPending}
-                className="text-[10px] font-medium px-2 py-0.5 rounded-md disabled:opacity-50"
+                className="text-xs font-medium px-2 py-0.5 rounded-md disabled:opacity-50"
                 style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3' }}
               >
                 {isPending ? '…' : 'Change'}
@@ -151,7 +151,7 @@ export function VendorHeaderStats(props: Props) {
             </div>
           </div>
           {approvalStatus === 'approved_with_exception' && exceptionReason && (
-            <p className="text-[10px] mt-1 italic truncate" style={{ color: '#7c3aed' }} title={exceptionReason}>Exception: {exceptionReason}</p>
+            <p className="text-xs mt-1 italic truncate" style={{ color: '#7c3aed' }} title={exceptionReason}>Exception: {exceptionReason}</p>
           )}
         </Tile>
 
@@ -166,7 +166,7 @@ export function VendorHeaderStats(props: Props) {
                 <MiniSparkline points={[snapshots[0].readiness_pct, currentReadinessPct]} />
               ) : (
                 <div className="h-[28px] flex items-center">
-                  <span className="text-[10px]" style={{ color: '#a99fd8' }}>No history</span>
+                  <span className="text-xs" style={{ color: '#6b5fa8' }}>No history</span>
                 </div>
               )}
             </div>
@@ -174,7 +174,7 @@ export function VendorHeaderStats(props: Props) {
             {/* Delta + expand */}
             <div className="shrink-0 text-right">
               {snapshots.length > 0 && (
-                <div className="text-sm font-bold tabular-nums" style={{ color: delta > 0 ? '#059669' : delta < 0 ? '#e11d48' : '#94a3b8' }}>
+                <div className="text-sm font-bold tabular-nums" style={{ color: delta > 0 ? '#059669' : delta < 0 ? '#e11d48' : '#64748b' }}>
                   {delta > 0 ? '↑' : delta < 0 ? '↓' : '→'}{Math.abs(delta)}
                 </div>
               )}
@@ -182,7 +182,7 @@ export function VendorHeaderStats(props: Props) {
                 <button
                   type="button"
                   onClick={() => setExpandedChart(expandedChart === 'trend' ? null : 'trend')}
-                  className="text-[9px] font-medium px-1.5 py-0.5 rounded"
+                  className="text-xs font-medium px-1.5 py-0.5 rounded"
                   style={{ background: expandedChart === 'trend' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'trend' ? 'white' : '#6c5dd3' }}
                 >
                   Expand
@@ -191,7 +191,7 @@ export function VendorHeaderStats(props: Props) {
                   <button
                     type="button"
                     onClick={() => setExpandedChart(expandedChart === 'radar' ? null : 'radar')}
-                    className="text-[9px] font-medium px-1.5 py-0.5 rounded"
+                    className="text-xs font-medium px-1.5 py-0.5 rounded"
                     style={{ background: expandedChart === 'radar' ? '#6c5dd3' : 'rgba(109,93,211,0.06)', color: expandedChart === 'radar' ? 'white' : '#6c5dd3' }}
                   >
                     Radar
@@ -239,7 +239,7 @@ function Tile({ label, children }: { label: string; children: React.ReactNode })
       className="rounded-xl p-3"
       style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 1px 4px rgba(109,93,211,0.04)' }}
     >
-      <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#8b7fd4' }}>{label}</div>
+      <div className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#5d5285' }}>{label}</div>
       {children}
     </div>
   )

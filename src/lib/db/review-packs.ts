@@ -379,7 +379,7 @@ export async function duplicatePackAsCustom(
   if (evRes.error) throw new Error(evRes.error.message)
   if (rrRes.error) throw new Error(rrRes.error.message)
 
-  type EvSrc = { id: string; name: string; description: string | null; required: boolean; expiry_applies: boolean; sort_order: number }
+  type EvSrc = { id: string; name: string; description: string | null; required: boolean; expiry_applies: boolean; refresh_after_days: number | null; sort_order: number }
   type RrSrc = { id: string; name: string; description: string | null; required: boolean; linked_evidence_requirement_id: string | null; compliance_references: { standard: string; reference: string }[] | null; creates_remediation_on_fail: boolean; sort_order: number }
   const srcEvidence = (evRes.data ?? []) as EvSrc[]
   const srcReviews = (rrRes.data ?? []) as RrSrc[]
@@ -401,6 +401,7 @@ export async function duplicatePackAsCustom(
       description: e.description,
       required: e.required,
       expiry_applies: e.expiry_applies,
+      refresh_after_days: e.refresh_after_days,
     })),
     reviewRequirements: srcReviews.map((r) => ({
       name: r.name,
@@ -425,6 +426,8 @@ export interface CustomEvidenceReqInput {
   description?: string | null
   required: boolean
   expiry_applies: boolean
+  /** Soft refresh window in days. Null = no refresh tracking. */
+  refresh_after_days?: number | null
 }
 
 export interface CustomReviewReqInput {
@@ -476,6 +479,7 @@ export async function createCustomReviewPack(input: {
       description: er.description ?? null,
       required: er.required,
       expiry_applies: er.expiry_applies,
+      refresh_after_days: er.refresh_after_days ?? null,
       sort_order: idx,
     }))
     const { data: evRows, error: evErr } = await supabase

@@ -115,10 +115,10 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
     <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Breadcrumb + Export */}
       <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-          <Link href="/reviews" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Reviews</Link>
+        <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
+          <Link href="/reviews" className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>Reviews</Link>
           <span>/</span>
-          <Link href={`/reviews/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>{vendor.name}</Link>
+          <Link href={`/reviews/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>{vendor.name}</Link>
           <span>/</span>
           <span className="font-medium" style={{ color: '#1e1550' }}>{pack.name}</span>
         </div>
@@ -131,14 +131,14 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>{pack.name}</h1>
             {pack.description && (
-              <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>{pack.description}</p>
+              <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>{pack.description}</p>
             )}
           </div>
           {/* Vendor-level summary badges */}
           {m && riskStyle && (
             <div className="flex items-center gap-3 shrink-0">
               <div className="text-right">
-                <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
                   Vendor Risk
                 </div>
                 <span
@@ -152,7 +152,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
               </div>
               <div className="h-10 w-px" style={{ background: 'rgba(109,93,211,0.1)' }} />
               <div className="text-right">
-                <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
                   Vendor Readiness
                 </div>
                 <div className="text-sm font-semibold mt-1" style={{ color: '#1e1550' }}>
@@ -184,7 +184,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
           className="rounded-2xl p-4"
           style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
         >
-          <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: '#6c5dd3' }}>Assignment</div>
+          <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#6c5dd3' }}>Assignment</div>
           <ReviewAssignment
             vendorId={vendorId}
             vendorReviewPackId={packId}

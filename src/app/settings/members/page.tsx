@@ -32,7 +32,7 @@ export default async function MembersPage() {
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
           Members & Invites
         </h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Manage who has access to your organisation.
         </p>
       </div>

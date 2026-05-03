@@ -213,12 +213,12 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, prefil
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
       >
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>Readiness</div>
+          <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>Readiness</div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold" style={{ color: counts.pct === 100 ? '#059669' : '#6c5dd3' }}>
               {counts.pct}%
             </span>
-            <span className="text-xs" style={{ color: '#a99fd8' }}>
+            <span className="text-xs" style={{ color: '#6b5fa8' }}>
               {counts.passed} / {counts.applicable} applicable
             </span>
           </div>
@@ -227,8 +227,8 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, prefil
         <SummaryStat label="Total"       count={counts.total}       color="#4a4270" />
         <SummaryStat label="Passed"      count={counts.passed}      color="#059669" />
         <SummaryStat label="Failed"      count={counts.failed}      color="#e11d48" />
-        <SummaryStat label="Not Started" count={counts.not_started} color="#a99fd8" />
-        <SummaryStat label="N/A"         count={counts.na}          color="#94a3b8" />
+        <SummaryStat label="Not Started" count={counts.not_started} color="#6b5fa8" />
+        <SummaryStat label="N/A"         count={counts.na}          color="#64748b" />
       </div>
 
       {/* Filter bar */}
@@ -303,7 +303,7 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, prefil
             type="button"
             onClick={() => handleBulkDecision('na')}
             className="text-xs font-medium px-3 py-1 rounded-full"
-            style={{ background: 'rgba(148,163,184,0.2)', color: '#cbd5e1' }}
+            style={{ background: 'rgba(148,163,184,0.2)', color: '#64748b' }}
           >
             Mark N/A
           </button>
@@ -330,7 +330,7 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, prefil
         style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)' }}
       >
         {visible.length === 0 ? (
-          <p className="p-8 text-center text-sm" style={{ color: '#a99fd8' }}>
+          <p className="p-8 text-center text-sm" style={{ color: '#6b5fa8' }}>
             No items match this filter.
           </p>
         ) : (
@@ -362,7 +362,7 @@ export function ReviewPackClient({ vendorId, packId, items: initialItems, prefil
 function SummaryStat({ label, count, color }: { label: string; count: number; color: string }) {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>{label}</div>
+      <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>{label}</div>
       <div className="text-lg font-bold tabular-nums" style={{ color }}>{count}</div>
     </div>
   )
@@ -470,7 +470,7 @@ function ReviewItemRow({
         {/* Decision indicator */}
         <span
           className="w-2 h-2 rounded-full shrink-0"
-          style={{ background: decisionStyle?.color ?? '#cbd5e1' }}
+          style={{ background: decisionStyle?.color ?? '#64748b' }}
         />
 
         {/* Title */}
@@ -479,12 +479,12 @@ function ReviewItemRow({
             {item.requirement_name ?? 'Review item'}
           </div>
           {item.compliance_references && item.compliance_references.length > 0 && (
-            <div className="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: '#a99fd8' }}>
+            <div className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: '#6b5fa8' }}>
               {item.compliance_references.slice(0, 3).map((ref, i) => (
                 <span
                   key={i}
                   className="px-1.5 py-0.5 rounded font-mono"
-                  style={{ background: 'rgba(109,93,211,0.05)', color: '#8b7fd4' }}
+                  style={{ background: 'rgba(109,93,211,0.05)', color: '#5d5285' }}
                 >
                   {ref.standard} {ref.reference}
                 </span>
@@ -496,7 +496,7 @@ function ReviewItemRow({
         {/* Pre-fill badge */}
         {prefill && (
           <span
-            className="text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 whitespace-nowrap"
+            className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0 whitespace-nowrap"
             style={{ background: 'rgba(14,165,233,0.08)', color: '#0284c7' }}
           >
             Last: {DECISIONS.find((d) => d.value === prefill.decision)?.label ?? prefill.decision}
@@ -507,7 +507,7 @@ function ReviewItemRow({
         {/* Decision badge */}
         {decisionStyle && (
           <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0"
+            className="text-xs px-2 py-0.5 rounded-full font-bold uppercase shrink-0"
             style={{ background: decisionStyle.bg, color: decisionStyle.color }}
           >
             {decisionStyle.label}
@@ -516,7 +516,7 @@ function ReviewItemRow({
 
         {/* Chevron */}
         <svg
-          width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#a99fd8" strokeWidth="2"
+          width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6b5fa8" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round"
           className="shrink-0 transition-transform"
           style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -531,7 +531,7 @@ function ReviewItemRow({
           {/* Description */}
           {item.requirement_description && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#a99fd8' }}>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#6b5fa8' }}>
                 What this requires
               </div>
               <p className="text-xs leading-relaxed" style={{ color: '#4a4270' }}>
@@ -543,14 +543,14 @@ function ReviewItemRow({
           {/* Compliance refs (full) */}
           {item.compliance_references && item.compliance_references.length > 0 && (
             <details className="text-xs">
-              <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+              <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
                 Compliance References
               </summary>
               <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                 {item.compliance_references.map((ref, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 rounded font-mono text-[10px]"
+                    className="px-2 py-0.5 rounded font-mono text-xs"
                     style={{ background: 'rgba(109,93,211,0.08)', color: '#6c5dd3' }}
                   >
                     {ref.standard} — {ref.reference}
@@ -562,7 +562,7 @@ function ReviewItemRow({
 
           {/* Comment field */}
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+            <label className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
               Reviewer Comment
             </label>
             <textarea
@@ -579,7 +579,7 @@ function ReviewItemRow({
           {item.linked_evidence_requirement_id && (
             <div className="rounded-lg p-2.5 space-y-2" style={{ background: 'rgba(108,93,211,0.04)', border: '1px solid rgba(108,93,211,0.1)' }}>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
                   Linked Evidence:
                 </span>
                 <span className="text-xs font-medium" style={{ color: '#1e1550' }}>
@@ -587,7 +587,7 @@ function ReviewItemRow({
                 </span>
                 {item.linked_evidence_status && (
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    className="text-xs px-1.5 py-0.5 rounded font-bold uppercase"
                     style={{
                       background: item.linked_evidence_status === 'approved' ? 'rgba(5,150,105,0.1)' :
                         item.linked_evidence_status === 'uploaded' ? 'rgba(14,165,233,0.1)' :
@@ -622,7 +622,7 @@ function ReviewItemRow({
                 </button>
               </form>
               {uploadMessage && (
-                <span className="text-[10px]" style={{ color: uploadMessage.includes('success') ? '#059669' : '#e11d48' }}>
+                <span className="text-xs" style={{ color: uploadMessage.includes('success') ? '#059669' : '#e11d48' }}>
                   {uploadMessage}
                 </span>
               )}
@@ -632,7 +632,7 @@ function ReviewItemRow({
           {/* Existing remediation link */}
           {item.created_remediation_id && (
             <div className="text-xs flex items-center gap-2">
-              <span style={{ color: '#a99fd8' }}>Remediation:</span>
+              <span style={{ color: '#6b5fa8' }}>Remediation:</span>
               <Link
                 href={`/issues/${item.created_remediation_id}`}
                 className="font-medium hover:underline"
@@ -685,12 +685,12 @@ function ReviewItemRow({
               style={{ background: 'rgba(108,93,211,0.05)', border: '1px solid rgba(108,93,211,0.15)' }}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>
                   AI Suggestion
                 </span>
                 {aiResult.suggestion && (
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+                    className="text-xs px-2 py-0.5 rounded-full font-bold uppercase"
                     style={{
                       background: DECISIONS.find((d) => d.value === aiResult.suggestion)?.bg,
                       color: DECISIONS.find((d) => d.value === aiResult.suggestion)?.color,

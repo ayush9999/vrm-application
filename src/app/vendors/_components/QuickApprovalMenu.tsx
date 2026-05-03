@@ -81,7 +81,7 @@ export function QuickApprovalMenu({
             boxShadow: '0 4px 16px rgba(109,93,211,0.15)',
           }}
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8', borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
+          <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8', borderBottom: '1px solid rgba(109,93,211,0.06)' }}>
             Set approval status
           </div>
           {FLOW.filter((f) => f.value !== current).map((f) => (

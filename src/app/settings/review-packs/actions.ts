@@ -229,12 +229,15 @@ export async function updatePackMetadataAction(
 
 export async function addEvidenceReqAction(
   packId: string,
-  input: { name: string; description?: string | null; required: boolean; expiry_applies: boolean },
+  input: { name: string; description?: string | null; required: boolean; expiry_applies: boolean; refresh_after_days?: number | null },
 ): Promise<{ success?: boolean; message?: string }> {
   try {
     const user = await requireCurrentUser()
     if (user.role !== 'site_admin') return { message: 'Only site admins can edit packs.' }
     if (!input.name?.trim()) return { message: 'Name is required' }
+    if (input.refresh_after_days != null && input.refresh_after_days <= 0) {
+      return { message: 'Refresh interval must be a positive number of days' }
+    }
     const supabase = await createServerClient()
 
     const { data: existing } = await supabase
@@ -254,6 +257,7 @@ export async function addEvidenceReqAction(
         description: input.description ?? null,
         required: input.required,
         expiry_applies: input.expiry_applies,
+        refresh_after_days: input.refresh_after_days ?? null,
         sort_order: nextSort + 1,
       })
     if (error) throw new Error(error.message)
@@ -267,11 +271,14 @@ export async function addEvidenceReqAction(
 
 export async function updateEvidenceReqAction(
   evidenceReqId: string,
-  patch: { name?: string; description?: string | null; required?: boolean; expiry_applies?: boolean },
+  patch: { name?: string; description?: string | null; required?: boolean; expiry_applies?: boolean; refresh_after_days?: number | null },
 ): Promise<{ success?: boolean; message?: string }> {
   try {
     const user = await requireCurrentUser()
     if (user.role !== 'site_admin') return { message: 'Only site admins can edit packs.' }
+    if (patch.refresh_after_days != null && patch.refresh_after_days <= 0) {
+      return { message: 'Refresh interval must be a positive number of days' }
+    }
     const supabase = await createServerClient()
     const { error, data } = await supabase
       .from('evidence_requirements')

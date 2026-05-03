@@ -12,6 +12,7 @@ interface EvidenceInput {
   description: string
   required: boolean
   expiry_applies: boolean
+  refresh_after_days: number | null
 }
 
 interface ComplianceRef {
@@ -34,7 +35,7 @@ interface Props {
     description: string | null
     applicability_rules: ApplicabilityRules
     review_cadence: 'annual' | 'biannual' | 'on_incident' | 'on_renewal'
-    evidence_requirements: { name: string; description?: string | null; required: boolean; expiry_applies: boolean }[]
+    evidence_requirements: { name: string; description?: string | null; required: boolean; expiry_applies: boolean; refresh_after_days?: number | null }[]
     review_requirements: {
       name: string
       description?: string | null
@@ -74,7 +75,7 @@ export function CustomPackBuilder({ createAction }: Props) {
     return n
   }
 
-  const addEvidence = () => setEvidence((e) => [...e, { name: '', description: '', required: true, expiry_applies: false }])
+  const addEvidence = () => setEvidence((e) => [...e, { name: '', description: '', required: true, expiry_applies: false, refresh_after_days: null }])
   const removeEvidence = (i: number) => {
     setEvidence((e) => e.filter((_, idx) => idx !== i))
     // Also clear any review's link to this index, and shift indices > i down by 1
@@ -120,6 +121,7 @@ export function CustomPackBuilder({ createAction }: Props) {
           description: e.description || null,
           required: e.required,
           expiry_applies: e.expiry_applies,
+          refresh_after_days: e.refresh_after_days,
         })),
         review_requirements: reviews.map((r) => ({
           name: r.name.trim(),
@@ -221,6 +223,32 @@ export function CustomPackBuilder({ createAction }: Props) {
                   <input type="checkbox" checked={e.expiry_applies} onChange={(ev) => updateEvidence(i, { expiry_applies: ev.target.checked })} className="h-3.5 w-3.5 rounded" style={{ accentColor: '#6c5dd3' }} />
                   <span style={{ color: '#4a4270' }}>Has expiry</span>
                 </label>
+                <label className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={e.refresh_after_days != null}
+                    onChange={(ev) => updateEvidence(i, { refresh_after_days: ev.target.checked ? 365 : null })}
+                    className="h-3.5 w-3.5 rounded"
+                    style={{ accentColor: '#6c5dd3' }}
+                  />
+                  <span style={{ color: '#4a4270' }}>Refresh after</span>
+                </label>
+                {e.refresh_after_days != null && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      value={e.refresh_after_days}
+                      onChange={(ev) => {
+                        const n = parseInt(ev.target.value, 10)
+                        updateEvidence(i, { refresh_after_days: Number.isFinite(n) && n > 0 ? n : 1 })
+                      }}
+                      className="w-16 rounded-lg px-2 py-1 text-xs"
+                      style={{ border: '1px solid rgba(109,93,211,0.2)', color: '#1e1550' }}
+                    />
+                    <span className="text-xs" style={{ color: '#5d5285' }}>days</span>
+                  </div>
+                )}
                 <button type="button" onClick={() => removeEvidence(i)} className="ml-auto text-xs px-2 py-1 rounded" style={{ color: '#e11d48' }}>Remove</button>
               </div>
               <input className={inputCls + ' sm:col-span-2'} style={inputStyle} value={e.description} onChange={(ev) => updateEvidence(i, { description: ev.target.value })} placeholder="Description (optional)" />
@@ -267,11 +295,11 @@ export function CustomPackBuilder({ createAction }: Props) {
 
               {/* Compliance references */}
               <div className="pt-2 border-t" style={{ borderColor: 'rgba(108,93,211,0.1)' }}>
-                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#a99fd8' }}>
+                <label className="block text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: '#6b5fa8' }}>
                   Compliance References (optional)
                 </label>
                 {r.compliance_references.length === 0 && (
-                  <p className="text-[10px] mb-1" style={{ color: '#a99fd8' }}>e.g. GDPR Art 28, SOC 2 CC6.1 — shown to reviewers as context</p>
+                  <p className="text-xs mb-1" style={{ color: '#6b5fa8' }}>e.g. GDPR Art 28, SOC 2 CC6.1 — shown to reviewers as context</p>
                 )}
                 {r.compliance_references.map((cr, ci) => (
                   <div key={ci} className="flex items-center gap-2 mb-1">
@@ -308,7 +336,7 @@ export function CustomPackBuilder({ createAction }: Props) {
                 <button
                   type="button"
                   onClick={() => updateReview(i, { compliance_references: [...r.compliance_references, { standard: '', reference: '' }] })}
-                  className="text-[11px] font-medium"
+                  className="text-xs font-medium"
                   style={{ color: '#6c5dd3' }}
                 >
                   + Add reference
@@ -350,7 +378,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
       style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
     >
       <h3 className="text-sm font-semibold mb-1" style={{ color: '#1e1550' }}>{title}</h3>
-      {subtitle && <p className="text-xs mb-3" style={{ color: '#a99fd8' }}>{subtitle}</p>}
+      {subtitle && <p className="text-xs mb-3" style={{ color: '#6b5fa8' }}>{subtitle}</p>}
       <div className={subtitle ? 'mt-2' : ''}>{children}</div>
     </section>
   )

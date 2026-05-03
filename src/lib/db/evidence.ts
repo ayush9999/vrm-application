@@ -26,6 +26,7 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
     req_description: string | null
     req_required: boolean | null
     req_expiry_applies: boolean | null
+    req_refresh_after_days: number | null
     pack_id: string | null
     pack_name: string | null
     pack_code: string | null
@@ -38,6 +39,7 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
       vd.verified_by_user_id, vd.verification_notes,
       er.id AS req_id, er.name AS req_name, er.description AS req_description,
       er.required AS req_required, er.expiry_applies AS req_expiry_applies,
+      er.refresh_after_days AS req_refresh_after_days,
       rp.id AS pack_id, rp.name AS pack_name, rp.code AS pack_code
     FROM vendor_documents vd
     LEFT JOIN evidence_requirements er ON er.id = vd.evidence_requirement_id
@@ -76,6 +78,7 @@ export async function getVendorEvidenceGrouped(vendorId: string): Promise<Eviden
       requirement_description: r.req_description ?? null,
       requirement_required: r.req_required ?? false,
       requirement_expiry_applies: r.req_expiry_applies ?? false,
+      requirement_refresh_after_days: r.req_refresh_after_days ?? null,
       pack_id: r.pack_id ?? null,
       pack_name: r.pack_name ?? null,
       pack_code: r.pack_code ?? null,

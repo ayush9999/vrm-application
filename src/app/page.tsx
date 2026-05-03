@@ -5,6 +5,8 @@ import { getProgrammeHealth, getPackReadiness, getAttentionItems } from '@/lib/d
 import { GaugeChart, RadarChart } from './_components/DashboardCharts'
 import { InfoPopover } from './_components/InfoPopover'
 import { DashboardTileModal } from './_components/DashboardTileModal'
+import { DateButton } from './_components/DateButton'
+import { AnimatedCounter } from './_components/AnimatedCounter'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -73,15 +75,6 @@ const AVATAR_COLORS = [
   { bg: '#E1F5EE', color: '#0F6E56' },
 ]
 
-const ghostButtonStyle = {
-  fontSize: 12,
-  padding: '7px 14px',
-  borderRadius: 8,
-  border: '1px solid #eceae4',
-  background: 'transparent',
-  color: '#6a6860',
-}
-
 const cardStyle = {
   background: 'white',
   border: '1px solid #e8e5de',
@@ -115,23 +108,9 @@ export default async function DashboardPage() {
           <div style={{ fontSize: 16, fontWeight: 500, color: '#18181b', letterSpacing: '-0.01em' }}>
             Dashboard
           </div>
-          <div style={{ fontSize: 11, color: '#9a9890', marginTop: 2 }}>
-            {new Date().toLocaleDateString('en-GB', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </div>
+          <DateButton />
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/vendors/new/wizard"
-            className="inline-flex items-center"
-            style={ghostButtonStyle}
-          >
-            Guided setup
-          </Link>
           <Link
             href="/vendors/new"
             className="inline-flex items-center"
@@ -152,7 +131,7 @@ export default async function DashboardPage() {
       {/* ── Body ── */}
       <div style={{ padding: '22px 28px' }} className="space-y-2.5">
         {/* ── KPI Row ── */}
-        <div className="grid grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-4 gap-2.5 dash-stagger" style={{ '--stagger-base': '0ms' } as React.CSSProperties}>
           <KpiCard
             label="TOTAL VENDORS"
             value={data.totals.vendors}
@@ -188,7 +167,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Main 3-col Grid ── */}
-        <div className="grid gap-2.5" style={{ gridTemplateColumns: '1fr 1fr 1.1fr' }}>
+        <div className="grid gap-2.5 dash-stagger" style={{ gridTemplateColumns: '1fr 1fr 1.1fr', '--stagger-base': '240ms' } as React.CSSProperties}>
           {/* Column 1: Programme Health */}
           {(() => {
             const nextThresholds: Record<string, { next: number; nextBand: string; nextKey: string }> = {
@@ -208,7 +187,7 @@ export default async function DashboardPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
                   <div className="flex items-center gap-2">
-                    <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6e6a5e' }}>
                       Programme health
                     </span>
                     <InfoPopover title="Programme Health">
@@ -233,7 +212,7 @@ export default async function DashboardPage() {
                   </div>
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '3px 10px',
                       borderRadius: 20,
@@ -260,7 +239,7 @@ export default async function DashboardPage() {
                   <span style={{ fontSize: 32, fontWeight: 600, color: '#18181b', lineHeight: 1, letterSpacing: '-0.02em' }}>
                     {health.score}
                   </span>
-                  <span style={{ fontSize: 11, color: '#9a9890', marginTop: 4 }}>out of 100</span>
+                  <span style={{ fontSize: 12, color: '#6e6a5e', marginTop: 4 }}>out of 100</span>
                 </div>
 
                 {/* Breakdown rows */}
@@ -273,7 +252,7 @@ export default async function DashboardPage() {
                 {/* Footer */}
                 {pointsNeeded > 0 && health.band !== 'low' && (
                   <div className="flex-1 flex items-end" style={{ padding: '6px 18px 10px' }}>
-                    <span style={{ fontSize: 11, color: '#6a6860', width: '100%', textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#6a6860', width: '100%', textAlign: 'center' }}>
                       +{pointsNeeded} pts to reach{' '}
                       <strong style={{ color: nextBandColor }}>{nt.nextBand}</strong>
                     </span>
@@ -289,7 +268,7 @@ export default async function DashboardPage() {
           <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6e6a5e' }}>
                   Pack readiness
                 </span>
                 <InfoPopover title="Pack Readiness">
@@ -303,21 +282,21 @@ export default async function DashboardPage() {
                   <p style={{ marginBottom: 8 }}>
                     Passed items + approved evidence, divided by total applicable items across all vendors with that pack.
                   </p>
-                  <p style={{ fontSize: 11, color: '#8b7fd4' }}>
+                  <p style={{ fontSize: 12, color: '#5d5285' }}>
                     Dot colour: <strong style={{ color: '#3B6D11' }}>green</strong> ≥60%,{' '}
                     <strong style={{ color: '#BA7517' }}>amber</strong> 30–59%,{' '}
                     <strong style={{ color: '#A32D2D' }}>red</strong> &lt;30%
                   </p>
                 </InfoPopover>
               </div>
-              <span style={{ fontSize: 11, color: '#9a9890' }}>
+              <span style={{ fontSize: 12, color: '#6e6a5e' }}>
                 {packReadiness.length} pack{packReadiness.length !== 1 ? 's' : ''}
               </span>
             </div>
 
             <div className="flex-1 flex items-center justify-center" style={{ padding: '12px 18px' }}>
               {packReadiness.length < 3 ? (
-                <div style={{ fontSize: 12, color: '#9a9890', textAlign: 'center', padding: '24px 0' }}>
+                <div style={{ fontSize: 12, color: '#6e6a5e', textAlign: 'center', padding: '24px 0' }}>
                   Radar chart requires at least 3 packs.
                   <br />
                   Currently {packReadiness.length} pack{packReadiness.length !== 1 ? 's' : ''} configured.
@@ -334,8 +313,8 @@ export default async function DashboardPage() {
               style={{
                 borderTop: '1px solid #eceae4',
                 padding: '10px 18px',
-                fontSize: 11,
-                color: '#9a9890',
+                fontSize: 12,
+                color: '#6e6a5e',
                 textAlign: 'center',
               }}
             >
@@ -349,7 +328,7 @@ export default async function DashboardPage() {
           <div style={{ ...cardStyle, cursor: 'pointer', height: '100%' }} className="flex flex-col transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between" style={{ padding: '14px 18px 0' }}>
               <div className="flex items-center gap-2">
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a9890' }}>
+                <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6e6a5e' }}>
                   Readiness by review pack
                 </span>
                 <InfoPopover title="Readiness by Pack">
@@ -359,7 +338,7 @@ export default async function DashboardPage() {
                   <p style={{ marginBottom: 8 }}>
                     Each bar shows the <strong>average readiness</strong> of a pack across every vendor that has it assigned.
                   </p>
-                  <p style={{ fontSize: 11, color: '#8b7fd4' }}>
+                  <p style={{ fontSize: 12, color: '#5d5285' }}>
                     Use this to spot which packs need the most attention. Low bars = many vendors behind on that pack.
                   </p>
                 </InfoPopover>
@@ -368,7 +347,7 @@ export default async function DashboardPage() {
 
             <div style={{ padding: '10px 0' }} className="flex-1">
               {sortedPacks.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#9a9890', textAlign: 'center', padding: 24 }}>
+                <div style={{ fontSize: 12, color: '#6e6a5e', textAlign: 'center', padding: 24 }}>
                   No review packs configured yet.
                 </div>
               ) : (
@@ -407,7 +386,7 @@ export default async function DashboardPage() {
                           paddingRight: 6,
                         }}
                       >
-                        <span style={{ fontSize: 10, fontWeight: 600, color: 'white' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'white' }}>
                           {pack.readinessPct}%
                         </span>
                       </div>
@@ -421,8 +400,8 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Attention Section ── */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
+        <div className="dash-fade-in" style={{ animationDelay: '420ms' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
             Needs your attention
           </div>
           <div style={cardStyle}>
@@ -446,8 +425,8 @@ export default async function DashboardPage() {
                     {item.subtitle && (
                       <span
                         style={{
-                          fontSize: 11,
-                          color: '#9a9890',
+                          fontSize: 12,
+                          color: '#6e6a5e',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -462,7 +441,7 @@ export default async function DashboardPage() {
                   {item.badgeLabel && (
                     <span
                       style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 500,
                         padding: '3px 8px',
                         borderRadius: 20,
@@ -478,7 +457,7 @@ export default async function DashboardPage() {
 
                   {/* Arrow */}
                   {item.href && (
-                    <span style={{ fontSize: 14, color: '#9a9890', flexShrink: 0 }}>&rsaquo;</span>
+                    <span style={{ fontSize: 14, color: '#6e6a5e', flexShrink: 0 }}>&rsaquo;</span>
                   )}
                 </div>
               )
@@ -496,23 +475,23 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Bottom Grid ── */}
-        <div className="grid gap-2.5" style={{ gridTemplateColumns: '1.3fr 1fr' }}>
+        <div className="grid gap-2.5 dash-stagger" style={{ gridTemplateColumns: '1.3fr 1fr', '--stagger-base': '480ms' } as React.CSSProperties}>
           {/* Left: Vendor Risk Overview */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
               Vendor risk overview
             </div>
             <div style={cardStyle}>
               {/* Card header */}
               <div className="flex items-center justify-between" style={{ padding: '14px 18px', borderBottom: '1px solid #eceae4' }}>
                 <span style={{ fontSize: 12, fontWeight: 500, color: '#18181b' }}>Ranked by risk</span>
-                <Link href="/vendors" style={{ fontSize: 11, color: '#9a9890' }}>
+                <Link href="/vendors" style={{ fontSize: 12, color: '#6e6a5e' }}>
                   View all &rarr;
                 </Link>
               </div>
 
               {data.highRiskVendors.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: '#9a9890' }}>
+                <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: '#6e6a5e' }}>
                   No high-risk vendors at this time.
                 </div>
               ) : (
@@ -544,7 +523,7 @@ export default async function DashboardPage() {
                           width: 26,
                           height: 26,
                           borderRadius: '50%',
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 600,
                           background: avatarStyle.bg,
                           color: avatarStyle.color,
@@ -565,7 +544,7 @@ export default async function DashboardPage() {
                         <div style={{ width: 52, height: 3, background: '#F1EFE8', borderRadius: 2 }}>
                           <div style={{ width: `${fillWidth}%`, height: '100%', borderRadius: 2, background: fillColor }} />
                         </div>
-                        <span style={{ fontSize: 11, width: 28, textAlign: 'right', color: fillColor }}>
+                        <span style={{ fontSize: 12, width: 28, textAlign: 'right', color: fillColor }}>
                           {v.readinessPct}%
                         </span>
                       </div>
@@ -573,7 +552,7 @@ export default async function DashboardPage() {
                       {/* Risk badge */}
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 500,
                           padding: '3px 8px',
                           borderRadius: 20,
@@ -594,12 +573,12 @@ export default async function DashboardPage() {
 
           {/* Right: Recent Activity */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6a6860', marginBottom: 8 }}>
               Recent activity
             </div>
             <div style={cardStyle}>
               {data.recentActivity.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: '#9a9890' }}>
+                <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: '#6e6a5e' }}>
                   No activity yet.
                 </div>
               ) : (
@@ -623,7 +602,7 @@ export default async function DashboardPage() {
                           width: 26,
                           height: 26,
                           borderRadius: '50%',
-                          fontSize: 9,
+                          fontSize: 12,
                           fontWeight: 600,
                           background: chip.bg,
                           color: chip.color,
@@ -637,13 +616,13 @@ export default async function DashboardPage() {
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {entry.title ?? entry.action.replace(/_/g, ' ')}
                         </div>
-                        <div style={{ fontSize: 11, color: '#9a9890', marginTop: 1 }}>
+                        <div style={{ fontSize: 12, color: '#6e6a5e', marginTop: 1 }}>
                           {entry.actor_name ? `${entry.actor_name} \u00b7 ` : ''}{relTime}
                         </div>
                       </div>
 
                       {/* Relative time on right */}
-                      <span style={{ fontSize: 11, color: '#9a9890', flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: '#6e6a5e', flexShrink: 0 }}>
                         {relTime}
                       </span>
                     </div>
@@ -680,7 +659,7 @@ function KpiCard({
   const content = (
     <>
       <div className="flex items-start justify-between">
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#78756d' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#78756d' }}>
           {label}
         </span>
         <div
@@ -690,8 +669,8 @@ function KpiCard({
           {icon}
         </div>
       </div>
-      <div style={{ fontSize: 36, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor, marginTop: 12 }}>
-        {value}
+      <div style={{ fontSize: 36, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor, marginTop: 12, fontVariantNumeric: 'tabular-nums' }}>
+        <AnimatedCounter value={value} delay={200} duration={1000} />
       </div>
     </>
   )

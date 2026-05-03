@@ -83,7 +83,7 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={labelStyle}>Organisation Name</label>
         <input className={inputCls} style={{ ...inputStyle, opacity: 0.6 }} value={profile.name} disabled />
-        <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>To rename your organisation, contact support.</p>
+        <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>To rename your organisation, contact support.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -123,14 +123,14 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
             <option value="on_renewal">On Renewal</option>
             <option value="on_incident">On Incident</option>
           </select>
-          <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>
+          <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
             Used as the default review cadence for new custom Review Packs.
           </p>
         </div>
         <div className="flex items-center gap-2 pt-7">
           <input id="esg" type="checkbox" checked={esg} onChange={(e) => setEsg(e.target.checked)} className="h-4 w-4 rounded" style={{ accentColor: '#6c5dd3' }} />
           <label htmlFor="esg" className="text-sm font-medium" style={{ color: '#4a4270' }}>ESG enabled</label>
-          <p className="text-[10px] ml-2" style={{ color: '#a99fd8' }}>(Auto-applies the ESG &amp; Supplier Conduct pack to new vendors)</p>
+          <p className="text-xs ml-2" style={{ color: '#6b5fa8' }}>(Auto-applies the ESG &amp; Supplier Conduct pack to new vendors)</p>
         </div>
       </div>
 
@@ -172,7 +172,7 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold" style={{ color: '#1e1550' }}>Compliance Standards</h3>
-            <p className="text-xs mt-0.5" style={{ color: '#8b7fd4' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#5d5285' }}>
               Select the standards your organisation is accountable to. These drive reporting filters and review item highlighting.
             </p>
           </div>
@@ -186,7 +186,7 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
             >
               {isPending ? 'Saving…' : 'Save Standards'}
             </button>
-            {standardsMsg && <span className="text-[11px]" style={{ color: standardsMsg === 'Saved' ? '#059669' : '#e11d48' }}>{standardsMsg}</span>}
+            {standardsMsg && <span className="text-xs" style={{ color: standardsMsg === 'Saved' ? '#059669' : '#e11d48' }}>{standardsMsg}</span>}
           </div>
         </div>
 
@@ -207,10 +207,10 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
               />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium" style={{ color: '#1e1550' }}>{s.code}</span>
-                <span className="text-xs ml-2" style={{ color: '#8b7fd4' }}>{s.name}</span>
+                <span className="text-xs ml-2" style={{ color: '#5d5285' }}>{s.name}</span>
               </div>
               {standards.has(s.code) && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded font-bold uppercase shrink-0" style={{ background: 'rgba(5,150,105,0.08)', color: '#059669' }}>
                   Selected
                 </span>
               )}
@@ -218,7 +218,7 @@ export function CompanyProfileForm({ profile, countries, canEdit, updateAction, 
           ))}
         </div>
 
-        <p className="text-[10px] mt-2" style={{ color: '#a99fd8' }}>
+        <p className="text-xs mt-2" style={{ color: '#6b5fa8' }}>
           {standards.size} standard{standards.size !== 1 ? 's' : ''} selected. Review items matching these standards will be highlighted during reviews.
         </p>
       </div>

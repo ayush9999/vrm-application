@@ -69,7 +69,7 @@ export function ApprovalWorkflow({ vendorId, currentStatus, approvedAt, exceptio
     >
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
             Approval Status
           </h3>
         </div>
@@ -113,7 +113,7 @@ export function ApprovalWorkflow({ vendorId, currentStatus, approvedAt, exceptio
           {current.label}
         </span>
         {approvedAt && (
-          <span className="text-[11px]" style={{ color: '#a99fd8' }}>
+          <span className="text-xs" style={{ color: '#6b5fa8' }}>
             since {new Date(approvedAt).toLocaleDateString()}
           </span>
         )}
@@ -125,7 +125,7 @@ export function ApprovalWorkflow({ vendorId, currentStatus, approvedAt, exceptio
           className="mt-3 px-3 py-2 rounded-lg text-xs"
           style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)' }}
         >
-          <span className="font-bold uppercase tracking-widest text-[10px]" style={{ color: '#7c3aed' }}>Exception:</span>
+          <span className="font-bold uppercase tracking-widest text-xs" style={{ color: '#7c3aed' }}>Exception:</span>
           <p className="mt-0.5" style={{ color: '#4a4270' }}>{exceptionReason}</p>
         </div>
       )}
@@ -133,7 +133,7 @@ export function ApprovalWorkflow({ vendorId, currentStatus, approvedAt, exceptio
       {/* Exception input */}
       {showExceptionField && (
         <div className="mt-3 space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#a99fd8' }}>
+          <label className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6b5fa8' }}>
             Exception Reason (required)
           </label>
           <textarea
@@ -158,7 +158,7 @@ export function ApprovalWorkflow({ vendorId, currentStatus, approvedAt, exceptio
               type="button"
               onClick={() => { setShowExceptionField(false); setError(null) }}
               className="text-xs px-3 py-1.5 rounded-full"
-              style={{ color: '#a99fd8' }}
+              style={{ color: '#6b5fa8' }}
             >
               Cancel
             </button>

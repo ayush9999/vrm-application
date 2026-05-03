@@ -48,12 +48,12 @@ export default async function ReviewDetailPage({ params }: PageProps) {
   return (
     <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-4 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-        <Link href="/vendors" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Vendors</Link>
+      <div className="mb-4 flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
+        <Link href="/vendors" className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>Vendors</Link>
         <span>/</span>
-        <Link href={`/vendors/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>{vendor.name}</Link>
+        <Link href={`/vendors/${vendorId}`} className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>{vendor.name}</Link>
         <span>/</span>
-        <Link href={`/vendors/${vendorId}?tab=reviews`} className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Reviews</Link>
+        <Link href={`/vendors/${vendorId}?tab=reviews`} className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>Reviews</Link>
         <span>/</span>
         <span className="font-medium" style={{ color: '#1e1550' }}>{review.review_code}</span>
       </div>

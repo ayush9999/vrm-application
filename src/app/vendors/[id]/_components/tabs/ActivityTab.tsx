@@ -27,7 +27,7 @@ const ACTIONS: Record<string, ActionMeta> = {
   // Remediation
   issue_created:              { label: 'Remediation created',     color: '#dc2626', bg: 'rgba(220,38,38,0.1)',   category: 'remediation' },
   issue_resolved:             { label: 'Remediation resolved',    color: '#059669', bg: 'rgba(5,150,105,0.1)',   category: 'remediation' },
-  issue_closed:               { label: 'Remediation closed',      color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', category: 'remediation' },
+  issue_closed:               { label: 'Remediation closed',      color: '#64748b', bg: 'rgba(148,163,184,0.15)', category: 'remediation' },
   issue_auto_resolved:        { label: 'Remediation auto-resolved', color: '#059669', bg: 'rgba(5,150,105,0.1)', category: 'remediation' },
   // Incidents
   incident_created:           { label: 'Incident created',        color: '#e11d48', bg: 'rgba(225,29,72,0.1)',   category: 'incidents' },
@@ -64,7 +64,7 @@ export function ActivityTab({ activityLog }: ActivityTabProps) {
   if (activityLog.length === 0) {
     return (
       <div className="rounded-2xl p-10 text-center" style={{ border: '1.5px dashed rgba(109,93,211,0.2)' }}>
-        <p className="text-sm" style={{ color: '#a99fd8' }}>No activity recorded yet.</p>
+        <p className="text-sm" style={{ color: '#6b5fa8' }}>No activity recorded yet.</p>
       </div>
     )
   }
@@ -92,12 +92,12 @@ export function ActivityTab({ activityLog }: ActivityTabProps) {
 
       {/* Timeline */}
       {visible.length === 0 ? (
-        <p className="text-sm py-8 text-center" style={{ color: '#a99fd8' }}>No activity in this category.</p>
+        <p className="text-sm py-8 text-center" style={{ color: '#6b5fa8' }}>No activity in this category.</p>
       ) : (
         <div className="flow-root">
           <ul className="-mb-6">
             {visible.map((entry, i) => {
-              const meta = ACTIONS[entry.action] ?? { label: humanize(entry.action), color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', category: 'admin' as Category }
+              const meta = ACTIONS[entry.action] ?? { label: humanize(entry.action), color: '#64748b', bg: 'rgba(148,163,184,0.15)', category: 'admin' as Category }
               const isLast = i === visible.length - 1
               return (
                 <li key={entry.id}>
@@ -116,7 +116,7 @@ export function ActivityTab({ activityLog }: ActivityTabProps) {
                       <div className="min-w-0 flex-1 pt-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0"
+                            className="text-xs px-2 py-0.5 rounded-full font-bold uppercase shrink-0"
                             style={{ background: meta.bg, color: meta.color }}
                           >
                             {meta.label}
@@ -128,7 +128,7 @@ export function ActivityTab({ activityLog }: ActivityTabProps) {
                         {entry.description && (
                           <p className="text-xs mt-1" style={{ color: '#4a4270' }}>{entry.description}</p>
                         )}
-                        <p className="text-[11px] mt-1" style={{ color: '#a99fd8' }}>
+                        <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
                           {entry.actor_name && <span>by {entry.actor_name} · </span>}
                           {new Date(entry.created_at).toLocaleString(undefined, {
                             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -153,7 +153,7 @@ function ActorAvatar({ name }: { name: string | null }) {
     : '?'
   return (
     <span
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shrink-0 ring-4 ring-white"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0 ring-4 ring-white"
       style={{ background: 'linear-gradient(135deg, #6c5dd3 0%, #7c6be0 100%)' }}
       title={name ?? 'Unknown'}
     >

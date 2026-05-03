@@ -54,7 +54,7 @@ export function CategoryPicker({
   }, [open])
 
   if (options.length === 0 && emptyHint) {
-    return <p className="text-xs italic" style={{ color: '#a99fd8' }}>{emptyHint}</p>
+    return <p className="text-xs italic" style={{ color: '#6b5fa8' }}>{emptyHint}</p>
   }
 
   const toggle = (id: string) => {
@@ -81,7 +81,7 @@ export function CategoryPicker({
         style={{
           background: 'white',
           border: '1px solid rgba(109,93,211,0.2)',
-          color: selectedOptions.length === 0 ? '#a99fd8' : '#1e1550',
+          color: selectedOptions.length === 0 ? '#6b5fa8' : '#1e1550',
         }}
       >
         <span className="truncate text-left">{triggerLabel}</span>
@@ -119,8 +119,8 @@ export function CategoryPicker({
             <button
               type="button"
               onClick={clearAll}
-              className="inline-flex items-center text-[11px] px-2 py-1 rounded-full hover:opacity-70"
-              style={{ color: '#8b7fd4' }}
+              className="inline-flex items-center text-xs px-2 py-1 rounded-full hover:opacity-70"
+              style={{ color: '#5d5285' }}
             >
               Clear all
             </button>
@@ -155,7 +155,7 @@ export function CategoryPicker({
           {/* Options list */}
           <div className="max-h-[260px] overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <div className="px-3 py-3 text-xs" style={{ color: '#a99fd8' }}>No matches</div>
+              <div className="px-3 py-3 text-xs" style={{ color: '#6b5fa8' }}>No matches</div>
             ) : (
               filtered.map((o) => {
                 const isSel = selectedSet.has(o.value)
@@ -185,7 +185,7 @@ export function CategoryPicker({
               className="flex items-center justify-between px-3 py-2 text-xs"
               style={{ borderTop: '1px solid rgba(108,93,211,0.08)', background: 'rgba(108,93,211,0.02)' }}
             >
-              <span style={{ color: '#8b7fd4' }}>{selectedOptions.length} selected</span>
+              <span style={{ color: '#5d5285' }}>{selectedOptions.length} selected</span>
               <button
                 type="button"
                 onClick={clearAll}

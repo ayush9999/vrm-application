@@ -23,8 +23,8 @@ export default async function AttentionCenterPage() {
   return (
     <div className="px-6 py-5 max-w-4xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-4 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-        <Link href="/" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>Dashboard</Link>
+      <div className="mb-4 flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
+        <Link href="/" className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>Dashboard</Link>
         <span>/</span>
         <span className="font-medium" style={{ color: '#1e1550' }}>Attention Center</span>
       </div>
@@ -32,7 +32,7 @@ export default async function AttentionCenterPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>Attention Center</h1>
-        <p className="text-sm mt-1" style={{ color: '#8b7fd4' }}>
+        <p className="text-sm mt-1" style={{ color: '#5d5285' }}>
           {realItems.length === 0
             ? 'All caught up — nothing needs your attention right now.'
             : `${realItems.length} item${realItems.length === 1 ? '' : 's'} need${realItems.length === 1 ? 's' : ''} your attention across your vendor programme.`}
@@ -54,7 +54,7 @@ export default async function AttentionCenterPage() {
             </svg>
           </div>
           <p className="text-sm font-medium" style={{ color: '#059669' }}>All caught up</p>
-          <p className="text-xs mt-1" style={{ color: '#8b7fd4' }}>No items need your attention right now.</p>
+          <p className="text-xs mt-1" style={{ color: '#5d5285' }}>No items need your attention right now.</p>
         </div>
       )}
 
@@ -82,7 +82,7 @@ function Group({ title, count, color, items }: { title: string; count: number; c
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-sm font-semibold" style={{ color: '#1e1550' }}>{title}</h2>
         <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+          className="text-xs font-bold px-2 py-0.5 rounded-full"
           style={{ background: `${color}15`, color }}
         >
           {count}
@@ -108,7 +108,7 @@ function Group({ title, count, color, items }: { title: string; count: number; c
                   {item.title}
                 </div>
                 {item.subtitle && (
-                  <div style={{ fontSize: 12, color: '#8b7fd4', marginTop: 4, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12, color: '#5d5285', marginTop: 4, lineHeight: 1.5 }}>
                     {item.subtitle}
                   </div>
                 )}
@@ -117,7 +117,7 @@ function Group({ title, count, color, items }: { title: string; count: number; c
                 {item.badgeLabel && (
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       padding: '3px 8px',
                       borderRadius: 20,
@@ -132,7 +132,7 @@ function Group({ title, count, color, items }: { title: string; count: number; c
                   </span>
                 )}
                 {item.href && (
-                  <span style={{ fontSize: 14, color: '#a99fd8' }}>›</span>
+                  <span style={{ fontSize: 14, color: '#6b5fa8' }}>›</span>
                 )}
               </div>
             </div>

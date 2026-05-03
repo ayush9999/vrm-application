@@ -80,7 +80,7 @@ export function CreateReviewModal({ isOpen, onClose, vendors, packs, users, crea
       >
         <div>
           <h3 className="text-lg font-semibold" style={{ color: '#1e1550' }}>Create New Review</h3>
-          <p className="text-xs mt-1" style={{ color: '#8b7fd4' }}>
+          <p className="text-xs mt-1" style={{ color: '#5d5285' }}>
             Start a review for a vendor with one or more review packs.
           </p>
         </div>
@@ -108,8 +108,8 @@ export function CreateReviewModal({ isOpen, onClose, vendors, packs, users, crea
               Review Packs <span className="text-rose-500">*</span>
             </label>
             <div className="flex gap-2">
-              <button type="button" onClick={selectAll} className="text-[10px] font-medium" style={{ color: '#6c5dd3' }}>Select all</button>
-              <button type="button" onClick={selectNone} className="text-[10px] font-medium" style={{ color: '#a99fd8' }}>Clear</button>
+              <button type="button" onClick={selectAll} className="text-xs font-medium" style={{ color: '#6c5dd3' }}>Select all</button>
+              <button type="button" onClick={selectNone} className="text-xs font-medium" style={{ color: '#6b5fa8' }}>Clear</button>
             </div>
           </div>
           <div
@@ -126,11 +126,11 @@ export function CreateReviewModal({ isOpen, onClose, vendors, packs, users, crea
                   style={{ accentColor: '#6c5dd3' }}
                 />
                 <span className="text-sm" style={{ color: '#1e1550' }}>{p.name}</span>
-                {p.code && <span className="text-[10px] font-mono" style={{ color: '#a99fd8' }}>{p.code}</span>}
+                {p.code && <span className="text-xs font-mono" style={{ color: '#6b5fa8' }}>{p.code}</span>}
               </label>
             ))}
           </div>
-          <p className="text-[10px] mt-1" style={{ color: '#a99fd8' }}>
+          <p className="text-xs mt-1" style={{ color: '#6b5fa8' }}>
             {selectedPacks.size} pack{selectedPacks.size !== 1 ? 's' : ''} selected
           </p>
         </div>
@@ -180,7 +180,7 @@ export function CreateReviewModal({ isOpen, onClose, vendors, packs, users, crea
         {error && <p className="text-xs" style={{ color: '#e11d48' }}>{error}</p>}
 
         <div className="flex items-center justify-end gap-2 pt-2" style={{ borderTop: '1px solid rgba(109,93,211,0.08)' }}>
-          <button type="button" onClick={onClose} disabled={isPending} className="text-sm px-4 py-2 rounded-full" style={{ color: '#8b7fd4' }}>
+          <button type="button" onClick={onClose} disabled={isPending} className="text-sm px-4 py-2 rounded-full" style={{ color: '#5d5285' }}>
             Cancel
           </button>
           <button

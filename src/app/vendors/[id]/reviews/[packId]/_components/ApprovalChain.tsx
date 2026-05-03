@@ -98,7 +98,7 @@ export function ApprovalChain({
       style={{ background: 'white', border: '1px solid rgba(109,93,211,0.1)', boxShadow: '0 2px 8px rgba(109,93,211,0.06)' }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>Approval Chain</h3>
+        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6c5dd3' }}>Approval Chain</h3>
         {isLocked && lockedAt && (
           <div className="flex items-center gap-1.5 text-xs" style={{ color: '#059669' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -118,7 +118,7 @@ export function ApprovalChain({
             return (
               <div key={a.id} className="flex items-start gap-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(108,93,211,0.03)' }}>
                 <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                   style={{ background: style.color }}
                 >
                   {a.level}
@@ -126,10 +126,10 @@ export function ApprovalChain({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium" style={{ color: '#1e1550' }}>{a.user_name ?? 'Unknown'}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase" style={{ background: style.bg, color: style.color }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold uppercase" style={{ background: style.bg, color: style.color }}>
                       {style.label}
                     </span>
-                    <span className="text-[10px]" style={{ color: '#a99fd8' }}>
+                    <span className="text-xs" style={{ color: '#6b5fa8' }}>
                       {new Date(a.decided_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -180,7 +180,7 @@ export function ApprovalChain({
 
       {status === 'awaiting_approval' && !showApproverForm && (
         <div className="space-y-2">
-          <p className="text-xs" style={{ color: '#8b7fd4' }}>
+          <p className="text-xs" style={{ color: '#5d5285' }}>
             This review is awaiting approval decision.
           </p>
           <button
@@ -214,7 +214,7 @@ export function ApprovalChain({
             <button type="button" onClick={() => handleApproverDecision('sent_back')} disabled={isPending} className="text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50" style={{ background: 'rgba(225,29,72,0.1)', color: '#e11d48' }}>
               {isPending ? '…' : 'Send Back'}
             </button>
-            <button type="button" onClick={() => setShowApproverForm(false)} className="text-xs px-3 py-1.5" style={{ color: '#a99fd8' }}>
+            <button type="button" onClick={() => setShowApproverForm(false)} className="text-xs px-3 py-1.5" style={{ color: '#6b5fa8' }}>
               Cancel
             </button>
           </div>
@@ -247,7 +247,7 @@ export function ApprovalChain({
             <button type="button" onClick={handleReopen} disabled={isPending} className="text-xs font-semibold px-3 py-1.5 rounded-full text-white disabled:opacity-50" style={{ background: '#d97706' }}>
               {isPending ? 'Reopening…' : 'Confirm Reopen'}
             </button>
-            <button type="button" onClick={() => setShowReopen(false)} className="text-xs px-3 py-1.5" style={{ color: '#a99fd8' }}>Cancel</button>
+            <button type="button" onClick={() => setShowReopen(false)} className="text-xs px-3 py-1.5" style={{ color: '#6b5fa8' }}>Cancel</button>
           </div>
         </div>
       )}

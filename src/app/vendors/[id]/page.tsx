@@ -28,6 +28,8 @@ import {
   getEvidenceVersionDownloadAction,
 } from './evidence-actions'
 import { deleteVendorAction, updateApprovalStatusAction, captureReadinessSnapshotAction } from '@/app/vendors/actions'
+import { listEvidenceRequestsForVendor, getActiveRequestByVendorDocument } from '@/lib/db/evidence-requests'
+import { createEvidenceRequestAction, cancelEvidenceRequestAction, deleteEvidenceRequestAction } from './evidence-request-actions'
 import { assignPackToVendorAction, removePackFromVendorAction } from './reviews/assign-action'
 import { getVendorAssignedPacks } from '@/lib/db/vendor-pack-assignments'
 import type { VendorStatus } from '@/types/vendor'
@@ -69,14 +71,17 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   const metrics = metricsMap.get(id)!
 
   // All tab data fetched in parallel — fast on direct Postgres connection
-  const [documents, activityLog, incidents, assessmentDocRequests, evidenceGroups, benchmark] = await Promise.all([
+  const [documents, activityLog, incidents, assessmentDocRequests, evidenceGroups, benchmark, evidenceRequests, activeRequestMap] = await Promise.all([
     getVendorDocumentsData(user.orgId, id, vendor.category_ids[0] ?? null),
     getVendorActivityLog(user.orgId, id),
     getVendorIncidents(user.orgId, id),
     getAssessmentDocRequestsForVendor(user.orgId, id),
     getVendorEvidenceGrouped(id),
     getPeerBenchmark(user.orgId, id, vendor.category_ids),
+    listEvidenceRequestsForVendor(id),
+    getActiveRequestByVendorDocument(id),
   ])
+  const activeRequestByDoc = Object.fromEntries(activeRequestMap)
 
   const boundDeleteVendor     = deleteVendorAction.bind(null, id)
   const boundCreateIncident   = createIncidentAction.bind(null, id)
@@ -88,11 +93,11 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
   return (
     <div className="px-6 py-5 max-w-6xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
+      <div className="mb-5 flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
         <Link
           href="/vendors"
           className="transition-colors hover:text-[#6c5dd3]"
-          style={{ color: '#a99fd8' }}
+          style={{ color: '#6b5fa8' }}
         >
           Vendors
         </Link>
@@ -175,6 +180,11 @@ export default async function VendorDetailPage({ params, searchParams }: PagePro
           requestEvidenceAction={requestEvidenceFromVendorAction}
           getEvidenceVersionsAction={getEvidenceVersionsAction}
           getEvidenceDownloadAction={getEvidenceVersionDownloadAction}
+          evidenceRequests={evidenceRequests}
+          activeRequestByDoc={activeRequestByDoc}
+          createEvidenceRequestAction={createEvidenceRequestAction}
+          cancelEvidenceRequestAction={cancelEvidenceRequestAction}
+          deleteEvidenceRequestAction={deleteEvidenceRequestAction}
           issueCounts={issueCounts}
           vendorId={id}
           vendorReviews={vendorReviews}

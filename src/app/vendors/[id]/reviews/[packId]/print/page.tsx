@@ -11,7 +11,7 @@ interface PageProps {
 }
 
 const DECISION_LABEL: Record<string, { label: string; color: string }> = {
-  not_started: { label: 'Pending', color: '#94a3b8' },
+  not_started: { label: 'Pending', color: '#64748b' },
   pass: { label: 'PASS', color: '#059669' },
   fail: { label: 'FAIL', color: '#e11d48' },
   na: { label: 'N/A', color: '#64748b' },
@@ -93,12 +93,12 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
           th { text-align: left; padding: 6px 8px; background: #f8f7fc; color: #6c5dd3; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e2f0; }
           td { padding: 6px 8px; border-bottom: 1px solid #f0eef5; vertical-align: top; }
           .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-          .meta { color: #8b7fd4; font-size: 11px; }
+          .meta { color: #5d5285; font-size: 11px; }
           .ref { display: inline-block; padding: 1px 6px; margin: 1px 2px; border-radius: 3px; background: #f0eef5; color: #6c5dd3; font-family: monospace; font-size: 10px; }
           .summary-grid { display: flex; gap: 24px; margin: 12px 0; }
           .summary-item { text-align: center; }
           .summary-value { font-size: 24px; font-weight: 700; }
-          .summary-label { font-size: 10px; color: #8b7fd4; text-transform: uppercase; letter-spacing: 0.5px; }
+          .summary-label { font-size: 10px; color: #5d5285; text-transform: uppercase; letter-spacing: 0.5px; }
           .print-btn { position: fixed; top: 16px; right: 16px; background: #6c5dd3; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; z-index: 100; }
         `}</style>
       </head>
@@ -153,7 +153,7 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
               </thead>
               <tbody>
                 {items.map((item) => {
-                  const dec = DECISION_LABEL[item.decision] ?? { label: item.decision, color: '#94a3b8' }
+                  const dec = DECISION_LABEL[item.decision] ?? { label: item.decision, color: '#64748b' }
                   return (
                     <tr key={item.id}>
                       <td>
@@ -219,7 +219,7 @@ export default async function PrintReviewPage({ params, searchParams }: PageProp
         )}
 
         {/* Footer */}
-        <div style={{ marginTop: 32, paddingTop: 12, borderTop: '1px solid #e5e2f0', color: '#a99fd8', fontSize: 10 }}>
+        <div style={{ marginTop: 32, paddingTop: 12, borderTop: '1px solid #e5e2f0', color: '#6b5fa8', fontSize: 12 }}>
           Exported from VRM · {new Date().toLocaleString()} · Confidential
         </div>
       </body>

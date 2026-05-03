@@ -47,7 +47,7 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
             <h3 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
               Members ({members.length})
             </h3>
-            <p className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#6b5fa8' }}>
               People with access to this organisation
             </p>
           </div>
@@ -82,19 +82,19 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
                 <p className="text-sm font-medium truncate" style={{ color: '#1e1550' }}>
                   {m.name ?? m.email ?? 'Unknown'}
                   {m.user_id === currentUserId && (
-                    <span className="ml-1.5 text-[10px] font-normal" style={{ color: '#a99fd8' }}>
+                    <span className="ml-1.5 text-xs font-normal" style={{ color: '#6b5fa8' }}>
                       (you)
                     </span>
                   )}
                 </p>
                 {m.email && (
-                  <p className="text-xs truncate" style={{ color: '#a99fd8' }}>
+                  <p className="text-xs truncate" style={{ color: '#6b5fa8' }}>
                     {m.email}
                   </p>
                 )}
               </div>
               <span
-                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
+                className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
                 style={{
                   background: m.role === 'site_admin' ? 'rgba(108,93,211,0.12)' : 'rgba(169,159,216,0.15)',
                   color: m.role === 'site_admin' ? '#6c5dd3' : '#6b5fa8',
@@ -102,7 +102,7 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
               >
                 {ROLE_LABELS[m.role] ?? m.role}
               </span>
-              <span className="text-[10px] shrink-0" style={{ color: '#a99fd8' }}>
+              <span className="text-xs shrink-0" style={{ color: '#6b5fa8' }}>
                 Joined {new Date(m.joined_at).toLocaleDateString()}
               </span>
             </li>
@@ -123,7 +123,7 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
             <h3 className="text-sm font-semibold" style={{ color: '#1e1550' }}>
               Pending invites ({pending.length})
             </h3>
-            <p className="text-xs mt-0.5" style={{ color: '#a99fd8' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#6b5fa8' }}>
               Copy a link to share with the invitee
             </p>
           </div>
@@ -156,7 +156,7 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
                   <p className="text-sm font-medium truncate" style={{ color: '#1e1550' }}>
                     {inv.email}
                   </p>
-                  <p className="text-xs" style={{ color: '#a99fd8' }}>
+                  <p className="text-xs" style={{ color: '#6b5fa8' }}>
                     {inv.status === 'accepted' && inv.accepted_at
                       ? `Accepted ${new Date(inv.accepted_at).toLocaleDateString()}`
                       : inv.status === 'expired'
@@ -165,7 +165,7 @@ export function MembersClient({ members, invites, currentUserId, isOwner }: Memb
                   </p>
                 </div>
                 <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                   style={{
                     background:
                       inv.status === 'accepted'
@@ -251,7 +251,7 @@ function InviteForm({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-[#a99fd8] hover:text-[#6c5dd3] px-2 py-2"
+          className="text-xs text-[#6b5fa8] hover:text-[#6c5dd3] px-2 py-2"
         >
           Cancel
         </button>
@@ -293,7 +293,7 @@ function PendingInviteRow({
           <p className="text-sm font-medium truncate" style={{ color: '#1e1550' }}>
             {invite.email}
           </p>
-          <p className="text-xs" style={{ color: '#a99fd8' }}>
+          <p className="text-xs" style={{ color: '#6b5fa8' }}>
             {ROLE_LABELS[invite.role] ?? invite.role} ·{' '}
             Expires {new Date(invite.expires_at).toLocaleDateString()}
           </p>
@@ -316,7 +316,7 @@ function PendingInviteRow({
             onClick={handleRevoke}
             disabled={isPending}
             className="text-xs font-medium hover:text-rose-600 disabled:opacity-50 transition-colors"
-            style={{ color: '#a99fd8' }}
+            style={{ color: '#6b5fa8' }}
           >
             Revoke
           </button>

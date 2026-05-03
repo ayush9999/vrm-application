@@ -40,7 +40,7 @@ export function JourneyCardActions({ vendorId, packId, status, submitAction, app
         type="button"
         onClick={handleSubmit}
         disabled={isPending}
-        className="text-[11px] font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 shrink-0"
+        className="text-xs font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 shrink-0"
         style={{ background: '#6c5dd3' }}
       >
         {isPending ? '…' : 'Submit for Approval'}
@@ -54,7 +54,7 @@ export function JourneyCardActions({ vendorId, packId, status, submitAction, app
         type="button"
         onClick={handleApprove}
         disabled={isPending}
-        className="text-[11px] font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 shrink-0"
+        className="text-xs font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 shrink-0"
         style={{ background: '#059669' }}
       >
         {isPending ? '…' : 'Approve'}

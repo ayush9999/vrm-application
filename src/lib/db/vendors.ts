@@ -24,6 +24,18 @@ export interface GetVendorsOptions {
   search?: string
   status?: VendorStatus | ''
   criticalOnly?: boolean
+  /** Limit to vendors with one of these IDs (used by Export "specific vendors" mode) */
+  vendorIds?: string[]
+  /** Limit to vendors whose service_types array overlaps with these */
+  serviceTypes?: string[]
+  /** Limit to vendors whose approval_status is one of these */
+  approvalStatuses?: string[]
+  /** Tri-state critical filter: undefined = all, true = only critical, false = only non-critical */
+  isCritical?: boolean
+  /** Filter to vendors NOT approved (excludes 'approved' and 'approved_with_exception') */
+  notApprovedOnly?: boolean
+  /** Filter to vendors that have at least one missing/rejected/expired evidence document */
+  hasMissingEvidence?: boolean
   sort?: VendorSortField
   sortDir?: 'asc' | 'desc'
   page?: number
@@ -74,6 +86,18 @@ export async function getVendors(
       ${opts.search ? sql`AND v.name ILIKE ${`%${opts.search}%`}` : sql``}
       ${opts.status ? sql`AND v.status = ${opts.status}` : sql``}
       ${opts.criticalOnly ? sql`AND v.is_critical = true` : sql``}
+      ${opts.isCritical === true ? sql`AND v.is_critical = true` : sql``}
+      ${opts.isCritical === false ? sql`AND v.is_critical = false` : sql``}
+      ${opts.vendorIds && opts.vendorIds.length > 0 ? sql`AND v.id = ANY(${opts.vendorIds}::uuid[])` : sql``}
+      ${opts.serviceTypes && opts.serviceTypes.length > 0 ? sql`AND v.service_types && ${opts.serviceTypes}::vendor_service_type[]` : sql``}
+      ${opts.approvalStatuses && opts.approvalStatuses.length > 0 ? sql`AND v.approval_status = ANY(${opts.approvalStatuses}::vendor_approval_status[])` : sql``}
+      ${opts.notApprovedOnly ? sql`AND v.approval_status NOT IN ('approved', 'approved_with_exception')` : sql``}
+      ${opts.hasMissingEvidence ? sql`AND EXISTS (
+        SELECT 1 FROM vendor_documents vd
+        WHERE vd.vendor_id = v.id
+          AND vd.deleted_at IS NULL
+          AND vd.evidence_status IN ('missing', 'rejected', 'expired')
+      )` : sql``}
     ORDER BY ${sql.unsafe(orderCol)} ${sql.unsafe(orderDir)} NULLS LAST
     LIMIT ${pageSize} OFFSET ${offset}
   `
@@ -115,6 +139,19 @@ export async function getVendorById(orgId: string, id: string): Promise<Vendor |
     LIMIT 1
   `
   return (rows[0] as unknown as Vendor) ?? null
+}
+
+/** Lightweight list of vendors for pickers/exports — id, name, code, criticality only. */
+export async function getVendorsLite(orgId: string): Promise<{ id: string; name: string; vendor_code: string | null; is_critical: boolean }[]> {
+  const rows = await sql<{ id: string; name: string; vendor_code: string | null; is_critical: boolean }[]>`
+    SELECT id, name, vendor_code, is_critical
+    FROM vendors
+    WHERE org_id = ${orgId}
+      AND deleted_at IS NULL
+      AND archived_at IS NULL
+    ORDER BY name
+  `
+  return rows as unknown as { id: string; name: string; vendor_code: string | null; is_critical: boolean }[]
 }
 
 /** Generate the next VND-XXXX code for an org (includes deleted vendors to avoid reuse) */

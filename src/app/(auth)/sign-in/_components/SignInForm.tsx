@@ -59,7 +59,7 @@ export function SignInForm() {
           style={
             mode === 'password'
               ? { background: 'white', color: '#6c5dd3', boxShadow: '0 1px 3px rgba(109,93,211,0.15)' }
-              : { color: '#a99fd8' }
+              : { color: '#6b5fa8' }
           }
         >
           Password
@@ -71,7 +71,7 @@ export function SignInForm() {
           style={
             mode === 'magic'
               ? { background: 'white', color: '#6c5dd3', boxShadow: '0 1px 3px rgba(109,93,211,0.15)' }
-              : { color: '#a99fd8' }
+              : { color: '#6b5fa8' }
           }
         >
           Magic Link
@@ -144,7 +144,7 @@ export function SignInForm() {
             {mlPending ? 'Sending link…' : 'Send magic link'}
           </button>
 
-          <p className="text-xs text-center mt-2" style={{ color: '#a99fd8' }}>
+          <p className="text-xs text-center mt-2" style={{ color: '#6b5fa8' }}>
             We&apos;ll email you a one-tap sign-in link.
           </p>
         </form>

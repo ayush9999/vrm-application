@@ -5,13 +5,13 @@ import Link from 'next/link'
 import type { VendorReview, VendorReviewStatus, ReviewType } from '@/types/review-pack'
 
 const STATUS_STYLE: Record<VendorReviewStatus, { label: string; bg: string; color: string; dot: string }> = {
-  not_started:              { label: 'Not Started',      bg: 'rgba(148,163,184,0.12)', color: '#64748b', dot: '#94a3b8' },
+  not_started:              { label: 'Not Started',      bg: 'rgba(148,163,184,0.12)', color: '#64748b', dot: '#64748b' },
   in_progress:              { label: 'In Progress',      bg: 'rgba(14,165,233,0.1)',   color: '#0284c7', dot: '#0ea5e9' },
   submitted:                { label: 'Submitted',        bg: 'rgba(245,158,11,0.1)',   color: '#d97706', dot: '#f59e0b' },
   approved:                 { label: 'Approved',         bg: 'rgba(5,150,105,0.1)',    color: '#059669', dot: '#10b981' },
   approved_with_exception:  { label: 'Approved (Exc)',   bg: 'rgba(124,58,237,0.1)',   color: '#7c3aed', dot: '#8b5cf6' },
   done:                     { label: 'Done',             bg: 'rgba(5,150,105,0.1)',    color: '#059669', dot: '#10b981' },
-  cancelled:                { label: 'Cancelled',        bg: 'rgba(148,163,184,0.12)', color: '#64748b', dot: '#94a3b8' },
+  cancelled:                { label: 'Cancelled',        bg: 'rgba(148,163,184,0.12)', color: '#64748b', dot: '#64748b' },
 }
 
 const TYPE_STYLE: Record<ReviewType, { label: string; bg: string; color: string }> = {
@@ -21,7 +21,7 @@ const TYPE_STYLE: Record<ReviewType, { label: string; bg: string; color: string 
 }
 
 const PACK_STATUS: Record<string, { label: string; color: string }> = {
-  not_started:              { label: 'Not Started',    color: '#94a3b8' },
+  not_started:              { label: 'Not Started',    color: '#64748b' },
   in_progress:              { label: 'In Progress',    color: '#0ea5e9' },
   submitted:                { label: 'Submitted',      color: '#6366f1' },
   awaiting_approval:        { label: 'Awaiting',       color: '#7c3aed' },
@@ -93,7 +93,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
               />
 
               {/* Date label */}
-              <div className="text-[10px] font-medium mb-1.5 flex items-center gap-2" style={{ color: '#8b7fd4' }}>
+              <div className="text-xs font-medium mb-1.5 flex items-center gap-2" style={{ color: '#5d5285' }}>
                 <span className="uppercase tracking-wider">{dateLabel}</span>
                 <span className="font-semibold">{dateStr}</span>
               </div>
@@ -116,7 +116,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
                   {/* Chevron */}
                   <span
                     className="text-xs shrink-0 transition-transform"
-                    style={{ color: '#a99fd8', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                    style={{ color: '#6b5fa8', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
                   >
                     ▸
                   </span>
@@ -131,7 +131,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
 
                   {/* Type badge */}
                   <span
-                    className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
+                    className="text-xs font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
                     style={{ background: typeSty.bg, color: typeSty.color }}
                   >
                     {typeSty.label}
@@ -139,7 +139,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
 
                   {/* Status badge */}
                   <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
                     style={{ background: sty.bg, color: sty.color }}
                   >
                     {sty.label}
@@ -154,7 +154,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
                   </span>
 
                   {/* Pack count */}
-                  <span className="text-[10px] shrink-0" style={{ color: '#a99fd8' }}>
+                  <span className="text-xs shrink-0" style={{ color: '#6b5fa8' }}>
                     {packs.length} pack{packs.length !== 1 ? 's' : ''}
                   </span>
 
@@ -162,7 +162,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
                   <Link
                     href={`/vendors/${vendorId}/reviews/view/${review.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] font-medium px-2.5 py-1 rounded-lg shrink-0 hover:opacity-80"
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg shrink-0 hover:opacity-80"
                     style={{ background: 'rgba(109,93,211,0.06)', color: '#6c5dd3', border: '1px solid rgba(109,93,211,0.12)' }}
                   >
                     Open Full Review →
@@ -187,7 +187,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
                           style={{ borderBottom: isLast ? 'none' : '1px solid rgba(109,93,211,0.04)' }}
                         >
                           {/* Tree connector */}
-                          <span className="text-[10px] font-mono shrink-0" style={{ color: '#c4bae8', width: 24 }}>
+                          <span className="text-xs font-mono shrink-0" style={{ color: '#c4bae8', width: 24 }}>
                             {connector}
                           </span>
 
@@ -198,7 +198,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
 
                           {/* Pack status */}
                           <span
-                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase shrink-0"
+                            className="text-xs font-semibold px-1.5 py-0.5 rounded uppercase shrink-0"
                             style={{ background: `${packSty.color}14`, color: packSty.color }}
                           >
                             {packSty.label}
@@ -218,12 +218,12 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
                           </div>
 
                           {/* Counts */}
-                          <span className="text-[10px] tabular-nums shrink-0" style={{ color: '#8b7fd4', width: 52, textAlign: 'right' }}>
+                          <span className="text-xs tabular-nums shrink-0" style={{ color: '#5d5285', width: 52, textAlign: 'right' }}>
                             {counts.passed}/{applicable} passed
                           </span>
 
                           {/* Percentage */}
-                          <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: pct === 100 ? '#059669' : '#6c5dd3', width: 28, textAlign: 'right' }}>
+                          <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: pct === 100 ? '#059669' : '#6c5dd3', width: 28, textAlign: 'right' }}>
                             {pct}%
                           </span>
                         </div>
@@ -232,8 +232,8 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
 
                     {/* Review meta footer */}
                     <div
-                      className="flex items-center gap-3 px-5 py-2.5 text-[10px] flex-wrap"
-                      style={{ borderTop: '1px solid rgba(109,93,211,0.06)', color: '#a99fd8' }}
+                      className="flex items-center gap-3 px-5 py-2.5 text-xs flex-wrap"
+                      style={{ borderTop: '1px solid rgba(109,93,211,0.06)', color: '#6b5fa8' }}
                     >
                       {review.reviewer_name && <span>Reviewer: <strong style={{ color: '#6c5dd3' }}>{review.reviewer_name}</strong></span>}
                       {review.approver_name && <span>Approver: <strong style={{ color: '#6c5dd3' }}>{review.approver_name}</strong></span>}
@@ -244,7 +244,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
 
                 {/* Expanded but no packs */}
                 {isExpanded && packs.length === 0 && (
-                  <div className="px-5 py-6 text-center text-xs" style={{ color: '#a99fd8', borderTop: '1px solid rgba(109,93,211,0.06)' }}>
+                  <div className="px-5 py-6 text-center text-xs" style={{ color: '#6b5fa8', borderTop: '1px solid rgba(109,93,211,0.06)' }}>
                     No packs in this review yet.
                   </div>
                 )}
@@ -259,7 +259,7 @@ export function ReviewTimelineClient({ reviews, vendorId }: Props) {
             className="absolute left-3.5 top-4 w-3 h-3 rounded-full ring-2 ring-white"
             style={{ background: '#6c5dd3' }}
           />
-          <div className="text-[11px] font-medium pt-1" style={{ color: '#8b7fd4' }}>
+          <div className="text-xs font-medium pt-1" style={{ color: '#5d5285' }}>
             Vendor review journey started
           </div>
         </div>

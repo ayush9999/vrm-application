@@ -8,7 +8,7 @@ export default function ForgotPasswordPage() {
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: '#1e1550' }}>
           Forgot your password?
         </h2>
-        <p className="text-sm mt-1" style={{ color: '#a99fd8' }}>
+        <p className="text-sm mt-1" style={{ color: '#6b5fa8' }}>
           Enter your email and we&apos;ll send you a reset link.
         </p>
       </div>

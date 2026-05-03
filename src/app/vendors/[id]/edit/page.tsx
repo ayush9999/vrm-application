@@ -34,7 +34,7 @@ export default async function EditVendorPage({ params }: PageProps) {
         <Link
           href={`/vendors/${id}`}
           className="inline-flex items-center gap-1 text-sm transition-colors hover:opacity-70"
-          style={{ color: '#a99fd8' }}
+          style={{ color: '#6b5fa8' }}
         >
           ← Back to {vendor.name}
         </Link>

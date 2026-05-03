@@ -4,6 +4,9 @@ import { requireCurrentUser } from '@/lib/current-user'
 import { getReviewPackWithRequirements } from '@/lib/db/review-packs'
 import { PackLifecycleControls } from './_components/PackLifecycleControls'
 import { EditableRequirements } from './_components/EditableRequirements'
+import { PackMetadataEditor } from './_components/PackMetadataEditor'
+import { ApplicabilityRulesEditor } from './_components/ApplicabilityRulesEditor'
+import type { ApplicabilityRules } from '@/types/review-pack'
 
 interface PageProps {
   params: Promise<{ packId: string }>
@@ -27,8 +30,8 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#a99fd8' }}>
-        <Link href="/settings/review-packs" className="hover:text-[#6c5dd3]" style={{ color: '#a99fd8' }}>
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b5fa8' }}>
+        <Link href="/settings/review-packs" className="hover:text-[#6c5dd3]" style={{ color: '#6b5fa8' }}>
           Review Packs
         </Link>
         <span>/</span>
@@ -45,7 +48,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
               </span>
             )}
             <span
-              className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
+              className="text-xs px-2 py-0.5 rounded-full font-bold uppercase"
               style={{
                 background: pack.source_type === 'standard' ? 'rgba(108,93,211,0.08)' : 'rgba(5,150,105,0.08)',
                 color: pack.source_type === 'standard' ? '#6c5dd3' : '#059669',
@@ -54,11 +57,11 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
               {pack.source_type}
             </span>
             {!pack.is_active && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: 'rgba(148,163,184,0.2)', color: '#64748b' }}>
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: 'rgba(148,163,184,0.2)', color: '#64748b' }}>
                 Archived
               </span>
             )}
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(245,158,11,0.06)', color: '#d97706' }}>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(245,158,11,0.06)', color: '#d97706' }}>
               {pack.review_cadence}
             </span>
           </div>
@@ -76,15 +79,22 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
         />
       </div>
 
+      <PackMetadataEditor
+        packId={pack.id}
+        initialName={pack.name}
+        initialDescription={pack.description}
+        initialCadence={pack.review_cadence}
+        canEdit={pack.source_type === 'custom' && user.role === 'site_admin'}
+      />
+
       {/* Applicability */}
       <Section title="Applicability Rules">
-        <pre
-          className="text-xs p-3 rounded-lg font-mono overflow-x-auto"
-          style={{ background: 'rgba(109,93,211,0.04)', color: '#4a4270', border: '1px solid rgba(109,93,211,0.08)' }}
-        >
-          {JSON.stringify(pack.applicability_rules, null, 2)}
-        </pre>
-        <p className="text-xs mt-2" style={{ color: '#a99fd8' }}>
+        <ApplicabilityRulesEditor
+          packId={pack.id}
+          initial={(pack.applicability_rules ?? {}) as ApplicabilityRules}
+          canEdit={pack.source_type === 'custom' && user.role === 'site_admin'}
+        />
+        <p className="text-xs mt-2" style={{ color: '#6b5fa8' }}>
           These rules drive auto-assignment of this pack to vendors based on their profile.
         </p>
       </Section>
@@ -103,7 +113,7 @@ export default async function ReviewPackDetailPage({ params }: PageProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#a99fd8' }}>
+      <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5fa8' }}>
         {title}
       </h3>
       {children}
