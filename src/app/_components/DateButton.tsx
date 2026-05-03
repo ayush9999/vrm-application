@@ -64,13 +64,15 @@ export function DateButton() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  const goPrev = () => setViewMonth(({ year, month }) => {
-    const m = month - 1
-    return m < 0 ? { year: year - 1, month: 11 } : { year, month: m }
+  const goPrev = () => setViewMonth((prev) => {
+    if (!prev) return prev
+    const m = prev.month - 1
+    return m < 0 ? { year: prev.year - 1, month: 11 } : { year: prev.year, month: m }
   })
-  const goNext = () => setViewMonth(({ year, month }) => {
-    const m = month + 1
-    return m > 11 ? { year: year + 1, month: 0 } : { year, month: m }
+  const goNext = () => setViewMonth((prev) => {
+    if (!prev) return prev
+    const m = prev.month + 1
+    return m > 11 ? { year: prev.year + 1, month: 0 } : { year: prev.year, month: m }
   })
   const goToday = () => setViewMonth({ year: today.getFullYear(), month: today.getMonth() })
 
