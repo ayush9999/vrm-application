@@ -249,14 +249,7 @@ export function RadarChart({ labels, data }: { labels: string[]; data: number[] 
           r: {
             min: 0,
             max: axisMax,
-            ticks: {
-              display: true,
-              stepSize: axisMax / 4,
-              color: '#6b5fa8',
-              backdropColor: 'transparent',
-              font: { size: 10 },
-              callback: (v) => `${v}`,
-            },
+            ticks: { display: false },
             grid: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             angleLines: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             pointLabels: {
@@ -325,14 +318,7 @@ export function RadarChartLarge({ labels, data }: { labels: string[]; data: numb
         scales: {
           r: {
             min: 0, max: axisMax,
-            ticks: {
-              display: true,
-              stepSize: axisMax / 4,
-              color: '#6b5fa8',
-              backdropColor: 'transparent',
-              font: { size: 11 },
-              callback: (v) => `${v}`,
-            },
+            ticks: { display: false },
             grid: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             angleLines: { color: 'rgba(0,0,0,0.07)', lineWidth: 0.5 },
             pointLabels: { font: { size: 12 }, color: '#4a4270', padding: 12 },
